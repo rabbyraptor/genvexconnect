@@ -70,3 +70,56 @@ Seek a technical/partner conversation with LS Control and Nabto, asking for the 
 4. Can Nabto supply an ARM64 Linux legacy Client SDK and commercial redistribution terms?
 
 Until these points are answered, keep all cloud work read-only and avoid guessing endpoints or credential flows.
+
+
+## Deeper Smart Connect Center capability findings (brochure)
+
+The official Genvex brochure provides more concrete details than the product landing page:
+
+- Trend history is retained for **two years**.
+- Trend logging interval is **five minutes**.
+- Graphs can be zoomed and exported; the brochure explicitly lists CSV export.
+- The UI has separate tabs for Data, Graphs, Event log and Set Points.
+- Event log filters include all events, alarms only, set-point changes and communication errors.
+- Event entries include timestamp, event type, description, action, level and username.
+- The current-data view includes temperatures, humidity, pressure, fan percentages and RPM, relay states, compressor state, bypass and error list.
+- Set-point view includes heating/humidity controls, temperature settings, boost duration, fan-level settings, minimum-air-volume settings and frost protection.
+
+Sources:
+- https://www.genvex.com/download/18.6d7c19c518cfe26c3038363/1745309256723/Brochure-Smart-Connect-Center.pdf
+
+This is a significant product insight: Smart Connect Center's five-minute, two-year history and CSV export could provide a strong baseline for the kind of user-facing energy/comfort/ventilation history we want to build. It is not proof that an API exists, but it gives us a precise list of valuable data to request through a supported integration.
+
+## Deeper Nabto authentication implications
+
+Nabto's TEN036 security document clarifies three distinct legacy Micro authentication models:
+
+1. **CA-signed client certificates with user identity**: the client certificate carries a user identity (often email); the basestation validates the certificate and forwards the identity to the device, which applies its ACL. This requires a central identity-management service. Nabto explicitly says it no longer provides the generic CA user-management service, while customers can integrate their own service.
+2. **PPKA (paired public key authentication)**: a client creates an RSA keypair and the device authorizes its public-key fingerprint. The standard pairing flow requires the client and device to be on the same LAN (or another trusted provisioning route) to register the key. Once paired, remote access is possible.
+3. **Application-level authentication**: the Nabto connection itself can be anonymous, with application credentials/session tokens validated by the device. Nabto warns that this is a poor fit for RPC unless credentials are included and validated in each RPC call.
+
+Sources:
+- https://downloads.nabto.com/assets/docs/TEN036%20Security%20in%20Nabto%20Solutions.pdf
+- https://www.nabto.com/pairing-and-access-control-part-1-intro-and-device/
+
+### Consequences for this Genvex investigation
+
+- PPKA is not a shortcut that lets us connect to an arbitrary Genvex unit: the unit must already support the relevant ACL/pairing mechanism and our client public-key fingerprint must be authorized.
+- The user's existing Genvex Connect account may be backed by a vendor-managed identity flow, but public evidence does not reveal the exact mechanism used by app v4.0.3.
+- We must not derive or guess a Nabto password from the Genvex Connect password, and must not try undocumented credential endpoints.
+- A supported third-party path likely requires LS Control to authorize an additional client identity, provide an API/SDK contract, or offer a Smart Connect Center integration.
+
+## Nabto platform lifecycle
+
+Nabto's current documentation says Nabto Edge is superseding Nabto Micro for new remote-control solutions. Nabto Micro remains supported for existing customers, but Edge and Micro are incompatible and cannot be substituted transparently. Micro uses its own static-interface RPC protocol; Edge uses CoAP and a different identity/device model.
+
+Source:
+- https://www.nabto.com/docs/developer/guides/overview/edge-vs-micro.html
+
+This reinforces the need to treat the Genvex integration as a compatibility client for an existing deployed Micro fleet—not to migrate the ventilation controller to Edge.
+
+## Revised feasibility assessment
+
+The Smart Connect Center route is now the strongest **commercially sustainable** candidate if LS Control will grant partner access. It has the clearest documented data model and historical value. The direct Nabto Micro route remains the strongest **technical reverse-integration candidate**, but the authentication and client SDK are gated by LS Control/Nabto cooperation.
+
+No code has been added for cloud login or remote RPC: without a verified auth contract and a supported SDK binary for the target architecture, doing so would create fragile and potentially unsafe credential handling.
