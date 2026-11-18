@@ -73,3 +73,29 @@ Only after Phase 3 proves a supported remote session, add a transport abstractio
 - Nabto Cordova plugin: https://github.com/nabto/cordova-plugin-nabto
 - LS Control Nabto test app: https://github.com/nabto/cordova-lsc-test
 - Official Genvex Connect product information: https://www.genvex.com/produkter/genvex-tilbehor/genvex-connect
+
+
+## Raspberry Pi 4 / HAOS architecture finding
+
+The target Home Assistant host is a Raspberry Pi 4 running 64-bit ARM (aarch64).
+
+This rules out directly loading the Linux x86_64 shared library bundled by the existing `nabto4-python-wrapper`. Do not attempt to install that wheel on the Pi or copy its x86_64 shared object into HAOS.
+
+A potentially relevant lead is the public Nabto 4 Android Client API repository. It contains an Android `arm64-v8a` JNI library, but this is an Android/Bionic JNI artifact, not a documented Linux ARM64 client SDK. It cannot be treated as a drop-in `libnabto_client_api.so` for Home Assistant. Extracting or reusing it would require understanding its JNI boundary, runtime dependencies, licensing and compatibility; it is not the preferred production path.
+
+The public Nabto Edge SDK has Linux aarch64 build support, but Edge and Micro are explicitly incompatible. It cannot connect to the existing Micro Nabto Genvex gateway unless LS Control migrates the device/service to Edge.
+
+The public Nabto 4 CLI project explicitly says the legacy client SDK is obtained by contacting Nabto support. This is currently the most credible route to determine whether an ARM64 Linux client build exists or can be supplied.
+
+### Updated decision
+
+1. Ask Nabto whether the legacy Nabto 4/Micro Client SDK is available for Linux aarch64 and whether its use is permitted for a third-party Home Assistant integration.
+2. In parallel, ask LS Control/Genvex for the supported remote integration interface or written authorization and technical details for their current Genvex Connect service.
+3. Do not build against Android JNI or Nabto Edge as a substitute for the Micro client.
+4. Keep local UDP support as the working fallback. Remote support remains blocked pending a compatible client SDK and the correct Genvex identity-management configuration.
+
+### Additional references
+
+- Nabto 4 Android client API (Android arm64 JNI, not Linux ABI): https://github.com/nabto/android-client-api
+- Nabto 4 Client SDK CLI build requirements: https://github.com/nabto/nabto-cli
+- Nabto Micro vs Edge compatibility: https://www.nabto.com/docs/developer/guides/overview/edge-vs-micro.html
