@@ -240,3 +240,97 @@ Source:
 - https://github.com/nabto/unabto/blob/master/src/unabto/unabto_protocol_defines.h
 - https://github.com/nabto/unabto/blob/master/src/unabto/unabto_packet_util.h
 - https://github.com/nabto/unabto/blob/master/src/unabto/unabto_packet.c
+
+
+## Official Nabto/LS Control architecture and supported-client investigation (2026-11-19)
+
+A review of Nabto's official LS Control partner page provides an important architectural confirmation and changes the recommended next step.
+
+### What Nabto publicly confirms about LS Control
+
+Nabto describes the LS Control implementation as:
+
+- Embedded hardware based on PIC32 using the uNabto SDK for RPC and streaming.
+- iOS and Android apps built with Ionic/Cordova using Nabto RPC for remote control.
+- A .NET server application using the Nabto Client SDK .NET wrapper to access devices through Nabto RPC and Nabto Streaming.
+- Nabto CA-based authentication integrated with a custom identity-management system.
+
+Source: https://www.nabto.com/partners/ls-control/
+
+This is direct vendor-published evidence that LS Control has used a **server-side Nabto client**, not only mobile clients. It also confirms the CA/custom-identity architecture at the LS Control product level. It does not establish that the public Genvex Connect login credentials can be used directly with the Nabto SDK, nor does it document a third-party API.
+
+### Why this matters for a Home Assistant integration
+
+The most promising supported route is now to investigate the same server-side client model LS Control publicly describes:
+
+1. Obtain confirmation from Nabto/LS Control whether the legacy Nabto 4/Micro Client SDK and .NET wrapper can be licensed or supplied for third-party integration.
+2. Confirm whether a supported Linux build exists and whether it runs on the target architecture(s) intended for the HAOS add-on (initially ARM64/Raspberry Pi if that remains the target).
+3. Obtain the documented CA authentication and identity-management flow for an authorized Genvex Connect user/device.
+4. Confirm whether the SDK may be redistributed inside a commercial, preconfigured Home Assistant appliance, and what licensing or per-device fees apply.
+5. If the SDK is available, build a small isolated service/add-on that uses the supported SDK and exposes a narrow local API to Home Assistant. Keep Nabto session management and credentials out of YAML dashboards and ordinary entity attributes.
+
+The official Nabto Edge Linux SDK documentation is **not** a drop-in replacement: Edge is the newer Nabto platform, while LS Control's published architecture and the captured traffic identify the deployed system as legacy uNabto/Nabto Micro. A client written for Edge cannot be assumed to connect to a Micro device.
+
+Nabto explicitly labels its legacy Nabto 4/Micro material as a legacy platform superseded by Nabto 5/Edge and recommends Edge for new designs. That is a lifecycle and support risk for a commercial product, so written confirmation of availability, support and redistribution rights is essential before investing in a production implementation.
+
+Relevant Nabto sources:
+- LS Control architecture: https://www.nabto.com/partners/ls-control/
+- Nabto Edge SDK platform list (documents current Edge SDKs, including Linux): https://www.nabto.com/docs/developer/platforms.html
+- Nabto article explicitly identifying Nabto 4/Micro as legacy: https://www.nabto.com/cc3200-two-way-audio-with-android/
+- Nabto legacy PPKA access-control overview: https://www.nabto.com/pairing-and-access-control-part-1-intro-and-device/
+- Nabto legacy client-side authentication/pairing overview: https://www.nabto.com/pairing-and-access-control-client-implementation/
+
+### Genvex Connect account onboarding: what the public guide says
+
+Genvex's current Quick Guide says that:
+
+- A 12-digit ID on the gateway label is used to add a gateway when the phone is not on the same local network.
+- A user is created by entering an email address; a password is automatically generated and sent to that email address.
+- The first user registered on a gateway becomes its owner; additional users use the owner's email address and password.
+
+Source: https://www.genvex.com/download/18.2632f14918aa7daec381d84/1775546758460/Quickguide-Genvex-Connect.pdf
+
+This describes the consumer account workflow, but it does **not** explain how that account maps to Nabto CA identities or how a third-party server client is authorized. Do not assume that the emailed Genvex password is a Nabto certificate password or a reusable SDK credential.
+
+### Smart Connect Center as a separate supported route
+
+Genvex's Smart Connect Center product page says that systems with Optima 270 can be connected when they have LAN connectivity. It advertises current and historical operating data, alarm/event logs, service history, notifications, and remote parameter adjustment. The service is presented as a professional/administrator product.
+
+Source: https://www.genvex.com/en/products/genvex-accessories/smart-connect-center
+
+This is especially relevant to the Optima 270 controller in the investigation. It may be a more supportable data-access route for a commercial integration, but no public third-party API or end-user API documentation has been identified. The next vendor question should be whether an authorized API, scheduled export, or data-sharing interface exists, and whether access requires a Smart Connect Center subscription or installer/partner agreement.
+
+### Questions to send to Nabto and LS Control/Genvex
+
+**To Nabto:**
+1. Is the legacy Nabto 4/Micro Client SDK (Plain C and/or .NET wrapper) still available to existing deployments such as LS Control?
+2. Is there a supported Linux client build, and which architectures/libc environments are supported (particularly ARM64)?
+3. Can a third-party commercial appliance redistribute or bundle the client SDK? What licensing, support and runtime fees apply?
+4. What is the supported integration process for a third-party server client connecting to an LS Control device using the LS Control CA/custom identity-management setup?
+
+**To LS Control/Genvex:**
+1. Is there a documented or partner-accessible API/SDK for Genvex Connect or the LS Control Nabto service?
+2. Can an end user explicitly authorize a third-party Home Assistant client to access their own gateway, without sharing the owner's account password?
+3. Is there a supported server-side integration path corresponding to the .NET Nabto Client SDK application described by Nabto?
+4. For Optima 270, can Smart Connect Center data be accessed through an API, export, or data-sharing agreement?
+5. What are the commercial, licensing, security-review and support conditions for embedding such access in a preconfigured Home Assistant appliance?
+
+### Evidence boundary
+
+Confirmed by public vendor sources:
+- LS Control's historical architecture includes a server-side .NET Nabto Client SDK wrapper.
+- LS Control uses Nabto CA authentication integrated with custom identity management.
+- Genvex Connect's documented user onboarding is based on an owner email/password workflow.
+- Genvex advertises Smart Connect Center support for Optima 270 systems.
+
+Not yet confirmed:
+- Availability of the legacy SDK/wrapper to third parties.
+- Linux ARM64 compatibility of the legacy client.
+- Redistribution rights or commercial licensing.
+- The exact mapping between Genvex Connect accounts and Nabto CA identities.
+- Any supported third-party API or Smart Connect Center API.
+- Whether the Genvex gateway in this investigation is registered for Smart Connect Center.
+
+### Recommended decision
+
+Do not start implementing a custom Nabto Micro client or reverse-engineered cloud login yet. First request written answers from Nabto and LS Control/Genvex on SDK availability, CA identity authorization, ARM64 support, redistribution and commercial terms. In parallel, ask about Smart Connect Center data access for Optima 270. Those answers determine whether the production architecture should be a supported Nabto client sidecar, an official cloud/data integration, or a local-only fallback.
