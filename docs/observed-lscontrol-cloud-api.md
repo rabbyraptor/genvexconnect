@@ -128,3 +128,64 @@ A similar 70-byte exchange was observed in earlier captures outside a clearly is
 - The earlier UDP traffic to port 5566 and STUN-like traffic on port 3478 remain suggestive of a Nabto-related transport, not proof of it.
 
 No further packet-capture repetition is planned at this stage. The investigation should move to source-level/vendor documentation and supported SDK/API access rather than continuing timing experiments.
+
+
+## Protocol identification from the 2026-11-19 PCAP hex dump
+
+A byte-level comparison of the three 70-byte UDP datagrams to `80.208.69.3:30815` against the public Nabto uNabto protocol definitions and the existing `superrob/genvexnabto` implementation identifies them as Nabto Micro DATA packets.
+
+This is substantially stronger than the earlier timing/packet-size correlation.
+
+### Parsed client-to-server packet
+
+The UDP payload is 70 bytes and parses as:
+
+| Offset | Bytes | Interpretation |
+|---:|---|---|
+| 0–3 | `31 c7 0d d4` | Client peer ID (NSI.cp) |
+| 4–7 | `c3 e1 e7 96` | Server peer ID (NSI.sp) |
+| 8 | `16` | Packet type DATA (decimal 22) |
+| 9 | `02` | Nabto protocol version 2 |
+| 10 | `00` | Retransmission/reserved field |
+| 11 | `00` | Packet flags |
+| 12–13 | `00 a8`, `00 ad`, `00 b4` | Sequence numbers in the three observed packets |
+| 14–15 | `00 46` | Total packet length: 70 bytes |
+| 16–19 | `36 00 00 36` | CRYPTO payload header; type 0x36, flags 0, payload length 0x0036 (54 bytes) |
+| 20–21 | `23 0a` | Crypto suite code 0x230A |
+| 22–69 | 48 bytes | Encrypted/authenticated crypto data |
+
+The apparent two-byte prefix before DATA in the original terminal rendering was a parsing-offset mistake: the UDP checksum was included in the Ethernet hex line. The UDP payload itself starts at byte `31 c7`, and its packet header aligns exactly with the uNabto 16-byte fixed header.
+
+### Crypto suite identification
+
+The public uNabto definitions compose the crypto code from:
+- `CRYPT` operation: `0x0002`
+- `SECR` encryption mode: `0x0008`
+- AES-CBC: `0x2000`
+- HMAC-SHA256: `0x0300`
+
+Combined: `0x230A`.
+
+This is the uNabto `CRYPT_W_AES_CBC_HMAC_SHA256` suite. The 48-byte crypto-data region is consistent with the documented layout of a 16-byte IV, one 16-byte AES-CBC ciphertext block (including padding of the short plaintext), and a 16-byte truncated HMAC. The encrypted application command itself is not visible in the capture.
+
+### Server response packets
+
+The 70-byte server datagrams have the same DATA/CRYPTO structure and sequence number as the corresponding client packet, with the response flag set (`flags=0x01`). Their crypto suite code is also `0x230A`.
+
+The intervening 24-byte server datagrams have not yet been decoded. In uNabto, an asynchronous request can produce a notification ACK using the `NOTIFY_MICRO_ACK` notification code. The 24-byte packet length is consistent with such a packet, but the exact notification type/code must be checked against its bytes before labelling it an ACK.
+
+### Conclusion and confidence
+
+- **Confirmed:** The 70-byte datagrams are structured as Nabto uNabto DATA packets, version 2, carrying a CRYPTO payload.
+- **Confirmed:** The crypto suite code is `0x230A`, which the public uNabto source defines as AES-CBC with HMAC-SHA256.
+- **Confirmed:** The three client packets carry sequence numbers `0x00A8`, `0x00AD`, and `0x00B4`; the server responses mirror those sequence numbers and set the response flag.
+- **Strongly established:** The app's remote UDP exchange uses the Nabto Micro/uNabto packet format. This is no longer merely inferred from port numbers.
+- **Not established:** The identity/role of `80.208.69.3` (device, relay, or other Nabto infrastructure), the plaintext command, or whether each correlated packet is itself the fan-speed write rather than part of its request/response flow.
+- **Next useful analysis:** Decode the already-captured 24-byte server datagrams to test whether they are the uNabto asynchronous Micro ACK. No new capture is required.
+
+Relevant public source:
+- Nabto uNabto packet layout and crypto definitions: https://github.com/nabto/unabto/blob/master/src/unabto/unabto_protocol_defines.h
+- Nabto uNabto packet header parsing: https://github.com/nabto/unabto/blob/master/src/unabto/unabto_packet_util.c
+- Nabto Micro ACK generation: https://github.com/nabto/unabto/blob/master/src/unabto/unabto_packet.c
+- Existing Genvex packet builder: https://github.com/superrob/genvexnabto/blob/main/src/genvexnabto/protocol/packet.py
+- Existing Genvex UDP message parser: https://github.com/superrob/genvexnabto/blob/main/src/genvexnabto/genvexnabto.py
