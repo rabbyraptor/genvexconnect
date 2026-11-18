@@ -189,3 +189,54 @@ Relevant public source:
 - Nabto Micro ACK generation: https://github.com/nabto/unabto/blob/master/src/unabto/unabto_packet.c
 - Existing Genvex packet builder: https://github.com/superrob/genvexnabto/blob/main/src/genvexnabto/protocol/packet.py
 - Existing Genvex UDP message parser: https://github.com/superrob/genvexnabto/blob/main/src/genvexnabto/genvexnabto.py
+
+
+## Decode of the 24-byte server notifications (2026-11-19)
+
+The user supplied a tcpdump hex dump filtered to UDP payload length 32 bytes at the IP layer (24-byte UDP payload). These packets are now decoded conclusively as Nabto Micro ACK notifications.
+
+Example UDP payload, beginning at the first byte after the UDP header:
+
+```
+31 c7 0d d4  c3 e1 e7 96  16 02 00 01  00 a8 00 18
+34 00 00 08  00 00 00 03
+```
+
+| Offset | Bytes | Interpretation |
+|---:|---|---|
+| 0–3 | `31 c7 0d d4` | Client peer ID |
+| 4–7 | `c3 e1 e7 96` | Server peer ID |
+| 8 | `16` | DATA packet |
+| 9 | `02` | Protocol version 2 |
+| 10 | `00` | Reserved/retransmission field |
+| 11 | `01` | Response flag |
+| 12–13 | `00 a8` | Sequence number |
+| 14–15 | `00 18` | Packet length: 24 bytes |
+| 16–19 | `34 00 00 08` | NOTIFY payload, flags 0, length 8 |
+| 20–23 | `00 00 00 03` | Notification code 3 |
+
+The public Nabto uNabto source defines payload type `0x34` as `NP_PAYLOAD_TYPE_NOTIFY`. Its notification enum begins at `NOTIFY_ATTACH_OK = 1`, followed by `NOTIFY_ATTACH_CLOSE = 2`, then `NOTIFY_MICRO_ACK = 3`. The source comment for `NOTIFY_MICRO_ACK` explicitly says: “The Micro has received the request, but the answer isn't ready yet.”
+
+The packet is therefore definitively a `NOTIFY_MICRO_ACK`, not merely a packet that happens to be 24 bytes long.
+
+### Correlation with the three observed 70-byte DATA requests
+
+The supplied capture includes notifications whose sequence numbers match the three 70-byte client DATA packets identified in the previous analysis:
+
+- `0x00A8` — notification at 00:47:02.618405
+- `0x00AD` — notification at 00:47:04.230543
+- `0x00B4` — notification at 00:47:07.120947
+
+This matching sequence number is consistent with Nabto acknowledging those requests while their answers are not yet ready. The capture excerpt shows repeated notifications at roughly one-second intervals for many sequence numbers; this is part of the observed asynchronous exchange and should not be mistaken for a new fan-speed command each time.
+
+### Updated conclusion
+
+- **Confirmed:** The 24-byte server packets are Nabto DATA response packets containing a NOTIFY payload with notification code 3, i.e. `NOTIFY_MICRO_ACK`.
+- **Confirmed:** The notification means the Micro side has received the request but the answer is not ready yet.
+- **Confirmed:** At least three notification sequence numbers (`0x00A8`, `0x00AD`, `0x00B4`) match the sequence numbers of the three 70-byte client DATA packets from the earlier analysis.
+- **Not established:** Whether the corresponding request is specifically the fan-speed write, another app operation, or a periodic/background request. Sequence matching proves protocol-level correlation, not application-level meaning.
+
+Source:
+- https://github.com/nabto/unabto/blob/master/src/unabto/unabto_protocol_defines.h
+- https://github.com/nabto/unabto/blob/master/src/unabto/unabto_packet_util.h
+- https://github.com/nabto/unabto/blob/master/src/unabto/unabto_packet.c
