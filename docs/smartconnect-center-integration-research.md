@@ -123,3 +123,22 @@ This reinforces the need to treat the Genvex integration as a compatibility clie
 The Smart Connect Center route is now the strongest **commercially sustainable** candidate if LS Control will grant partner access. It has the clearest documented data model and historical value. The direct Nabto Micro route remains the strongest **technical reverse-integration candidate**, but the authentication and client SDK are gated by LS Control/Nabto cooperation.
 
 No code has been added for cloud login or remote RPC: without a verified auth contract and a supported SDK binary for the target architecture, doing so would create fragile and potentially unsafe credential handling.
+
+
+## Client SDK architecture: what is and is not confirmed
+
+The public Nabto 4/Micro CLI documentation does not publish an architecture matrix for the legacy proprietary Client SDK. It only documents a Linux shared object (`libnabto_client_api.so`) and says the SDK must be obtained from Nabto support. Therefore, Linux ARM64/Raspberry Pi support remains **unconfirmed**, not disproven.
+
+Do not confuse this with the current Nabto Edge SDK: its public embedded repository documents Linux targets including `linux_aarch64`, but Edge is incompatible with Micro and cannot connect to an existing Genvex Micro device merely because both products are made by Nabto.
+
+Sources:
+- https://github.com/nabto/nabto-cli
+- https://github.com/nabto/nabto-embedded-sdk
+- https://www.nabto.com/docs/developer/guides/overview/edge-vs-micro.html
+
+For an HAOS appliance, the supported implementation choices remain:
+- a legacy Micro Client SDK binary supplied by Nabto for the appliance architecture, if available and licensed for redistribution;
+- an officially supported Smart Connect Center/API integration;
+- or, only if the user accepts an externally hosted component, a separately maintained service on an architecture supported by the legacy SDK. This last option would introduce an operational dependency and is not the preferred plug-and-play design.
+
+No evidence currently supports using the public Edge ARM64 library as a substitute for the Micro client library.
