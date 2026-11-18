@@ -193,3 +193,20 @@ This makes the remaining work much more specific: identify the actual remote RPC
 - Optima 270 model map: https://github.com/superrob/genvexnabto/blob/master/src/genvexnabto/models/optima270.py
 - Local UDP transport and command send/receive flow: https://github.com/superrob/genvexnabto/blob/master/src/genvexnabto/genvexnabto.py
 - Model adapter and Optima 270 device identification: https://github.com/superrob/genvexnabto/blob/master/src/genvexnabto/genvexnabto_modeladapter.py
+
+
+## Additional community implementations checked
+
+Two independent community projects provide useful cross-checks:
+
+- Homey's Genvex Connect app advertises Optima 270 support over the local network/LAN. Its public listing exposes fan-level and temperature control, filter reset, sensor readings, bypass and alarms, but does not advertise remote cloud access from a separate network.
+- HairingX's newer `nilan_connect` Python client explicitly describes itself as a local client for gateways over `micro_nabto`. It documents Optima 270 as read-tested on a unit and uses the account-paired email plus a gateway host/device ID. Its companion Home Assistant integration explicitly says local network / no cloud. This is a second independent implementation of the local path, not a cloud API.
+- The ESPHome `genvex-optima-270` project uses the Optima controller's RS-485/Modbus connection and a separate ESPHome-compatible board. It is a useful protocol/point-map reference, but it adds hardware and wiring at the installation and therefore does not meet this project's current no-extra-hardware requirement.
+
+These projects strengthen the conclusion that the known public community integrations are local-network solutions. They do not establish a supported third-party cloud endpoint for Genvex Connect.
+
+### Current technical boundary
+
+The public code gives us the Optima 270 point map and local Micro Nabto transport. Public Nabto material gives us historical RPC client concepts and LS Control's broad architecture. What is still missing is the bridge between them: the current Genvex app's concrete remote host/identity configuration and its RPC interface definitions or a supported remote UDP tunnel.
+
+Without that bridge, implementing a remote client now would require guessing protocol endpoints or app-specific credentials. That would be brittle and could send credentials to the wrong service. The next productive step is technical confirmation from LS Control/Nabto or an authorized inspection of the app's own connection metadata while it is operating—not blind endpoint probing.
