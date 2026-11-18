@@ -99,3 +99,47 @@ The public Nabto 4 CLI project explicitly says the legacy client SDK is obtained
 - Nabto 4 Android client API (Android arm64 JNI, not Linux ABI): https://github.com/nabto/android-client-api
 - Nabto 4 Client SDK CLI build requirements: https://github.com/nabto/nabto-cli
 - Nabto Micro vs Edge compatibility: https://www.nabto.com/docs/developer/guides/overview/edge-vs-micro.html
+
+
+## Genvex Connect account flow: important new evidence
+
+The current official Genvex Connect product page explicitly lists Optima 270 as directly compatible with the app. The ECO 360 R product page states that it ships with Optima 270 and has built-in internet connectivity for app control and remote monitoring. The Optima 270 setup documentation says the controller exposes a secure-communication Device-ID and an internet-connection status.
+
+The official Genvex Connect quick guide for the legacy Internet Gateway describes:
+- account registration using an email address;
+- an automatically generated password sent to that email address;
+- the first account as the owner;
+- additional app users signing in with the owner's email and password.
+
+The guide is for the older external gateway setup, so its precise onboarding details must not automatically be assumed to match the current Optima 270 app flow. It does establish that Genvex Connect credentials are distinct from the email-only identity field used by the local Home Assistant integration.
+
+The Nabto Cordova plugin's public API documents a legacy `createSignedKeyPair(email, password)` operation. Its description says the email/password authenticate against central Nabto CA user-management services and the same password encrypts the local private key. The plugin also explicitly marks this flow deprecated and says Nabto CA services are no longer part of the standard platform and require customer-specific setup. Its normal session startup opens a previously installed keypair; it is not itself a generic cloud login.
+
+Nabto's LS Control partner architecture page describes Ionic/Cordova mobile apps using Nabto RPC and a .NET server using the Nabto Client SDK, with Nabto CA authentication integrated into custom identity management. This is strong historical/architectural evidence, but it does not prove that Genvex Connect app v4.0.3 still uses the same Cordova plugin or CA flow.
+
+### Revised hypothesis
+
+A plausible legacy flow is:
+1. The app obtains/creates a signed Nabto client profile using the Genvex account credentials against LS Control's configured CA/user-management service.
+2. The app opens a Nabto session using that stored profile.
+3. The client prepares the Genvex device hostname/ID and uses Nabto RPC over a P2P or relay connection.
+4. The device's embedded uNabto endpoint handles the RPC calls.
+
+This is a hypothesis to verify, not an implementation specification. In particular, the CA portal hostname, identity service, device hostname format, RPC interface definitions, and current app SDK generation remain unknown.
+
+### ARM64 clarification
+
+The Android Client API repository includes an ARM64 Android JNI binary packaged in an Android AAR. This confirms that Nabto has shipped a Micro client implementation for Android ARM64, but it is built for Android's runtime/ABI and JNI bridge. It is not a Linux ARM64 `libnabto_client_api.so` and cannot be loaded directly by a Raspberry Pi Home Assistant OS process.
+
+The public Cordova plugin source confirms that Android and iOS use platform-specific native wrappers around the Nabto 4 client. Reusing the Android binary on Linux would require an Android runtime/JNI host and would still not solve the missing Genvex app configuration or provide a maintainable HAOS deployment. This is not recommended for the product.
+
+### Questions for Nabto / LS Control
+
+- Is Genvex Connect v4.0.3 still based on Nabto 4/Micro, or has it migrated to another transport?
+- Does LS Control still operate a Nabto CA/user-management service for Genvex Connect accounts?
+- Is third-party client access permitted for a customer-owned Optima 270 device?
+- Can Nabto provide a Linux aarch64 build of the legacy Nabto 4 Client SDK, or a supported alternative?
+- What is the official device hostname/ID mapping and RPC interface definition for Optima 270?
+- Is there a supported server-side API or customer integration route that avoids reverse-engineering the mobile app?
+
+No credentials have been sent to any endpoint as part of this investigation.
