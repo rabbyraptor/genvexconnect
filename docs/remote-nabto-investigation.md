@@ -143,3 +143,53 @@ The public Cordova plugin source confirms that Android and iOS use platform-spec
 - Is there a supported server-side API or customer integration route that avoids reverse-engineering the mobile app?
 
 No credentials have been sent to any endpoint as part of this investigation.
+
+
+## Existing Optima 270 command coverage — confirmed
+
+The command definitions are already present in the separate `superrob/genvexnabto` dependency, not duplicated in this Home Assistant repository. The Optima 270 model adapter identifies controller model 2010 / device number 79265 and loads the Optima 270 register map.
+
+### Existing read datapoints
+
+The Optima 270 adapter currently requests:
+- Supply, outside, exhaust, extract and frost-protection temperatures
+- Relative humidity
+- Supply and extract fan duty cycles and RPM
+- Preheat and reheat PWM
+- Bypass active state and analog bypass position
+- Two Optima 270 alarm datapoints
+- Rotor speed
+
+### Existing writable/readable setpoints
+
+The Optima 270 model currently defines:
+- Fan speed (levels 0–4)
+- Temperature setpoint
+- Bypass opening offset
+- Bypass turn-off threshold
+- Forced bypass speed and temperature
+- Reheating enable
+- Humidity control enable
+- Boost enable and duration
+- Filter days and filter reset
+
+The model file also contains commented-out supply/extract airflow level setpoints, explicitly described as write-locked in the gateway. These are not currently supported as writable Optima 270 setpoints.
+
+### Important transport distinction
+
+The current Python library does not use the Nabto Client SDK to establish a cloud session. It sends the reverse-engineered Genvex protocol as UDP datagrams directly to the device's IP address and port 5570. It handles discovery, U_CONNECT, ping, encrypted datapoint/setpoint reads and setpoint writes itself.
+
+The Nabto Cordova plugin, by contrast, exposes Nabto RPC and TCP tunnelling APIs. A TCP tunnel is not a transparent transport for the existing UDP datagrams. Therefore, we cannot simply point the current UDP socket at a Nabto TCP tunnel and expect it to work.
+
+For remote support, one of the following must be established:
+1. Genvex exposes an RPC interface that provides the same datapoints/setpoints; implement a separate RPC transport and map its values to the existing model/entity layer.
+2. Nabto/LS Control provides a supported UDP-capable remote tunnel/transport to the device's UDP service; adapt the transport carefully and validate packet/session semantics.
+3. An official server-side API exists and is supported for third-party use.
+
+This makes the remaining work much more specific: identify the actual remote RPC/tunnel endpoint and authentication configuration. The Optima 270 datapoint/setpoint map itself is not the primary unknown.
+
+### Existing source references
+
+- Optima 270 model map: https://github.com/superrob/genvexnabto/blob/master/src/genvexnabto/models/optima270.py
+- Local UDP transport and command send/receive flow: https://github.com/superrob/genvexnabto/blob/master/src/genvexnabto/genvexnabto.py
+- Model adapter and Optima 270 device identification: https://github.com/superrob/genvexnabto/blob/master/src/genvexnabto/genvexnabto_modeladapter.py
