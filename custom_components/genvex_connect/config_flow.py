@@ -149,7 +149,7 @@ class ConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_manual(self, user_input=None) -> ConfigFlowResult:
         """After user has provided their ip, port and email. Try to connect and see if email is correct."""
-        _LOGGER.info("Async step user has picked {%s}", user_input)
+        _LOGGER.debug("Config flow received user input; sensitive values redacted")
 
         self._authenticatedEmail = user_input[CONF_AUTHENTICATED_EMAIL]
         self._deviceIP = user_input[CONF_DEVICE_IP]
