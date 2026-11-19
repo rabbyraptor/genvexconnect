@@ -680,3 +680,14 @@ The captures also show a constant responder-side 16-byte IV-like value (`00..0f`
 The capture also includes CP_REQ_SP / CP_CONN_SP certificate/control-plane exchange before the DATA session. The data packet itself does not contain the 96-byte DATA key material required by the public uNabto crypto implementation.
 
 See [nabto-data-packet-structure-2026-11-19.md](nabto-data-packet-structure-2026-11-19.md) for the detailed packet offsets, evidence, and next steps. No integration code was changed.
+
+
+## 2026-11-19: Nabto 4 client distribution and profile provisioning gate
+
+The official Nabto CLI README says the legacy Nabto 4 Client SDK libraries must be obtained from Nabto support. The current public `nabto-client-sdk-releases` repository covers releases from v5.12.0 onward (Nabto Edge), not Nabto 4/Micro. The Android ARM64 JNI library is not a Linux ARM64 client library. A supported Linux aarch64 Nabto 4 SDK therefore remains an explicit dependency to resolve with Nabto.
+
+The client identity is a profile/keypair, not simply an email/password passed to the gateway. TEN025 describes a local private-key + certificate profile and CA-signed profile provisioning through a configured webservice. The public Cordova plugin says `startupAndOpenProfile(username,password)` locates and unlocks an already-installed keypair; `createSignedKeyPair(email,password)` is deprecated and requires customer-specific CA services. Existing evidence of an email in the captured client certificate Subject is consistent with CA-based identity but does not reveal the current Genvex app's profile enrollment flow.
+
+Nabto's 2026-09-08 policy lists Nabto 4 as maintenance-only, with security updates but no new features and no published end date. The project should proceed only with a supported SDK build, confirmed LS Control profile enrollment/authorization, and the Optima 270 RPC interface definition.
+
+Detailed source-based findings: [nabto4-client-sdk-availability-and-identity-2026-11-19.md](nabto4-client-sdk-availability-and-identity-2026-11-19.md). No integration code was changed.
