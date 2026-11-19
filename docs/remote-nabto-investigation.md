@@ -669,3 +669,14 @@ A 70-byte client DATA request occurred 1.619 seconds after the marker and receiv
 The remote UDP port was `30721` in this session, reinforcing that the port varies and must not be hard-coded.
 
 See [fan-speed-change-capture-2026-11-19.md](fan-speed-change-capture-2026-11-19.md) for the full packet-level analysis and evidence boundaries.
+
+
+## 2026-11-19: Nabto DATA wire-format analysis
+
+The three fan-change captures now show nine repeated 70-byte client DATA transactions correlated with the user markers. The packet structure is mapped to the public uNabto source: DATA header + CRYPTO payload + suite `0x230A` (AES-CBC/HMAC-SHA256). The 70-byte form contains one AES ciphertext block, so its plaintext is at most 15 bytes under the published padding scheme.
+
+The captures also show a constant responder-side 16-byte IV-like value (`00..0f`) across 2,834 DATA packets. This matches the public source's explicitly dummy random implementation, but the exact firmware/build is not confirmed. Treat this as an anomaly to raise with Nabto/LS Control, not as a proven vulnerability or a basis for packet manipulation.
+
+The capture also includes CP_REQ_SP / CP_CONN_SP certificate/control-plane exchange before the DATA session. The data packet itself does not contain the 96-byte DATA key material required by the public uNabto crypto implementation.
+
+See [nabto-data-packet-structure-2026-11-19.md](nabto-data-packet-structure-2026-11-19.md) for the detailed packet offsets, evidence, and next steps. No integration code was changed.
