@@ -555,3 +555,42 @@ The QEMU documentation confirms syscall translation and Linux threading support 
 This QEMU route supersedes the earlier statement that an add-on would not be a sensible first experiment: a dedicated add-on can isolate the emulator and x86_64 runtime without modifying HAOS or Home Assistant Core. It does not remove the need for valid Genvex remote identity configuration or RPC definitions.
 
 No Genvex credentials, private keys, certificates, tokens or new remote requests are involved in this feasibility test.
+
+
+## HAOS test app scaffold created (2026-11-19)
+
+A minimal, isolated Home Assistant app scaffold has been added under:
+
+`haos-apps/genvex-nabto-runtime-test/`
+
+Files:
+- `config.yaml` — ARM64-only, manual startup, no exposed ports.
+- `Dockerfile` — native ARM64 build stage obtains QEMU user-mode static emulator and official Nabto CLI v1.3.0; a foreign-platform Ubuntu 24.04 x86-64 image supplies the x86-64 runtime filesystem; final image is native ARM64 Home Assistant base.
+- `run.sh` — logs host architecture, QEMU version, and runs Nabto CLI `-v` under emulation; it does not connect to Genvex.
+- `DOCS.md` — test scope and expected result.
+
+The repository now also has a root `repository.yaml` so the app can be discovered as part of a Home Assistant app repository after the branch is available to the Supervisor.
+
+### Important status
+
+This is a **scaffold only**. It has not yet been built or run on the Raspberry Pi. Do not treat the Dockerfile's assumptions about the x86-64 sysroot, dynamic library resolution, or QEMU behavior as verified until the Home Assistant build and app log confirm them.
+
+The test is deliberately limited to the official CLI's version command. It does not configure credentials, perform discovery, open sessions, invoke RPCs, create tunnels, or contact Genvex.
+
+### Current installation path for testing this branch
+
+Because this work currently lives on the `remote-nabto-connection` development branch, the most direct test route is to copy the app folder into HAOS's `/local_apps` directory using the official local-app workflow. The current Home Assistant documentation identifies `/local_apps` as the directory scanned for locally developed apps and supports installing them from Settings > Apps > Local apps.
+
+References:
+- https://contributors.home-assistant.io/apps/first-app/
+- https://contributors.home-assistant.io/apps/guides/dockerfile/
+- https://contributors.home-assistant.io/apps/guides/repository/
+
+### Source/build references checked
+
+- QEMU user-mode translates guest system calls to the host kernel and supports running Linux user-mode processes in containers: https://www.qemu.org/docs/master/user/main.html
+- Debian Bookworm ARM64's `qemu-user-static` package includes `/usr/bin/qemu-x86_64-static`: https://packages.debian.org/bookworm/arm64/qemu-user-static/filelist
+- Ubuntu 24.04 publishes ARM64 `qemu-user-static` builds as well, confirming the host architecture is supported: https://packages.ubuntu.com/noble-updates/arm64/qemu-user-static
+- Home Assistant base images support `aarch64`, and the official Dockerfile guide recommends Debian/Ubuntu base images when software requires glibc: https://contributors.home-assistant.io/apps/guides/dockerfile/
+
+The next action is to install this local app on the actual HAOS host and inspect the image build result. If the build fails, use the exact Docker build error to refine the sysroot and package contents before attempting any Genvex network activity.
