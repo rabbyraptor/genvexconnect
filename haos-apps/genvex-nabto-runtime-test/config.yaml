@@ -1,0 +1,10 @@
+name: "Genvex Nabto Runtime Test"
+version: "0.1.0"
+slug: "genvex_nabto_runtime_test"
+description: "Isolated ARM64/QEMU test for the official Nabto 4 Linux client. Does not connect to Genvex."
+url: "https://github.com/rabbyraptor/genvexconnect"
+startup: application
+boot: manual
+init: false
+arch:
+  - aarch64
