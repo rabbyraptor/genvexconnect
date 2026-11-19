@@ -5,6 +5,7 @@ description: "Read-only ARM64/QEMU runtime, certificate-store and local discover
 url: "https://github.com/rabbyraptor/genvexconnect"
 startup: application
 boot: manual
+host_network: true
 init: false
 arch:
   - aarch64
