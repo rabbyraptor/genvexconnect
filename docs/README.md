@@ -1,11 +1,12 @@
 # Remote Nabto research — documentation index
 
-**Start here:** [Verified facts manifest](remote-nabto-verified-facts.md). This is the current status as of **2026-11-19**: authenticated remote `ping.json` succeeded on x86_64 and **on Raspberry Pi HAOS ARM64 through QEMU emulation**, and **read-only datapoint RPC 45 also succeeded on x86_64 Steam Deck** for five separate sensors (addresses 20, 21, 22, 23, 26; all SDK RPC statuses 0). One-call five-sensor batching is now also **verified on Steam Deck x86_64 (RPC status 0, 318 ms)**. **The same five-sensor RPC 45 batch is now independently VERIFIED under HAOS ARM64/QEMU (RPC status 0, 1,150 ms for one invocation).** Native ARM64, continuous polling, integration and production packaging remain open.
+**Start here:** [Verified facts manifest](remote-nabto-verified-facts.md). This is the current status as of **2026-11-19**: authenticated remote `ping.json` succeeded on x86_64 and **on Raspberry Pi HAOS ARM64 through QEMU emulation**, and **read-only datapoint RPC 45 also succeeded on x86_64 Steam Deck** for five separate sensors (addresses 20, 21, 22, 23, 26; all SDK RPC statuses 0). One-call five-sensor batching is now also **verified on Steam Deck x86_64 (RPC status 0, 318 ms)**. **The same five-sensor RPC 45 batch is now independently VERIFIED under HAOS ARM64/QEMU (RPC status 0, 1,150 ms for one invocation).** Two additional independent HAOS batches (1,200 / 1,260 ms, both 5/5) also passed. Native ARM64, continuous polling, integration and production packaging remain open.
 
 ## Navigation
 
 | Document | Purpose |
 | --- | --- |
+| [Remote HA entity bridge plan](remote-ha-entity-plan.md) | First five read-only entity specifications, offline test model, secure runtime-to-HA bridge requirements and deployment gates |
 | [Verified facts manifest](remote-nabto-verified-facts.md) | Current verified results, exact SDK statuses, identity provisioning, architecture, remaining gates |
 | [Phase 1: read-only sensor validation](remote-phase1-sensor-validation-2026-11-19.md) | Five verified individual RPC 45 sensor reads and one verified five-sensor batch; HAOS/QEMU batch now verified; next resilience/integration gates |
 | [RPC / ARM64 next steps](remote-nabto-next-steps.md) | Read-only query discovery and Linux ARM64 validation plan |
