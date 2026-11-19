@@ -39,7 +39,7 @@ rm -f "$RUNNER"
 echo "HAOS batch test exit status: $STATUS"
 ```
 
-The script asks for: HAOS SSH target (user@host as used in the previous working HAOS ping), Nabto identity, Nabto device hostname, and the existing key passphrase. Do not commit or paste secrets into GitHub or public logs.
+The script asks for: HAOS SSH target (user@host **without** `-p`), a **separate SSH port** (default `22222`; the user's current HAOS SSH forwarding uses this port), Nabto identity, Nabto device hostname, and the existing key passphrase. Port 22 is not assumed. The SSH account must have access to `docker exec` on the HAOS host; merely reaching an SSH terminal addon does not guarantee that permission. Do not commit or paste secrets into GitHub or public logs.
 
 Expected success: x86_64 Python SDK startup=0, resources=0, profile session=0, query XML setup=0, RPC status=0, `Read-only batch decoded: 5/5`, clean SDK shutdown. This is a **prediction** pending live HAOS/QEMU execution, not a recorded result.
 
