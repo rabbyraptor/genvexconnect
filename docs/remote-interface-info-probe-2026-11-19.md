@@ -50,3 +50,13 @@ Source: https://github.com/nabto/nabto-cli/blob/master/src/nabto_cli.cpp
 A second test used the same known-good identity, SDK and client XML. All initialization steps and shutdown again returned 0. `nabtoRpcInvoke` again returned `26`, and the classifier printed `OTHER_JSON_ERROR` with `Diagnostic codes: []`. The JSON was discarded after a narrow code/message scan; this **still does not establish whether a remote request reached the gateway**. The upstream Cordova error object uses nested `error.body`, `error.header`, and `error.event` fields that the initial classifier did not inspect.
 
 Prepared a narrow follow-up test: [`scripts/diagnose_remote_interface_info.py`](../scripts/diagnose_remote_interface_info.py) inspects these additional fields, prints only categorical results and numeric codes, uses the pre-existing profile, and does not log raw JSON or identity data. It has **not yet been executed**. This is a diagnostic utility, not a product client.
+
+## Root cause identified — third diagnostic (2026-11-19)
+
+**USER-VERIFIED RESULT:** On Linux x86_64 Steam Deck using SDK 4.9.11 and the already valid CA-signed RSA-1024 profile, `nabtoStartup`, resource install, `nabtoOpenSession`, and `nabtoRpcSetDefaultInterface` each returned `0`; `nabtoRpcInvoke(.../get_interface_info.json)` returned `26` and the sanitized error JSON reported event **`2000027`**, category `QUERY_LOOKUP_OR_NOT_FOUND`. Session close and shutdown returned `0`; test profile cleaned up. No changes to the live HA integration.
+
+**SOURCE-VERIFIED EXPLANATION:** Nabto's official `cordova-plugin-nabto/www/nabto-constants.js` maps `2000027` to **`QUERY_MODEL_NO_SUCH_REQUEST`**. The XML supplied to the client defines only `ping.json` (query ID 17), so `get_interface_info.json` is absent from the **client-side query model**. This explains the failing RPC attempt at the query-model lookup level. It does **not** establish whether the Optima 270 gateway implements that optional metadata query, nor prove that the failed attempt reached the device.
+
+Source: https://github.com/nabto/cordova-plugin-nabto/blob/master/www/nabto-constants.js
+
+**Decision:** Close this specific probe without trying guessed IDs. Continue sourcing the authentic production `unabto_queries.xml` from LS Control's legitimate HTML-DD archive, vendor documentation or app assets. If an upstream, unambiguous query definition of `get_interface_info.json` is later found, it can be revisited without guessing IDs. Retain `ping.json` as the only verified remote RPC.
