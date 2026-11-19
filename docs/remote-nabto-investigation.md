@@ -691,3 +691,14 @@ The client identity is a profile/keypair, not simply an email/password passed to
 Nabto's 2026-09-08 policy lists Nabto 4 as maintenance-only, with security updates but no new features and no published end date. The project should proceed only with a supported SDK build, confirmed LS Control profile enrollment/authorization, and the Optima 270 RPC interface definition.
 
 Detailed source-based findings: [nabto4-client-sdk-availability-and-identity-2026-11-19.md](nabto4-client-sdk-availability-and-identity-2026-11-19.md). No integration code was changed.
+
+
+## 2026-11-19: Remote endpoint ownership, Shelly Cloud, and cumulative capture correction
+
+The public destination `80.208.69.3` is in a Fibia P/S (AS44869) address block, consistent with but not proof of the user's Waoo/Fibia summer-house ISP. The observed LS Control HTTPS API POST target is a different IP, `77.247.79.106:4160`. Four remote Nabto U_CONNECT/DATA session ports appear in the cumulative PCAP: `30721`, `30723`, `30725` and `30727`; these must not be hard-coded.
+
+The user's Shelly Plus Plug S is connected through Shelly Cloud API, but the documented Cloud Control API does not expose a general remote on-device `HTTP.GET` method or a public WAN IP status field. The reported Wi-Fi `sta_ip` is LAN-local. Thus the cloud integration alone does not currently establish the summer-house WAN address. Obtain an independent current WAN reading through an already-authorized router/provider channel and compare it with a contemporaneous passive Genvex app capture.
+
+**Data integrity:** the three fan-change PCAP files are cumulative byte-prefix copies, not independent recordings. Deduplicate by using the largest v3 file; it contains **1,325 distinct server DATA/CRYPTO packets** (rather than 2,834 obtained by summing overlaps). All 1,325 have the previously noted constant responder IV. The nine marked fan-change events remain distinct events in the ongoing recording.
+
+Full assessment: [remote-endpoint-and-shelly-cloud-ip-assessment-2026-11-19.md](remote-endpoint-and-shelly-cloud-ip-assessment-2026-11-19.md).
