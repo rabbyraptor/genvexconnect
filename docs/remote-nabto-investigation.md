@@ -1,5 +1,7 @@
 # Remote Nabto investigation
 
+> **Current-status notice (2026-11-19):** This is a historical research document. Subsequent standalone experiments successfully provisioned a CA-signed RSA-1024 profile, opened a Nabto 4 SDK 4.9.11 session, and executed authenticated remote `ping.json` with status 0 and a JSON gateway response. Earlier statements that registration, authenticated remote access, or a usable x86_64 client are still unproven are **superseded**. Native Linux ARM64 and production telemetry RPCs remain unresolved. Use the [verified facts manifest](remote-nabto-verified-facts.md) for current conclusions.
+
 ## Goal
 
 Investigate whether Home Assistant can reach a Genvex ECO 360 R H / Optima controller remotely through the same supported remote path used by Genvex Connect, without a VPN or additional hardware at the installation.
