@@ -22,6 +22,10 @@ This is a short repeatability smoke test, **not** proof of week-long uptime or a
 
 [`experimental/genvex_remote/test_sensor_model.py`](../experimental/genvex_remote/test_sensor_model.py) tests the verified batch, address order, device-ID validation, malformed and incomplete responses offline. This model is intentionally staged **outside** `custom_components/genvex_connect`, so installing or updating the existing local integration cannot be affected.
 
+## Target end-user experience (new product requirement)
+
+The user expects **Settings → Devices & services → Add integration → Genvex Remote** with an ordinary login/config form. The user should **never** have to use SSH/terminal, transfer certificates, create CSRs, copy encrypted keys, or type the local key-unlock passphrase for routine operation. The runtime App must internally handle private key + CSR generation, vendor legacy CA certificate enrollment, persistent protected credential lifecycle and SDK startup; the separate HA integration owns device/entity UI. The old standalone test app exists because its x86_64 SDK cannot run in native ARM64 HA Core. Full [architecture and security gates](remote-ha-ui-onboarding-architecture.md).
+
 ## Remaining bridge (must be implemented before live HA entities)
 
 Build a private, well-defined **HAOS runtime → Home Assistant data bridge**. The current v0.4.0 app exposes a one-shot manual RPC script, not a polling service, shared state/API or Home Assistant Config Entry. No false live-data dashboard shortcut.
