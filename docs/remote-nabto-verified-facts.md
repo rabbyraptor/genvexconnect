@@ -135,7 +135,7 @@ The screenshot also showed potential follow-up benchmarks: outdoor air **0.20 °
 
 Each address was read separately, using the reconstructed RPC 45 model's list of **one** `obj=0, address=<listed>` item, and `trailer=1`. These are source-documented Optima 270 datapoint addresses, **not enumerated or guessed IDs**. The supplied app screenshot predates this capture and is only an approximate reference, not a simultaneous ground truth. The first invocation likely incurred setup overhead, but this causal explanation is not yet independently measured. One run cannot establish typical latency or stability. Reference: [phase 1 validation](remote-phase1-sensor-validation-2026-11-19.md).
 
-**Next unverified milestone:** validate the newly successful five-element batch inside the isolated HAOS/QEMU runtime. Never assume writes are supported. No changes to the current local HA integration.
+**Next unverified milestone:** validate the newly successful five-element batch inside the isolated HAOS/QEMU runtime. **Prepared in the isolated addon v0.4.0 source** with prebuilt x86_64 Python, one-call read-only probe, and temporary encrypted-profile SSH test wrapper. This source has **not yet been rebuilt, run, or verified on the user's HAOS host**; only earlier RPC 17 ping was verified there. See [addon documentation](../haos-apps/genvex-nabto-runtime-test/DOCS.md). Never assume writes are supported. No changes to the current local HA integration.
 
 ### Phase 1B — verified read-only RPC 45 five-element batch (2026-11-19)
 
