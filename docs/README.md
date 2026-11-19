@@ -7,6 +7,7 @@
 | Document | Purpose |
 | --- | --- |
 | [Verified facts manifest](remote-nabto-verified-facts.md) | Current verified results, exact SDK statuses, identity provisioning, architecture, remaining gates |
+| [Phase 1: read-only sensor validation](remote-phase1-sensor-validation-2026-11-19.md) | Five individual source-defined RPC 45 sensor reads, validation gates and Steam Deck procedure |
 | [RPC / ARM64 next steps](remote-nabto-next-steps.md) | Read-only query discovery and Linux ARM64 validation plan |
 | [Investigation journal](remote-nabto-investigation.md) | Full history and evolving hypotheses; includes older, now-superseded status statements |
 | [Reconstructed read-only query 45](reconstructed-readonly-query45-2026-11-19.md) | Source-grounded LAN opcode mapping and offline candidate XML for remote telemetry |
