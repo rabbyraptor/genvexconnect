@@ -1,13 +1,13 @@
 # Remote Nabto research — documentation index
 
-**Start here:** [Verified facts manifest](remote-nabto-verified-facts.md). This is the current status as of **2026-11-19**: authenticated remote `ping.json` succeeded on x86_64 and **on Raspberry Pi HAOS ARM64 through QEMU emulation**, and **read-only datapoint RPC 45 also succeeded on x86_64 Steam Deck** for five separate sensors (addresses 20, 21, 22, 23, 26; all SDK RPC statuses 0). One-call batching, RPC 45 under HAOS/QEMU, native ARM64 and production packaging remain open.
+**Start here:** [Verified facts manifest](remote-nabto-verified-facts.md). This is the current status as of **2026-11-19**: authenticated remote `ping.json` succeeded on x86_64 and **on Raspberry Pi HAOS ARM64 through QEMU emulation**, and **read-only datapoint RPC 45 also succeeded on x86_64 Steam Deck** for five separate sensors (addresses 20, 21, 22, 23, 26; all SDK RPC statuses 0). One-call five-sensor batching is now also **verified on Steam Deck x86_64 (RPC status 0, 318 ms)**. RPC 45 under HAOS/QEMU, native ARM64 and production packaging remain open.
 
 ## Navigation
 
 | Document | Purpose |
 | --- | --- |
 | [Verified facts manifest](remote-nabto-verified-facts.md) | Current verified results, exact SDK statuses, identity provisioning, architecture, remaining gates |
-| [Phase 1: read-only sensor validation](remote-phase1-sensor-validation-2026-11-19.md) | Five verified individual RPC 45 sensor reads, recorded timings, and prepared one-call batch experiment |
+| [Phase 1: read-only sensor validation](remote-phase1-sensor-validation-2026-11-19.md) | Five verified individual RPC 45 sensor reads and one verified five-sensor batch; next HAOS/QEMU gate |
 | [RPC / ARM64 next steps](remote-nabto-next-steps.md) | Read-only query discovery and Linux ARM64 validation plan |
 | [Investigation journal](remote-nabto-investigation.md) | Full history and evolving hypotheses; includes older, now-superseded status statements |
 | [Reconstructed read-only query 45](reconstructed-readonly-query45-2026-11-19.md) | Source-grounded LAN opcode mapping and offline candidate XML for remote telemetry |
