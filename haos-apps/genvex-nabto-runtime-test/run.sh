@@ -20,7 +20,7 @@ run_nabto() {
     "${QEMU}" -L "${SYSROOT}" "${NABTO}" "$@"
 }
 
-bashio::log.info "Genvex Nabto runtime test v0.3.0 starting"
+bashio::log.info "Genvex Nabto runtime test v0.4.0 starting"
 bashio::log.info "Native app architecture: $(uname -m)"
 
 bashio::log.info "QEMU version:"
@@ -34,6 +34,12 @@ else
 fi
 
 bashio::log.info "Test home directory created; existing Nabto user data will not be read"
+bashio::log.info "x86_64 Python ctypes smoke test:"
+if "${QEMU}" -L "${SYSROOT}" "${SYSROOT}/usr/bin/python3" -c "import ctypes, json, urllib.parse; print(\"PASS: x86_64 Python ctypes import\")"; then
+    bashio::log.info "PASS: x86_64 Python runtime works under QEMU"
+else
+    bashio::log.error "FAIL: x86_64 Python runtime"
+fi
 bashio::log.info "Checking Nabto SDK startup and version"
 if run_nabto --home-dir "$TEST_HOME" --version; then
     bashio::log.info "PASS: Nabto SDK startup, static-resource installation and version API completed"
