@@ -1,0 +1,21 @@
+# Remote Nabto research — documentation index
+
+**Start here:** [Verified facts manifest](remote-nabto-verified-facts.md). This is the current status as of **2026-11-19**: an authenticated remote `ping.json` RPC succeeded on x86_64 using a CA-signed RSA-1024 profile and Nabto 4 Client SDK 4.9.11. Linux ARM64 and non-ping controller queries remain open.
+
+## Navigation
+
+| Document | Purpose |
+| --- | --- |
+| [Verified facts manifest](remote-nabto-verified-facts.md) | Current verified results, exact SDK statuses, identity provisioning, architecture, remaining gates |
+| [Investigation journal](remote-nabto-investigation.md) | Full history and evolving hypotheses; includes older, now-superseded status statements |
+| [RPC findings](remote-nabto-rpc-findings.md) | Earlier RPC research and open questions |
+| [Nabto 4 SDK and identity research](nabto4-client-sdk-availability-and-identity-2026-11-19.md) | Upstream SDK/CA/architecture background |
+| [LS Control sample app](lsc-nabto-test-app-analysis.md) | Source-level `ping.json` interface, demonstrated locally upstream and now remotely by us |
+| [Cloud API observation](observed-lscontrol-cloud-api.md) | HTTPS evidence; not a replacement for remote Nabto RPC |
+| [Login traffic capture](remote-login-flow-capture-2026-11-19.md) | HAR/PCAP and timing evidence |
+| [Micro DATA packet structure](nabto-data-packet-structure-2026-11-19.md) | Legacy Micro wire format and evidence limits |
+| [Fan speed capture](fan-speed-change-capture-2026-11-19.md) | Packet correlation, not verified write command |
+| [Remote endpoint assessment](remote-endpoint-and-shelly-cloud-ip-assessment-2026-11-19.md) | IP/endpoint ownership and uncertainty |
+| [HAOS isolated SDK test runtime](../haos-apps/genvex-nabto-runtime-test/DOCS.md) | QEMU/x86_64 test app on ARM64 HAOS |
+
+The existing local Home Assistant integration remains unchanged. Do not infer that any packet-correlated control call is a verified RPC write.
