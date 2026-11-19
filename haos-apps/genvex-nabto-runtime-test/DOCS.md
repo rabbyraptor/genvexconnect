@@ -39,10 +39,10 @@ The app log should show:
 ```text
 PASS: Nabto SDK startup, static-resource installation and version API completed
 PASS: Nabto certificate enumeration API completed
-PASS: Nabto discovery command completed
+Nabto discovery process returned
 ```
 
-Discovery may report zero output lines if no compatible Nabto device is found on the local network. A timeout or failure is diagnostic information, not proof that remote connectivity is impossible.
+Discovery may report zero output lines if no compatible Nabto device is found on the local network. The current upstream CLI implementation exits with status 0 after calling its discovery helper even if that helper reports failure, so a zero exit status alone is not proof that discovery succeeded. The output line count is recorded, but device identifiers and raw output are suppressed. A timeout or empty result is diagnostic information, not proof that remote connectivity is impossible.
 
 ## Install the update
 
