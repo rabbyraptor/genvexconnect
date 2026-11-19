@@ -1,5 +1,52 @@
 # Genvex Nabto Runtime Test
 
+## Version 0.4.0 — experimental authenticated read-only batch through QEMU
+
+**Status: prepared in GitHub; not built or executed on the user's HAOS host in this revision.**
+
+This release extends the previously working 0.3.0 isolated test app without changing the existing local Home Assistant integration:
+
+- Retains the working x86_64 Nabto CLI/SDK 4.9.11, QEMU, and Ubuntu 24.04 sysroot.
+- Adds a prebuilt x86_64 Python 3.12 runtime from an official Python Linux amd64 image; no foreign-architecture commands are needed to prepare the build stages.
+- Runs an x86_64 Python `ctypes` smoke test through QEMU at image build time and when the diagnostic addon starts.
+- Bundles [`probe_remote_batch.py`](probe_remote_batch.py), a **one-shot** authenticated, **read-only** RPC 45 batch, reading only the five source-documented Optima 270 datapoints (20,21,22,23,26).
+- By design the addon does **not** automatically open any remote authenticated session, load secrets, or send RPC requests when started. Its idle diagnostic flow stays unchanged.
+- The authenticated batch runs only after a deliberate manual invocation from the separate [Steam Deck orchestration script](../../scripts/run_haos_qemu_remote_batch_from_deck.sh). The orchestrator prompts for the previously configured account/device identifiers and local encrypted key passphrase; transports the existing encrypted key and public certificate over an authorized SSH session to a random temporary directory inside the isolated test container, passes the passphrase over stdin and cleans up the temporary profile on normal exit.
+- The orchestrator requires the same previously verified SSH access with the ability to call `docker exec` on the HAOS host; it does not enable or configure SSH.
+
+### Build/installation prerequisite
+
+Update **the existing local addon directory** on the HAOS host with all five files from this directory (`config.yaml`, `Dockerfile`, `run.sh`, `DOCS.md`, `probe_remote_batch.py`). Rebuild/reinstall the addon from the local addon store, then start it manually. **Changing the GitHub files alone does not update the installed addon.** How the local addon directory is mounted and how rebuild is triggered depend on the user's existing HAOS/SSH setup; do not guess a host path. Check the addon log for:
+
+```text
+Genvex Nabto runtime test v0.4.0 starting
+PASS: x86_64 Python runtime works under QEMU
+```
+
+A build failure means the x86_64 Python dependency set needs correction before any authenticated test. No existing HA integration or its local transport should be touched.
+
+### Run after the addon is confirmed running
+
+From the Steam Deck with the existing encrypted Nabto profile and existing key-based SSH to HAOS:
+
+```bash
+umask 077
+RUNNER=$(mktemp /tmp/genvex-haos-batch.XXXXXX.sh) || exit 1
+curl -fsSL 'https://raw.githubusercontent.com/rabbyraptor/genvexconnect/remote-nabto-connection/scripts/run_haos_qemu_remote_batch_from_deck.sh' -o "$RUNNER" || { rm -f "$RUNNER"; exit 1; }
+bash "$RUNNER"
+STATUS=$?
+rm -f "$RUNNER"
+echo "HAOS batch test exit status: $STATUS"
+```
+
+The script asks for: HAOS SSH target (user@host as used in the previous working HAOS ping), Nabto identity, Nabto device hostname, and the existing key passphrase. Do not commit or paste secrets into GitHub or public logs.
+
+Expected success: x86_64 Python SDK startup=0, resources=0, profile session=0, query XML setup=0, RPC status=0, `Read-only batch decoded: 5/5`, clean SDK shutdown. This is a **prediction** pending live HAOS/QEMU execution, not a recorded result.
+
+**Safety caveats:** This is proprietary Nabto 4 SDK under emulation with legacy RSA-1024 credentials. Profile transfer via SSH is transient, but does leave sensitive encrypted key material briefly in the addon container's writable filesystem. The passphrase is transmitted via SSH over stdin and exists in both processes' memory. A hard crash or lost SSH connection may leave the temporary directory; remove any leftover `/tmp/genvex-haos-batch.*` folders from the isolated addon container before next tests, and do not expose debug output containing identity/hostname. SDK redistribution terms remain unresolved. Runtime stability, timeouts and subsequent reconnects remain untested.
+
+---
+
 This is an isolated test app for the Raspberry Pi 4 / Home Assistant OS ARM64 host.
 
 ## Version 0.3.0 — SDK API and local-network checks
