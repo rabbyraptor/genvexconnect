@@ -44,3 +44,9 @@ Source: https://github.com/nabto/cordova-plugin-nabto/blob/master/www/nabto-erro
 The official CLI's `checkInterface()` invokes `get_interface_info.json` in the strict-check path after registering an externally supplied XML interface; the implementation **does not supply a get_interface_info query in that function**. So it remains possible that the SDK recognizes the convention specially or that the externally registered interface must contain the query elsewhere. The diagnostic JSON is decisive and should be captured **only as a whitelisted error category and code**, not raw output.
 
 Source: https://github.com/nabto/nabto-cli/blob/master/src/nabto_cli.cpp
+
+## Repeat test with expanded classifier (user output, 2026-11-19)
+
+A second test used the same known-good identity, SDK and client XML. All initialization steps and shutdown again returned 0. `nabtoRpcInvoke` again returned `26`, and the classifier printed `OTHER_JSON_ERROR` with `Diagnostic codes: []`. The JSON was discarded after a narrow code/message scan; this **still does not establish whether a remote request reached the gateway**. The upstream Cordova error object uses nested `error.body`, `error.header`, and `error.event` fields that the initial classifier did not inspect.
+
+Prepared a narrow follow-up test: [`scripts/diagnose_remote_interface_info.py`](../scripts/diagnose_remote_interface_info.py) inspects these additional fields, prints only categorical results and numeric codes, uses the pre-existing profile, and does not log raw JSON or identity data. It has **not yet been executed**. This is a diagnostic utility, not a product client.
