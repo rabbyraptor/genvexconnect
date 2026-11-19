@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Phase 1B: one five-item read-only Nabto RPC 45 batch for authorized Optima 270.
 
-Uses an existing locally provisioned client profile. No write RPC, no batch requests,
+Uses an existing locally provisioned client profile. No write RPC, exactly one batch request,
 no raw JSON, account, hostname, certificate, private key or passphrase in logs.
 Five separate sensor reads are already verified; batch ordering is NOT yet verified.
 """
@@ -118,7 +118,13 @@ def take(ptr):
     finally:
         dll.nabtoFree(ptr)
 
-password = getpass.getpass("Existing encrypted test key passphrase: ")
+# Optional stdin mode avoids getpass(/dev/tty) terminal/paste handling quirks.
+# The wrapper collects the passphrase silently and pipes it to stdin.
+# No passphrase in environment variables or argv.
+if "--passphrase-stdin" in sys.argv:
+    password = sys.stdin.readline().rstrip("\r\n")
+else:
+    password = getpass.getpass("Existing encrypted test key passphrase: ")
 if not password:
     sys.exit("Empty passphrase")
 
