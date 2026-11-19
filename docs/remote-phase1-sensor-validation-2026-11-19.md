@@ -2,7 +2,7 @@
 
 Date: 2026-11-19  
 Branch: `remote-nabto-connection`  
-**Current state: COMPLETE on Linux x86_64 Steam Deck — five independently addressed read-only RPC 45 calls successful; HAOS/QEMU still pending.**
+**Current state: PHASE 1 + PHASE 1B COMPLETE on Linux x86_64 Steam Deck — five individual read-only RPC 45 calls and one five-item RPC batch successful. HAOS/QEMU still pending.**
 
 ## Baseline and success criterion
 
@@ -78,8 +78,25 @@ Earlier official iOS screenshot at **22:33** reported supply 6.70 °C, outdoor 0
 
 **Outcome:** Phase 1 individual read-only sensor coverage **passed on Steam Deck**. Next gate: run an isolated single multi-item **read-only** RPC-ID-45 batch for the same five source-defined addresses; verify response count/order/mapping and device behavior. Only after batch verification should HAOS/QEMU and integration work proceed. Native ARM64 SDK, certified binary redistribution and production resilience remain open.
 
-## Phase 1B: batch read prepared, not yet executed
+## Phase 1B: successful five-element batch
 
 The newly prepared [`scripts/probe_remote_sensors_batch_phase1b.py`](../scripts/probe_remote_sensors_batch_phase1b.py) performs **one** authorized, read-only RPC 45 request containing five list entries in exactly the source-documented order `20,21,22,23,26`, with one `obj=0` per entry and trailer 1. The proposed response schema is the same list of signed 16-bit values already verified in single-element form. The probe verifies that the response list contains **exactly five** values, then associates each response position to its requested address. It does not send writes, scan addresses, or log sensitive account/device data; failure yields a nonzero exit code. Static checks: [`tests/test_remote_sensor_batch_phase1b.py`](../tests/test_remote_sensor_batch_phase1b.py).
 
-**This is a hypothesis to test, not a verified batch capability.** Although each address worked individually, the gateway's maximum list size, response length, and exact list ordering have not been confirmed. The next external action is one controlled execution on the already authorized Steam Deck using the same existing profile. Do not deploy batching on HAOS or Home Assistant before the result is reviewed.
+**UPDATED AFTER USER TEST:** batch capability is now verified for exactly these five addresses and this request order; other sizes, permutations and HAOS/QEMU execution are untested.
+
+### Phase 1B — verified read-only RPC 45 five-element batch (2026-11-19)
+
+**VERIFIED from user's Steam Deck terminal output:** same existing authenticated x86_64 Nabto SDK 4.9.11 test profile, with explicit passphrase via stdin. `nabtoStartup`, `nabtoInstallDefaultStaticResources`, `nabtoOpenSession` and `nabtoRpcSetDefaultInterface` all returned **0**. Exactly one `nabtoRpcInvoke` for query **45** with the ordered five-item request `obj=0`, addresses **20, 21, 22, 23, 26**, trailer=1, returned **RPC status 0** in **318 ms**. Its response decoded to **five signed int16 values**:
+
+| Address | Sensor | Raw | Converted |
+| ---: | --- | ---: | ---: |
+| 20 | Supply air | 365 | 6.50 °C |
+| 21 | Outdoor air | 299 | -0.10 °C |
+| 22 | Exhaust air | 313 | 1.30 °C |
+| 23 | Extract air | 377 | 7.70 °C |
+| 26 | Humidity | 65 | 65 % |
+
+Log ended `Read-only batch decoded: 5/5`, `Result: BATCH_DECODED`, session close 0, SDK shutdown 0, cleaned temporary profile and wrapper success. This demonstrates **one working five-address remote batch**, including response count and values consistent with individual reads and expected position ordering. Since no response-side address IDs were present, response **ordering is strongly corroborated rather than independently proven for every possible list**. An additional repeated/reordered batch could check this if needed. The 318 ms is one observed elapsed time and not a latency benchmark.
+
+**Now next gate:** run the same read-only batch inside the **existing isolated** HAOS Raspberry Pi 4 ARM64/QEMU test runtime. Do not change the working Home Assistant integration, commit private credentials or SDK binaries, or enable writes. Confirm SDK/CLI invocation and response decoding in the emulated environment; only then plan HA entity mapping and runtime deployment.
+
