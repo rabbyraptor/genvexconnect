@@ -2,7 +2,7 @@
 
 **Status:** authenticated remote Nabto RPC 17 (ping) and RPC 45 (five independent sensor reads and one five-item batch) proven on 2026-11-19; supply-air interpretation independently corroborated by the user's official Genvex Connect app screenshot.  
 **Target:** Genvex Connect / Optima 270; eventual Home Assistant OS on Raspberry Pi (Linux aarch64).  
-**Evidence level:** authenticated remote ping on Linux x86_64 Steam Deck and on Raspberry Pi HAOS ARM64/QEMU; additionally, read-only datapoint RPC ID 45 returned five successful one-sensor reads **and one successful five-sensor batch in a single RPC** on Steam Deck x86_64. RPC 45 has not yet been tested on HAOS/QEMU. This is emulation for HAOS, not native ARM64 or a production integration.  
+**Evidence level:** authenticated remote ping on Linux x86_64 Steam Deck and on Raspberry Pi HAOS ARM64/QEMU; additionally, read-only datapoint RPC ID 45 returned five successful one-sensor reads **and one successful five-sensor batch in a single RPC** on Steam Deck x86_64. RPC 45 was also successfully tested as a five-sensor **remote batch on HAOS ARM64/QEMU**, RPC status 0, one observed RPC duration 1,150 ms. This is emulation for HAOS, not native ARM64 or a production integration.  
 **Scope:** experimental remote transport only. The working local UDP integration is unchanged.
 
 This file is the **single source of truth for the current project state**. The other documents preserve investigation history, hypotheses and capture evidence. When they conflict with this document's verified later experiments, prefer this manifest and the underlying captured output.
@@ -135,7 +135,7 @@ The screenshot also showed potential follow-up benchmarks: outdoor air **0.20 °
 
 Each address was read separately, using the reconstructed RPC 45 model's list of **one** `obj=0, address=<listed>` item, and `trailer=1`. These are source-documented Optima 270 datapoint addresses, **not enumerated or guessed IDs**. The supplied app screenshot predates this capture and is only an approximate reference, not a simultaneous ground truth. The first invocation likely incurred setup overhead, but this causal explanation is not yet independently measured. One run cannot establish typical latency or stability. Reference: [phase 1 validation](remote-phase1-sensor-validation-2026-11-19.md).
 
-**Next unverified milestone:** validate the newly successful five-element batch inside the isolated HAOS/QEMU runtime. **Prepared in the isolated addon v0.4.0 source** with prebuilt x86_64 Python, one-call read-only probe, and temporary encrypted-profile SSH test wrapper. This source has **not yet been rebuilt, run, or verified on the user's HAOS host**; only earlier RPC 17 ping was verified there. See [addon documentation](../haos-apps/genvex-nabto-runtime-test/DOCS.md). Never assume writes are supported. No changes to the current local HA integration.
+**The HAOS/QEMU five-element RPC 45 batch has now succeeded in the isolated addon v0.4.0.** Read-only data via the emulated architecture is verified; long-running operation, restart and reconnect behavior, SDK licensing, and Home Assistant entities remain unverified. See [addon documentation](../haos-apps/genvex-nabto-runtime-test/DOCS.md). Never assume writes are supported. No changes to the current local HA integration.
 
 ### Phase 1B — verified read-only RPC 45 five-element batch (2026-11-19)
 
@@ -152,6 +152,28 @@ Each address was read separately, using the reconstructed RPC 45 model's list of
 Log ended `Read-only batch decoded: 5/5`, `Result: BATCH_DECODED`, session close 0, SDK shutdown 0, cleaned temporary profile and wrapper success. This demonstrates **one working five-address remote batch**, including response count and values consistent with individual reads and expected position ordering. Since no response-side address IDs were present, response **ordering is strongly corroborated rather than independently proven for every possible list**. An additional repeated/reordered batch could check this if needed. The 318 ms is one observed elapsed time and not a latency benchmark.
 
 **Now next gate:** run the same read-only batch inside the **existing isolated** HAOS Raspberry Pi 4 ARM64/QEMU test runtime. Do not change the working Home Assistant integration, commit private credentials or SDK binaries, or enable writes. Confirm SDK/CLI invocation and response decoding in the emulated environment; only then plan HA entity mapping and runtime deployment.
+
+## Verified HAOS ARM64/QEMU five-sensor RPC 45 batch — 2026-11-19
+
+**VERIFIED from the user's successful Raspberry Pi 4 HAOS terminal test**, orchestrated from Steam Deck through SSH on its explicitly configured port, into the running isolated test addon v0.4.0. The addon boot log independently showed `aarch64`, functioning QEMU x86_64, successful x86_64 Python ctypes import, and Nabto 4 Client SDK **4.9.11**. The temporary encrypted client profile was transferred for the test; the remote query was run with the bundled x86_64 Python probe under QEMU, **not native ARM64 code**.
+
+- SDK startup **0**, static resources **0**, authenticated profile session **0**, reconstructed RPC interface XML registration **0**.
+- Exactly **one read-only RPC ID 45** with ordered obj=0 addresses **20, 21, 22, 23, 26**, and trailer=1. RPC status **0**, elapsed **1,150 ms** for this invocation.
+- Response decoded **5/5** signed 16-bit values in requested order:
+
+| Sensor | Address | Raw int16 | Interpreted value |
+| --- | ---: | ---: | ---: |
+| Supply air | 20 | 367 | 6.70 °C |
+| Outdoor air | 21 | 295 | -0.50 °C |
+| Exhaust air | 22 | 313 | 1.30 °C |
+| Extract air | 23 | 377 | 7.70 °C |
+| Humidity | 26 | 65 | 65 % |
+
+- Client session closed **0**, SDK shutdown **0**, SDK temporary profile cleaned, and orchestration reported success.
+
+**Milestone:** real device telemetry from an authenticated proprietary Nabto 4/Micro gateway is now proven **from HAOS Raspberry Pi ARM64 via isolated x86_64 QEMU SDK runtime**. This is a single successful test run, **not** a supported native ARM64 SDK, a shipping Home Assistant integration, a latency benchmark, a long-running polling service, or verified writes. Batch response value order is strongly corroborated by the independently verified single-address measurements but is not accompanied by per-item response identifiers. The existing LAN UDP integration remained unchanged. Maintain credential protection and check the licensing/redistribution rights of the proprietary SDK before production distribution.
+
+**Next safe engineering work:** establish restart/reconnect behavior, bounded polling and secret lifecycle in the isolated test runtime; then design a remote data-coordinator/transport adapter isolated from the working LAN integration. No write RPCs.
 
 ## Safety, privacy and engineering guardrails
 
