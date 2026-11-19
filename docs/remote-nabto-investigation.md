@@ -401,3 +401,55 @@ Assuming the HAOS host is the Raspberry Pi 4 / 64-bit ARM installation already i
 Before changing the integration, establish the exact HAOS host architecture and runtime from Home Assistant's own System Information page, then check whether any available Nabto 4 client artifact matches that architecture and ABI. If the host is aarch64 and no Linux Micro client exists, stop trying to install the x86_64 wrapper on HAOS and concentrate on the documented remote RPC/API path or obtaining a compatible client library.
 
 No new credentials or remote requests are needed for this architecture check.
+
+
+## Public Nabto release matrix checked (2026-11-19)
+
+A further check of Nabto's own current repositories resolves an apparent contradiction: Linux ARM64 Nabto client binaries do exist publicly, but the available ARM64 release is **Nabto 5 / Edge**, not the legacy Nabto 4 / Micro client required by the Genvex traffic.
+
+Evidence:
+
+- The `nabto-client-sdk-releases` repository explicitly says it contains Nabto Client SDK releases from v5.12.0 onward. This is the Edge generation.
+- Nabto's own `nabto-cli` README explicitly marks that CLI as Nabto 4/Micro and says the legacy Client SDK libraries must be obtained separately from Nabto.
+- The current `nabto-cli` GitHub Actions workflow fetches Nabto Client SDK 4.9.11 and lists only `linux64` for Linux, plus `mac-arm64` for macOS. It does not list Linux aarch64.
+- The current `nabto4-python-wrapper` was updated on 2026-10-27 to SDK 4.9.11 and still hard-codes Linux to `linux64` in `setup.py`.
+
+So the previous conclusion should be stated precisely: **there is no publicly documented Linux aarch64 Nabto 4/Micro client artifact in the official sources checked**. We cannot conclude that Nabto has never built one privately or can never provide one.
+
+The existence of the Edge ARM64 library does not unblock Genvex: Nabto documents Edge and Micro as incompatible protocol generations. Do not install the Edge library as a substitute.
+
+Primary sources:
+- https://github.com/nabto/nabto-client-sdk-releases/blob/main/README.md
+- https://github.com/nabto/nabto-cli/blob/master/README.md
+- https://github.com/nabto/nabto-cli/blob/master/.github/workflows/build.yml
+- https://github.com/nabto/nabto4-python-wrapper/blob/master/setup.py
+- https://github.com/nabto/nabto4-python-wrapper/commit/8ab0cb550d3d8eb9f16148283daa042cf9d1fbc5
+- https://www.nabto.com/docs/developer/guides/overview/edge-vs-micro.html
+
+### HAOS deployment conclusion
+
+A dedicated HAOS app/add-on remains a valid way to isolate a native transport service and its dependencies. Home Assistant's current app build documentation supports multi-architecture images for `amd64` and `aarch64`, and exposes `BUILD_ARCH` / `TARGETARCH` to select architecture-specific build behavior.
+
+However, containerization only solves dependency isolation and packaging. It does not convert the Edge client into a Micro client or supply a missing Micro ARM64 binary. The add-on route becomes actionable as soon as one of these exists:
+
+- a Linux aarch64 Nabto 4/Micro SDK;
+- a supported, documented Genvex remote API/RPC client that can run on aarch64;
+- or a separately verified remote transport implementation that does not depend on the closed SDK.
+
+Home Assistant app build references:
+- https://contributors.home-assistant.io/apps/guides/dockerfile/
+- https://github.com/home-assistant/docker-base
+
+### Next HAOS-side check
+
+The next user-side check should be read-only and only needs to establish the actual architecture reported by the running HAOS host. From the Terminal & SSH app, run:
+
+```sh
+echo "=== HAOS host architecture ==="
+uname -m
+echo
+echo "=== Home Assistant installation info ==="
+ha info 2>/dev/null | grep -Ei 'arch|machine|version|operating_system' || true
+```
+
+Expected architecture names include `aarch64` (64-bit ARM) or `x86_64` (64-bit Intel/AMD). This check does not change configuration or contact the Genvex device.
