@@ -1,7 +1,7 @@
 # Reconstructing a read-only remote RPC query from the LAN implementation
 
 Date: 2026-11-19  
-**Status: experimentally promising hypothesis; NOT verified via remote device.**
+**Status: authenticated read-only RPC 45 verified via Steam Deck x86_64 on 2026-11-19; source-derived schema works for one sensor. Numeric sensor-to-temperature interpretation still awaits independent comparison.**
 
 ## New observation: known remote query 17 matches the LAN opcode and encoding
 
@@ -20,7 +20,7 @@ The public LAN code specifies:
 | LAN application command | Hex | Decimal | Purpose | Project remote status |
 | --- | ---: | ---: | --- | --- |
 | `PING` | 0x11 | 17 | Identify device | **VERIFIED REMOTE** |
-| `DATAPOINT_READLIST` | 0x2d | **45** | Read datapoints | **UNVERIFIED REMOTE** |
+| `DATAPOINT_READLIST` | 0x2d | **45** | Read datapoints | **VERIFIED REMOTE for a single object/address** |
 | `SETPOINT_READLIST` | 0x2a | **42** | Read setpoints | **UNVERIFIED REMOTE** |
 | `SETPOINT_WRITELIST` | 0x2b | 43 | Write setpoints | **DO NOT TEST** |
 
@@ -46,7 +46,7 @@ Nabto's original [uNabto query C code](https://github.com/nabto/unabto/blob/mast
 - [`tests/fixtures/candidate_readonly_query45.xml`](../tests/fixtures/candidate_readonly_query45.xml) — *hypothetical* read-only schema, mapping query ID **45** to list fields `obj:uint8`, `address:uint32`, and an explicit `trailer:uint8=1`, with a candidate response list of signed 16-bit values.
 - [`tests/test_reconstructed_readonly_rpc.py`](../tests/test_reconstructed_readonly_rpc.py) — offline-only comparison against public LAN serialization.
 
-The author ran **four equivalent offline structural tests**, passing for one, three, and zero datapoints and a schema assertion. The test reimplements the documented encoding and checks exact bytes; **this does NOT prove the closed-source Nabto 4 Client SDK will accept the XML or serialize it identically**.
+The author ran **four equivalent offline structural tests**, passing for one, three, and zero datapoints and a schema assertion. The test reimplements the documented encoding and checks exact bytes; **the SDK now independently accepted the candidate XML and decoded a single remote response successfully**.
 
 The candidate response schema `list(values: int16)` reflects the publicly documented local decoder's `uint16 count` followed by signed 16-bit values. The trailing `01` in the LAN request is not yet explained; modeling it as an extra `uint8` parameter is a **testable hypothesis**.
 
@@ -60,10 +60,14 @@ The candidate response schema `list(values: int16)` reflects the publicly docume
 
 ## Risk/constraints
 
-Remote reachability of query 45, device handler behavior, XML request's trailing byte, exact response layout, and licensing/distribution of the legacy binary **remain OPEN**. A valid local schema and working ping do not prove a new query is present remotely. Keep the existing HAOS integration untouched.
+Remote reachability of query 45 for one address, SDK XML acceptance, and one-element int16 response decoding are now **VERIFIED**. The exact semantic meaning of the response without a contemporaneous local comparison, general multi-value behavior, HAOS/QEMU operation of RPC 45, and SDK licensing/distribution remain **OPEN**. A valid local schema and working ping do not prove a new query is present remotely. Keep the existing HAOS integration untouched.
 
 ## Prepared single-sensor authenticated read-only test
 
 A dedicated, standalone probe is now available at [`scripts/probe_remote_datapoint45_readonly.py`](../scripts/probe_remote_datapoint45_readonly.py). It uses the already provisioned, encrypted RSA-1024 test profile, registers **only** the candidate RPC opcode 45, and sends **at most one** read for `obj=0, address=20` after the XML is accepted. It does not enable write opcode 43, make arbitrary-ID requests, print raw responses, alter Home Assistant files, or store credentials in Git. It uses the existing test profile and suppresses personal identifiers in printed output.
 
-The script has **not been executed against the Genvex gateway**. Its local XML acceptance by the actual Nabto 4 SDK and the response decoding remain to be tested. If the SDK returns a diagnostic, record only sanitized status/event codes. A plausible numerical temperature still requires independent comparison against the known local integration.
+**The user has now executed the script against the authorized Genvex gateway.** The SDK accepted the XML and returned RPC status 0, with one signed 16-bit datapoint value (367). If the SDK returns a diagnostic, record only sanitized status/event codes. A plausible numerical temperature still requires independent comparison against the known local integration.
+
+## Verified Steam Deck remote test (2026-11-19)
+
+**Status 0 for XML registration and RPC invocation.** SDK 4.9.11, authorized CA-signed RSA-1024 test identity; query ID 45, obj 0, address 20, list count 1. Response was decoded as raw signed int16 value **367**; model-derived supply temperature is **6.7 °C**. Session closure and cleanup succeeded. This is a real remote response using our *own reconstructed RPC XML*, not the vendor's original XML. **Independent temperature comparison is still needed**; no claim that 6.7 °C is already validated as the actual air temperature. No writes were attempted; the working Home Assistant integration is unchanged.
