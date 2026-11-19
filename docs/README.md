@@ -6,6 +6,8 @@
 
 | Document | Purpose |
 | --- | --- |
+| [Resource catalogue](remote-nabto-resources.md) | Curated official Nabto / Home Assistant documentation, upstream Github repositories, reverse-engineering links and verified runtime evidence |
+| [UI onboarding + automatic certificate architecture](remote-ha-ui-onboarding-architecture.md) | Why the QEMU App exists, desired real HA integration, login/config flow, automatic CSR/certificate issuance and secret lifecycle |
 | [Remote HA entity bridge plan](remote-ha-entity-plan.md) | First five read-only entity specifications, offline test model, secure runtime-to-HA bridge requirements and deployment gates |
 | [Verified facts manifest](remote-nabto-verified-facts.md) | Current verified results, exact SDK statuses, identity provisioning, architecture, remaining gates |
 | [Phase 1: read-only sensor validation](remote-phase1-sensor-validation-2026-11-19.md) | Five verified individual RPC 45 sensor reads and one verified five-sensor batch; HAOS/QEMU batch now verified; next resilience/integration gates |
