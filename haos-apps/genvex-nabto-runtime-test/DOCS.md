@@ -7,6 +7,7 @@ This is an isolated test app for the Raspberry Pi 4 / Home Assistant OS ARM64 ho
 The app:
 
 - Runs natively as an ARM64 Home Assistant app.
+- Uses host networking so the local Nabto discovery operation can access the physical LAN; the app exposes no listening ports and remains manual-start only.
 - Includes the statically linked ARM64 QEMU x86-64 user-mode emulator.
 - Uses the official Nabto 4 CLI v1.3.0 release and its bundled Nabto Client SDK 4.9.11 shared library.
 - Supplies an x86-64 Ubuntu 24.04 userspace library tree.
@@ -24,7 +25,7 @@ Important source-code clarification: the Nabto CLI calls `nabtoStartup()` and `n
 - No certificate or private key is created.
 - The test uses a fresh temporary home directory, so it does not inspect any existing Nabto user profiles or certificates.
 - Certificate names/fingerprints and discovered device identifiers are never written to the app log.
-- Local discovery is read-only and limited to the local network.
+- Local discovery is read-only and limited to the local network. Host networking is enabled because Home Assistant documents it as necessary for apps that must see real network interfaces or perform discovery protocols; this lowers the app's security rating, so it remains a manual diagnostic app.
 - No remote hostname is contacted.
 - No user profile/session is opened.
 - No RPC, pairing, stream, tunnel or controller command is invoked.
@@ -60,3 +61,4 @@ Stop the app from Settings > Apps after inspecting the log. It is configured for
 - Legacy Nabto API client application guide (TEN025): https://downloads.nabto.com/assets/docs/TEN025%20Writing%20a%20Nabto%20API%20client%20application.pdf
 - QEMU user-mode documentation: https://www.qemu.org/docs/master/user/main.html
 - Home Assistant app Dockerfile guide: https://contributors.home-assistant.io/apps/guides/dockerfile/
+- Home Assistant app host networking and discovery guidance: https://contributors.home-assistant.io/apps/guides/hardware/
