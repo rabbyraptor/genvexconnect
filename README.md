@@ -1,4 +1,6 @@
 # Genvex Connect
+
+> **Remote Nabto 4 research (experimental):** A standalone Linux x86_64 client has successfully used a Nabto CA-signed RSA-1024 identity and Nabto 4 SDK 4.9.11 to invoke the Genvex gateway's remote `ping.json` RPC. This is **not yet** remote support in the Home Assistant integration or a native Linux ARM64 client. See the [verified facts manifest](docs/remote-nabto-verified-facts.md) and [research index](docs/README.md). The working local UDP integration remains unchanged.
 ![installation_badge](https://img.shields.io/badge/dynamic/json?color=41BDF5&logo=home-assistant&label=integration%20usage&suffix=%20installs&cacheSeconds=15600&url=https://analytics.home-assistant.io/custom_integrations.json&query=$.genvex_connect.total)
 
 This component integrates Genvex Connect and Nilan Gateway devices directly into Home Assistant.
