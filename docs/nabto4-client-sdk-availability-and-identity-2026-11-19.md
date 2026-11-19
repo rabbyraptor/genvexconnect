@@ -83,7 +83,7 @@ Source: https://downloads.nabto.com/assets/docs/TEN025%20Writing%20a%20Nabto%20A
 
 ## 4. Relevance of the observed constant responder IV
 
-The three user-supplied fan-change captures contain 2,834 server-to-phone Nabto DATA/CRYPTO packets from the observed remote UDP endpoint. Every packet's 16-byte IV field is `00 01 02 ... 0f`. The client-to-endpoint packets use varying IV values.
+The three user-supplied fan-change PCAPs are cumulative snapshots of one recording, not independent captures. The largest v3 file contains **1,325 distinct server-to-phone Nabto DATA/CRYPTO packets** from the observed remote UDP endpoint (the earlier 2,834 total mistakenly added overlapping packets). Every packet's 16-byte IV field is `00 01 02 ... 0f`. The client-to-endpoint packets use varying IV values.
 
 The public uNabto source's encryption routine calls `nabto_random(dst, 16)` to generate the IV. Its separate dummy random module emits the byte sequence `00, 01, 02, ...` and explicitly warns that it is an incomplete, cryptographically useless implementation. Nabto's TEN036 security guide states that AES-CBC IVs should be unique under a key and unguessable at encryption time.
 
