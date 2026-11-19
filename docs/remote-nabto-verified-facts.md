@@ -1,8 +1,8 @@
 # Remote Nabto 4 — verified facts manifest
 
-**Status:** remote read-only RPC proven on 2026-11-19.  
+**Status:** authenticated remote Nabto RPC 17 (ping) and RPC 45 (single datapoint read) proven on 2026-11-19; interpretation of sensor values still requires independent comparison.  
 **Target:** Genvex Connect / Optima 270; eventual Home Assistant OS on Raspberry Pi (Linux aarch64).  
-**Evidence level:** successful end-to-end read-only remote RPC both on Linux x86_64 Steam Deck (Python ctypes + Nabto 4 SDK 4.9.11) **and on Raspberry Pi HAOS ARM64** (x86_64 Nabto CLI/SDK through QEMU user-mode). This is emulation, not a native ARM64 client or production integration.  
+**Evidence level:** authenticated remote ping on Linux x86_64 Steam Deck and on Raspberry Pi HAOS ARM64/QEMU; additionally, read-only datapoint RPC ID 45 returned an SDK-success response on Steam Deck x86_64. RPC 45 has not yet been tested on HAOS/QEMU. This is emulation for HAOS, not native ARM64 or a production integration.  
 **Scope:** experimental remote transport only. The working local UDP integration is unchanged.
 
 This file is the **single source of truth for the current project state**. The other documents preserve investigation history, hypotheses and capture evidence. When they conflict with this document's verified later experiments, prefer this manifest and the underlying captured output.
@@ -28,8 +28,9 @@ This file is the **single source of truth for the current project state**. The o
 | LS Control RPC ping definition | **SOURCE + VERIFIED** | Nabto's `cordova-lsc-test/www/js/index.js` defines query ID `17`, name `ping.json`, one uint32 input `ping`, and response fields below; the exact interface successfully installed through `nabtoRpcSetDefaultInterface = 0` in our test. |
 | **Remote authenticated RPC** | **VERIFIED** | With the same 1024-bit profile and the device's private, account-associated `<12-digit-id>.remote.lscontrol.dk` hostname: `nabtoRpcInvoke('nabto://<device>/ping.json?ping=1885957735') = 0`, yielding the gateway response below. This is the key end-to-end milestone. |
 | **HAOS ARM64 + QEMU remote RPC** | **VERIFIED** | On Raspberry Pi HAOS, isolated test app `app_local_genvex_nabto_runtime_test` ran Nabto CLI v1.3.0 / SDK 4.9.11 through `qemu-x86_64-static -L /opt/x86_64-sysroot`; encrypted RSA-1024 profile transferred securely via SSH, `ping.json` RPC returned exit status `0` and the same six numeric gateway values as the Steam Deck baseline; temporary profile removal reported `True`. The native SDK process remains x86_64 emulated. |
+| **RPC 45 / datapoint read** | **VERIFIED ON X86_64** | SDK accepted source-derived XML (0), invoked RPC 45 for one known read-only datapoint (obj=0, address=20) (0), and decoded one signed 16-bit raw value 367 -> *candidate* supply-air temperature 6.7 °C. Independent comparison and HAOS/QEMU support remain OPEN. No writes. |
 | Native Linux aarch64 Nabto 4 client | **OPEN** | No native Linux aarch64 SDK/client found or validated; no completed Home Assistant remote adapter. |
-| Non-ping Genvex RPC operations | **OPEN** | No production Optima 270 telemetry or control RPC interface identified/validated yet. Local UDP point mappings are **not** automatically the remote Nabto RPC schema. |
+| Additional Genvex RPC operations | **PARTIALLY OPEN** | Read-only datapoint RPC **45** verified for a single sensor. Other addresses, batched reads, setpoint read ID 42 and all write/control operations remain untested. No complete production XML recovered. Local register addresses are distinct from application query IDs. |
 | Route details | **OPEN** | A successful remote response does **not** distinguish direct P2P from Nabto relay; do not claim which was used without separate evidence. |
 
 ### End-to-end response actually received
@@ -58,7 +59,7 @@ Steam Deck (Linux x86_64)
       -> Nabto CA-signed RSA-1024 identity + encrypted private key
         -> legacy Nabto remote transport (path/relay not yet established)
           -> Genvex Connect / Optima 270
-            -> RPC 17, ping.json -> JSON response
+            -> RPC 17 (ping) and RPC 45 (single Steam Deck datapoint read) -> JSON response
 ```
 
 **No iPhone translation layer is required for this proven path.** The HAOS ARM64 test now proves remote RPC **under x86_64 user-mode emulation**. This is SDK-backed, **not** a pure-Python Micro Nabto implementation, native ARM64 library, licensed production bundle or completed Home Assistant integration.
@@ -84,6 +85,33 @@ Steam Deck (Linux x86_64)
 - Endpoint: `nabto://<device-id>.remote.lscontrol.dk/ping.json?ping=1885957735` (replace device ID only in private test environment).
 - RPC interface from Nabto's own LS Control source: query `17`, input `ping: uint32`; response `Pong`, `Devicenumber`, `Model`, `Version`, `SlaveDevicenumber`, `SlaveModel` as uint32, plus `UserNames:` as raw. Do not print or publish the username field.
 
+### First non-ping authenticated remote datapoint result (2026-11-19)
+
+**VERIFIED USER OUTPUT, Steam Deck x86_64, Nabto SDK 4.9.11:**
+
+```text
+===== READ-ONLY RPC 45 CANDIDATE =====
+SDK startup: 0
+Resources: 0
+Profile session: 0
+Candidate XML registered: 0
+Invoking: read-only ID 45; object 0; address 20; count 1
+RPC status: 0
+Raw supply temperature register: 367
+Decoded temperature (candidate): 6.7 C
+Result: RESPONSE_DECODED_UNVERIFIED
+Session close: 0
+SDK shutdown: 0
+Temporary profile: removed on normal exit
+Test exit status: 0
+```
+
+The candidate query ID 45 was reconstructed from the source-defined LAN opcode DATAPOINT_READLIST=0x2d. The XML request was a list containing a single entry (obj=0, address=20) and a trailing uint8=1; response schema: list(values:int16). The client-side *name* candidate_read_datapoints.json was chosen by us and is not claimed as the vendor's original RPC name. The authenticated remote gateway supplied a successful decoded response.
+
+**Boundary:** SDK RPC status 0 and decoded response confirm a working read-only RPC 45 operation, not just a ping. Raw 367 is a device response. The temperature interpretation 6.7 °C derives from the public Optima 270 LAN adapter (raw-300)/10 and has NOT been independently validated against the contemporaneous local sensor or app. RPC 45 has NOT yet been tested on HAOS/QEMU. Do not infer remote support for query 42, arbitrary addresses, batching, control or writes. No existing HA integration changes.
+
+Related: [RPC 45 derivation](reconstructed-readonly-query45-2026-11-19.md) · [read-only probe](../scripts/probe_remote_datapoint45_readonly.py).
+
 ## Safety, privacy and engineering guardrails
 
 1. **Do not commit** actual client certificates, private keys, account passwords, local passphrases, device identifiers, or unredacted PCAP/HAR captures.
@@ -96,7 +124,7 @@ Steam Deck (Linux x86_64)
 
 ## Next experiments (ordered)
 
-1. **Map more *read-only* RPCs:** obtain the actual Optima 270 / LS Control query model (`unabto_queries.xml`) from available firmware, app resources or manufacturer documentation; do **not** guess IDs or perform writes. Verify one safe telemetry RPC on x86_64 with the already-working client, recording its schema and sanitized result here.
+1. **Validate the verified *read-only* RPC 45:** compare obj=0/address=20 against the existing local integration, then test additional source-documented read-only Optima 270 datapoints and batching separately, with sanitized outputs. Never attempt writes or assume other query models. The original production XML remains useful but is no longer a prerequisite for cautious read-only progress.
 2. **Reference client:** preserve the proven Python/ctypes experiment as a **local/private** test fixture; extract a sanitized, non-secret template only after the interface is known. Do not commit SDK binaries or working credentials.
 3. **ARM64 path:** investigate a licensed native Nabto 4 Client SDK for Linux aarch64; separately evaluate whether an isolated emulated x86_64 service can be supported on HAOS as a **fallback**. **Remote RPC on HAOS ARM64 through QEMU has now succeeded.** Next evaluate its maintainability and security, including CPU/memory, reconnection, restart behavior and supported SDK licensing before considering it a deployable fallback.
 4. **Integration architecture:** abstract remote transport behind the existing Home Assistant entities only after the read RPC schema and runtime packaging are verified. Keep local and remote modes isolated, with explicit credential handling and a tested fallback.
