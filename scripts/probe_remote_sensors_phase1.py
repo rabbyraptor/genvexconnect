@@ -178,6 +178,8 @@ try:
                   flush=True)
             completed += 1
         print(f"Read-only sensors decoded: {completed}/{len(SENSORS)}", flush=True)
+        if completed != len(SENSORS):
+            sys.exit(6)
 except RuntimeError as exc:
     print("Stopped:", str(exc), flush=True)
 finally:
