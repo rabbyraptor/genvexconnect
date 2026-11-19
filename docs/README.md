@@ -1,6 +1,6 @@
 # Remote Nabto research — documentation index
 
-**Start here:** [Verified facts manifest](remote-nabto-verified-facts.md). This is the current status as of **2026-11-19**: authenticated remote `ping.json` succeeded both on x86_64 (Python ctypes) and **on Raspberry Pi HAOS ARM64 through QEMU emulation** using a CA-signed RSA-1024 profile and Nabto 4 Client SDK 4.9.11. A **native** Linux ARM64 client, production packaging, and non-ping controller queries remain open.
+**Start here:** [Verified facts manifest](remote-nabto-verified-facts.md). This is the current status as of **2026-11-19**: authenticated remote `ping.json` succeeded on x86_64 and **on Raspberry Pi HAOS ARM64 through QEMU emulation**, and **read-only datapoint RPC 45 also succeeded on x86_64 Steam Deck** (raw 367, candidate 6.7 °C). Independent measurement comparison, query 45 under HAOS/QEMU, native ARM64 and production packaging remain open.
 
 ## Navigation
 
