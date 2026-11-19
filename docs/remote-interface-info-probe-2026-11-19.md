@@ -34,3 +34,13 @@ Use a *single local-only* diagnostic or, if re-running with the legitimate profi
 Sources:
 - https://github.com/nabto/nabto4-python-wrapper/blob/master/extension/linux64/include/nabto_client_api.h
 - https://github.com/nabto/nabto-cli/blob/master/src/nabto_cli.cpp
+
+## Further upstream verification (2026-11-19)
+
+The official Nabto Cordova error table maps specific P2P errors including `P2P_NO_SUCH_REQUEST = 3227` (request absent in interface or resource not found), `P2P_INTERFACE_DEF_INVALID = 3223`, and `P2P_RPC_INTERFACE_NOT_SET = 3267`; it also distinguishes the device-side `EXC_INV_QUERY_ID = 4007`. These are *mapping hints*, not proof that a particular numeric code will appear in this SDK's JSON diagnostic.
+
+Source: https://github.com/nabto/cordova-plugin-nabto/blob/master/www/nabto-error.js
+
+The official CLI's `checkInterface()` invokes `get_interface_info.json` in the strict-check path after registering an externally supplied XML interface; the implementation **does not supply a get_interface_info query in that function**. So it remains possible that the SDK recognizes the convention specially or that the externally registered interface must contain the query elsewhere. The diagnostic JSON is decisive and should be captured **only as a whitelisted error category and code**, not raw output.
+
+Source: https://github.com/nabto/nabto-cli/blob/master/src/nabto_cli.cpp
