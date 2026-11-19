@@ -6,13 +6,13 @@ umask 077
 
 CONTAINER="app_local_genvex_nabto_runtime_test"
 AUTH_DIR="/mnt/data/supervisor/genvex-nabto-remote-profile"
-DEVICE_ID="\${GENVEX_DEVICE_ID:-}"
-IDENTITY="\${GENVEX_NABTO_IDENTITY:-}"
+DEVICE_ID="${GENVEX_DEVICE_ID:-}"
+IDENTITY="${GENVEX_NABTO_IDENTITY:-}"
 
 case "$DEVICE_ID" in
     ''|*[!0-9]*) echo "GENVEX_DEVICE_ID must be exactly 12 digits." >&2; exit 2 ;;
 esac
-if [ "\${#DEVICE_ID}" -ne 12 ]; then
+if [ "${#DEVICE_ID}" -ne 12 ]; then
     echo "GENVEX_DEVICE_ID must be exactly 12 digits." >&2
     exit 2
 fi
@@ -20,7 +20,7 @@ case "$IDENTITY" in
     *@*.*) ;;
     *) echo "Set GENVEX_NABTO_IDENTITY to your registered Nabto identity." >&2; exit 2 ;;
 esac
-HOST="\${DEVICE_ID}.remote.lscontrol.dk"
+HOST="${DEVICE_ID}.remote.lscontrol.dk"
 
 for file in client.crt client-encrypted.key; do
     if [ ! -r "$AUTH_DIR/$file" ]; then
