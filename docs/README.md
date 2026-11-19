@@ -9,6 +9,7 @@
 | [Verified facts manifest](remote-nabto-verified-facts.md) | Current verified results, exact SDK statuses, identity provisioning, architecture, remaining gates |
 | [RPC / ARM64 next steps](remote-nabto-next-steps.md) | Read-only query discovery and Linux ARM64 validation plan |
 | [Investigation journal](remote-nabto-investigation.md) | Full history and evolving hypotheses; includes older, now-superseded status statements |
+| [Nabto TEN025 and LS Control architecture](nabto-ten025-lscontrol-rpc-architecture-2026-11-19.md) | Primary-source RPC migration, static XML and vendor-specific bridge limitations |
 | [Remote RPC without Android](remote-rpc-without-android-2026-11-19.md) | HTML-DD, existing iPhone captures, vendor API documentation and limits of remote streams |
 | [RPC metadata probe result](remote-interface-info-probe-2026-11-19.md) | Status 26, missing JSON diagnostics and why this does not establish gateway support |
 | [Legacy Nabto HTML-DD RPC distribution](nabto-legacy-html-dd-interface-distribution-2026-11-19.md) | Official mechanism for centrally supplied `unabto_queries.xml` and read-only interface metadata |
