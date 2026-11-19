@@ -1,7 +1,7 @@
 name: "Genvex Nabto Runtime Test"
-version: "0.2.0"
+version: "0.3.0"
 slug: "genvex_nabto_runtime_test"
-description: "Read-only ARM64/QEMU compatibility test for the official Nabto 4 Linux client."
+description: "Read-only ARM64/QEMU runtime, certificate-store and local discovery checks for the official Nabto 4 Linux client."
 url: "https://github.com/rabbyraptor/genvexconnect"
 startup: application
 boot: manual
