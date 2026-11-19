@@ -259,3 +259,39 @@ The sample test-app ping response reports `Model=1141`, but this is only the REA
 - **Not confirmed:** Any Optima 270 RPC methods beyond `ping.json`.
 
 This correction supersedes any implication elsewhere in this document that `cordova-lsc-test` itself proves remote LS Control RPC.
+
+
+## Related community implementation discovered: glutter/genvexassistant (2026-11-19)
+
+A separate community project, `glutter/genvexassistant`, implements a Java 17 service and Home Assistant add-on for Genvex Optima 270 / Model 2010 over the local Micro Nabto UDP interface.
+
+Relevant source:
+- https://github.com/glutter/genvexassistant
+- https://github.com/glutter/genvexassistant/blob/main/src/main/java/GenvexClient.java
+- https://github.com/glutter/genvexassistant/blob/main/src/main/java/GenvexProbe.java
+- https://github.com/glutter/genvexassistant/blob/main/ADDRESS_MAP.md
+
+### What is useful for our investigation
+
+1. The project independently implements the local Genvex UDP handshake on port 5570, including the CP_ID email payload and a ping handshake.
+2. It confirms a read-only register-scan approach using only DATAPOINT_READ (`0x2d`) and SETPOINT_READ (`0x2a`).
+3. Its `GenvexProbe` scans addresses 0–127 and records raw response bytes, then watches selected addresses over time.
+4. It identifies fan telemetry as:
+   - datapoint 18: supply fan duty, raw/100;
+   - datapoint 19: extract fan duty, raw/100;
+   - datapoint 35: supply fan RPM;
+   - datapoint 36: extract fan RPM;
+   - setpoint read address 7: fan stage, noted as unreliable on some firmware;
+   - datapoint 24: a temperature register, not the fan-stage register.
+5. Its published Optima 270 map substantially matches the existing `superrob/genvexnabto` model mapping already used in this investigation.
+6. Its dashboard/service includes fan-stage estimation from duty and RPM and keeps observed fan state separate from the requested/commanded stage.
+
+### Important scope limitation
+
+This is a local-network implementation. Its configuration requires a Genvex IP and registered email, and its Java client sends UDP to the device at port 5570. It does not provide a Nabto cloud relay client or prove remote connectivity from outside the summer-house LAN. It therefore cannot be used as the remote transport solution without additional supported remote transport.
+
+### Why we should keep it as a reference
+
+This is a useful independent implementation for validating the Optima 270 register map and the semantics of the values we eventually expose through Home Assistant. Its read-only probe is especially useful as a model for safe telemetry validation. We should not transplant its fan-control policy wholesale; our immediate focus remains remote data access and preserving the existing integration's entity/model layer.
+
+The project's address map reports some firmware-dependent behavior: setpoint read address 7 can be inactive/always zero, and read address 24 may not reliably reflect a commanded fan stage. This reinforces the need to treat fan duty/RPM as observed state and a setpoint as requested state, rather than conflating them.
