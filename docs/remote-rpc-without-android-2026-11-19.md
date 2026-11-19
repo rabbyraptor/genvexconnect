@@ -47,3 +47,24 @@ Do not enumerate guessed RPC IDs against the production unit; do not try write c
 ## Decision
 
 Next **without an Android phone**: inspect redacted already-captured iPhone HTTPS metadata if available, in parallel search original HTML-DD and vendor materials. If neither yields a real RPC XML, obtain a vendor interface specification before attempting remote telemetry. This is an evidence gap, not a Nabto transport blocker.
+
+## Direct examination of existing Project captures (2026-11-19)
+
+**NEW: The original captures were already available as mounted Project attachments. No re-upload is required.**
+
+Files inspected locally, with request/response bodies, cookies, tokens and header values deliberately not echoed:
+
+- `api.lscontrol.dk_11-19-2026-12-36-06.har`
+- `api.lscontrol.dk_11-19-2026-12-36-34.har`
+- `api.lscontrol.dk_11-19-2026-00-06-08.proxymanlogv2`
+- `api.lscontrol.dk_11-19-2026-00-06-27.proxymanlogv2`
+
+The two HAR archives contain one HTTP transaction each. Each Proxyman ZIP contains one request record. All four examined records are `POST https://api.lscontrol.dk:4160/` with HTTP 200 responses, and the HAR responses declare `text/html; charset=utf-8` with a short body. No separate static resource URL, `unabto_queries.xml`, or HTML-DD archive request is present **in these four records**. This is a narrow statement about available captures, **not** proof that the mobile app never downloads such assets.
+
+HAR request bodies are multipart/form-data and should be treated as potentially credential-bearing. No raw payload or full headers were copied to this repository. The remaining PCAP files contain encrypted Nabto traffic and may support timing/destination analysis but do not reveal an authenticated remote RPC XML definition without endpoint plaintext.
+
+**Interpretation:** Do not ask for re-upload of existing Proxyman/HAR captures. Pursue source artifacts or vendor documentation. A future fresh capture is warranted only if a concrete, distinct HTTP resource request is targeted and consented to.
+
+Public documentation additionally confirms the legacy `nabtoFetchUrl` API exists, but it is a deprecated HTML-DD document fetching API and is **not** documented as a direct `unabto_queries.xml` retrieval method. Do not invent resource URLs against the production device.
+
+Source: https://github.com/nabto/nabto4-python-wrapper/blob/master/extension/linux64/include/nabto_client_api.h
