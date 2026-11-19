@@ -7,6 +7,7 @@
 | Document | Purpose |
 | --- | --- |
 | [Verified facts manifest](remote-nabto-verified-facts.md) | Current verified results, exact SDK statuses, identity provisioning, architecture, remaining gates |
+| [RPC / ARM64 next steps](remote-nabto-next-steps.md) | Read-only query discovery and Linux ARM64 validation plan |
 | [Investigation journal](remote-nabto-investigation.md) | Full history and evolving hypotheses; includes older, now-superseded status statements |
 | [RPC findings](remote-nabto-rpc-findings.md) | Earlier RPC research and open questions |
 | [Nabto 4 SDK and identity research](nabto4-client-sdk-availability-and-identity-2026-11-19.md) | Upstream SDK/CA/architecture background |
