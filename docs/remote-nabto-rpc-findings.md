@@ -303,7 +303,7 @@ A new passive analysis of three user-supplied fan-change captures identified the
 
 All nine manually marked fan changes across the 15:08, 15:12 and 15:17 captures have a 70-byte client DATA request 74–385 ms before the entered timestamp. Each request is followed by a 24-byte `NOTIFY_MICRO_ACK` and a DATA response. This is strong correlation, not proof of the RPC meaning.
 
-A notable anomaly: all 2,834 server-to-phone DATA packets in the three captures have the same first 16 crypto-data bytes (`00..0f`), matching the public uNabto repository's explicitly dummy `nabto_random()` implementation. This requires confirmation against the actual LS Control firmware/build; it is not being treated as a proven vulnerability or as a way to decrypt/forge packets.
+A notable anomaly: the three PCAPs are cumulative byte-prefix snapshots, not independent captures. All **1,325 distinct server-to-phone DATA/CRYPTO packets in the largest v3 file** have the same first 16 crypto-data bytes (`00..0f`), matching the public uNabto repository's explicitly dummy `nabto_random()` implementation. This requires confirmation against the actual LS Control firmware/build; it is not being treated as a proven vulnerability or as a way to decrypt/forge packets.
 
 Detailed offsets, capture timings, public-source mapping, and caveats are documented in [nabto-data-packet-structure-2026-11-19.md](nabto-data-packet-structure-2026-11-19.md).
 
