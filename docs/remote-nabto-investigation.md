@@ -317,3 +317,21 @@ The next work should use the evidence already collected and source-level analysi
 6. Evaluate the old Client SDK as a product dependency only after its supported platforms, licensing and redistribution terms are known. Do not substitute Edge or Android JNI binaries for a Linux Micro client.
 
 No credentials, private keys, certificates, tokens or redacted application values have been added to this document.
+
+
+### 7. Reuse and packaging notes for the HairingX reference
+
+The two HairingX Python libraries inspected here publish MIT licenses. Their current project metadata also states:
+
+- `modbus_event_connect` is in Alpha development status and requires Python `>=3.14`.
+- `nilan_connect` is in Alpha development status and requires Python `>=3.14`.
+- The companion HA integration pins `nilan_connect==0.7.0` and declares `iot_class: local_polling`.
+
+This makes the code legally easier to evaluate for reuse than an unlicensed repository, but it is not automatically a drop-in dependency for every Home Assistant Core release or deployment. Before adopting it, verify the Python runtime used by the target HA release, test the package in the actual HA environment, and pin a reviewed version. For a commercial hub, also retain license notices and track upstream changes.
+
+Sources:
+- https://github.com/HairingX/modbus_event_connect/blob/main/LICENSE
+- https://github.com/HairingX/modbus_event_connect/blob/main/pyproject.toml
+- https://github.com/HairingX/nilan_connect/blob/main/LICENSE
+- https://github.com/HairingX/nilan_connect/blob/main/pyproject.toml
+- https://github.com/HairingX/ha_nilan_connect/blob/main/custom_components/nilan_connect/manifest.json
