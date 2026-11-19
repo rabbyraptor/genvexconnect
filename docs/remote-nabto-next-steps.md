@@ -41,18 +41,18 @@ Source: https://github.com/nabto/cordova-lsc-test/blob/master/www/js/index.js . 
 
 ## 2. ARM64 decision gates
 
-The present reference runs **Linux x86_64**. A Raspberry Pi 4 with 64-bit HAOS runs **Linux aarch64**. Simply using `ctypes` does not remove the native architecture dependency.
+The native library reference runs **Linux x86_64**. Raspberry Pi 4 with 64-bit HAOS runs **Linux aarch64**. **2026-11-19 update: the already-installed isolated HAOS test app successfully executed an authenticated remote `ping.json` through QEMU x86_64** and got the exact six numeric values recorded on Steam Deck. This proves emulated runtime compatibility for the tested RPC, **not** a native ARM64 library or production suitability. Simply using `ctypes` does not remove the native architecture dependency.
 
 | Candidate | Present status | Verification needed |
 | --- | --- | --- |
 | Native legacy Nabto 4 Client SDK for Linux aarch64 | Not located/verified | Ask Nabto for compatible binary/source access and SDK licensing, plus redistribution terms |
-| Separate x86_64 user-mode QEMU runtime in an isolated ARM64 Home Assistant app | Emulator/SDK startup path already established | End-to-end remote ping **on the HAOS host** using a temporary profile; benchmark CPU/memory/reconnect; account for emulator and proprietary SDK licensing |
+| Separate x86_64 user-mode QEMU runtime in an isolated ARM64 Home Assistant app | **Verified end-to-end remote ping from HAOS via QEMU** (CLI exited 0; JSON pong and gateway values matched Steam Deck; temporary profile removed) | Benchmark CPU/memory/reconnect/restarts, isolate credential storage and process arguments, review emulator and proprietary SDK licensing |
 | Separate x86_64 host/sidecar | Technically plausible but additional host dependency | Operational and security tradeoffs, not plug-and-play |
 | Pure Python native Micro Nabto client | Not implemented | Substantial authentication, key exchange, transport, crypto, relay and RPC work; cannot claim compatibility from observed packet headers |
 | Nabto Edge Linux ARM64 | Available for *different* protocol generation | Not a compatible Micro client; do not substitute |
 | Android arm64-v8a JNI artifact | Android ABI, not GNU/Linux ABI | Cannot use as drop-in native HAOS library |
 
-**Recommended sequencing:** first establish telemetry RPC schemas on the proven x86_64 reference. Then, without changing the existing HA integration, run the **same read-only ping** inside the isolated HAOS QEMU test app. Evaluate whether that fallback is maintainable while seeking a native/licensed ARM64 SDK. Integrate only after these gates are met.
+**Recommended sequencing:** first establish telemetry RPC schemas on the proven x86_64 reference. The same read-only ping **already succeeded** inside the isolated HAOS QEMU test app. Next evaluate whether that proven emulated fallback is maintainable while seeking a native/licensed ARM64 SDK. Integrate only after these gates are met.
 
 ## 3. Secrets and reproducibility
 
