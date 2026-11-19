@@ -197,3 +197,65 @@ However, we still lack two concrete inputs needed for a successful Genvex RPC:
 - the Optima 270 RPC interface definition/query names beyond the demonstrated `ping.json` example.
 
 The public Python wrapper is useful as an API reference and potential x86_64 diagnostic harness, but its current Linux packaging is not a ready ARM64 solution. The open-source uNabto repository is the embedded/device-side SDK; it should not be confused with the separate legacy Nabto Client SDK used by the Python wrapper.
+
+
+## Source-level clarification: what the LS Control Cordova test actually proves (2026-11-19)
+
+The full `nabto/cordova-lsc-test/www/js/index.js` and README were inspected. This narrows an earlier interpretation: the test app does **not** demonstrate a remote RPC call to an LS Control/Genvex device.
+
+### Exact test-app flow
+
+The app embeds one LS Control RPC interface definition containing only:
+
+- Query name: `ping.json`
+- Query ID: `17`
+- Request parameter: `ping` (`uint32`)
+- Response fields: `Pong`, `Devicenumber`, `Model`, `Version`, `SlaveDevicenumber`, `SlaveModel`, and a raw `UserNames:` field.
+
+Its LS Control invocation sequence is:
+
+1. `startupAndOpenProfile()` with the plugin's default guest profile.
+2. `bindToWifi()`.
+3. `getLocalDevices()`.
+4. Filter for a discovered hostname containing `lscontrol`.
+5. `prepareInvoke([device])`.
+6. `rpcSetDefaultInterface(lscRpcInterface)`.
+7. Invoke `nabto://<local-lscontrol-host>/ping.json?ping=1885957735`.
+8. Clear the Wi-Fi binding.
+
+The README explicitly instructs that the Android device must be connected directly to the gateway in AP mode. Its example output confirms a successful local ping and shows sample metadata, but that sample is not evidence about the user's specific gateway.
+
+After clearing the Wi-Fi binding, the app separately invokes `demo.nabto.net/wind_speed.json` as a generic remote-connectivity demonstration. It does **not** invoke the LS Control hostname remotely.
+
+Sources:
+- https://github.com/nabto/cordova-lsc-test/blob/master/www/js/index.js
+- https://github.com/nabto/cordova-lsc-test/blob/master/README.md
+
+### What `prepareInvoke()` actually does in the public Cordova plugin
+
+The Android implementation of `prepareInvoke` iterates over supplied hostnames, caches them, and applies free-tier/ad gating logic. It does not itself establish a Nabto session or prove that a device is reachable. The actual RPC invocation is performed separately by `rpcInvoke()`.
+
+This means our earlier shorthand that the test app's `prepareInvoke` step demonstrates remote discovery/connection was too strong. The test app proves the RPC API usage pattern and local LS Control ping, not the remote LS Control authentication path.
+
+Source:
+- https://github.com/nabto/cordova-plugin-nabto/blob/master/src/android/Nabto.java
+
+### Important consequence for the Genvex investigation
+
+We now have a known, read-only LS Control query definition (`ping.json`) and its expected response schema. We do **not** have:
+- a public LS Control remote-client example using a Genvex hostname,
+- the user's gateway's actual ping response from the remote path,
+- the Optima 270 datapoint/setpoint RPC definitions,
+- evidence that the public guest profile can access the user's registered remote gateway.
+
+The sample test-app ping response reports `Model=1141`, but this is only the README's example device. It must not be treated as the model ID of the user's Optima 270. The existing `genvexnabto` library independently parses device model and slave model from its local ping response and selects an adapter from those values; that is the model-identification step we should preserve if we later obtain an RPC response for the user's own gateway.
+
+### Updated evidence boundary
+
+- **Confirmed:** The public LS Control test app can issue `ping.json` to a locally discovered LS Control device using Nabto 4.8.
+- **Confirmed:** The query interface is an XML definition embedded in the test app source.
+- **Confirmed:** The test app's remote demonstration targets `demo.nabto.net`, not the LS Control gateway.
+- **Not confirmed:** Remote access to a Genvex gateway using the test app, guest profile, or a third-party profile.
+- **Not confirmed:** Any Optima 270 RPC methods beyond `ping.json`.
+
+This correction supersedes any implication elsewhere in this document that `cordova-lsc-test` itself proves remote LS Control RPC.
