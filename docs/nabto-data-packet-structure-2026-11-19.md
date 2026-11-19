@@ -19,7 +19,7 @@ The three fan-change markers in this capture each have a 70-byte client-to-peer 
 
 Each request receives a 24-byte `NOTIFY_MICRO_ACK` and a 70-byte DATA response. The server response follows the request by approximately 35–41 ms in this capture.
 
-Across the three separate fan-change captures from 15:08, 15:12 and 15:17, all nine marked changes have a 70-byte request 74–385 ms before the manually entered timestamp marker. Each has a corresponding ACK and DATA response. This is a strong temporal correlation, but not proof that the 70-byte request contains the fan-speed write: the timestamp is entered after the user action, and other 70-byte requests also occur outside the marked events.
+Across three distinct event windows at 15:08, 15:12 and 15:17 in a cumulative capture, all nine marked changes have a 70-byte request 74–385 ms before the manually entered timestamp marker. Each has a corresponding ACK and DATA response. This is a strong temporal correlation, but not proof that the 70-byte request contains the fan-speed write: the timestamp is entered after the user action, and other 70-byte requests also occur outside the marked events.
 
 The packet layout can now be mapped against the public Nabto uNabto source. The 70-byte packet is:
 - 16-byte Nabto packet header;
@@ -120,7 +120,7 @@ Counts:
 - 571 server DATA packets in the 15:08 capture;
 - 938 in the 15:12 capture;
 - 1,325 in the 15:17 capture;
-- 2,834 total, all with that same 16-byte prefix.
+- These are overlapping counts, **not additive**: the three PCAP files are exact byte-prefix snapshots of the same ongoing recording. The largest v3 file contains **1,325 distinct server DATA/CRYPTO packets**, all with the same 16-byte IV field. The previously quoted total of 2,834 double/triple-counted packets.
 
 The phone-to-peer DATA packets have distinct IV values in the inspected captures.
 
@@ -153,7 +153,7 @@ This establishes that the DATA exchange is preceded by a separate Nabto control-
 - Nine fan-change markers across three captures each have a 70-byte request shortly before the manually entered timestamp.
 - Each correlated request receives a NOTIFY_MICRO_ACK and a DATA response.
 - The 70-byte request's encrypted plaintext is no more than 15 bytes under the published format.
-- The responder-side IV-like field is constant across 2,834 DATA packets in the supplied captures and matches the public uNabto dummy random implementation's output.
+- The responder-side IV-like field is constant across **1,325 distinct DATA/CRYPTO packets in the largest cumulative v3 PCAP** and matches the public uNabto dummy random implementation's output. Earlier `2,834` counts were incorrect because the capture files overlap.
 
 **Not established**
 - The plaintext RPC/query name or fan-stage value.
