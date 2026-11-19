@@ -308,3 +308,16 @@ A notable anomaly: all 2,834 server-to-phone DATA packets in the three captures 
 Detailed offsets, capture timings, public-source mapping, and caveats are documented in [nabto-data-packet-structure-2026-11-19.md](nabto-data-packet-structure-2026-11-19.md).
 
 No packet replay, credential extraction, or integration-code changes were performed.
+
+
+## 2026-11-19: Official Nabto 4 SDK and identity-model research
+
+Official Nabto documentation confirms that the legacy Nabto 4 Client SDK binaries are not publicly distributed with the current CLI source: the Nabto CLI README instructs developers to contact Nabto support for the legacy SDK libraries. The current `nabto-client-sdk-releases` repository starts at v5.12.0 and is for Nabto Edge, not Micro. The Android `arm64-v8a` library is a JNI/AAR artifact and is not a Linux aarch64 shared library.
+
+The profile flow is also more specific than a generic email/password login. TEN025 says a Nabto client profile consists of a private key and associated public certificate; profiles live in the Nabto home directory and the private key is unlocked when opening a session. CA-signed profile creation contacts the configured Nabto webservice and requires an existing verified account. The Cordova plugin marks `createSignedKeyPair(email,password)` as deprecated and notes that CA/user-management services require customer-specific setup. Its `startupAndOpenProfile(username,password)` method opens an already-installed keypair and decrypts its private key; it is not itself the account-provisioning step.
+
+Earlier capture evidence of a client certificate with the account email in its X.509 Subject is consistent with the traditional CA-signed identity model, but does not prove the current Genvex Connect 4.0.3 enrollment implementation. Do not assume the account password can be used as a new Nabto profile password without LS Control confirmation.
+
+Nabto's 2026-09-08 support policy lists Nabto 4 as maintenance-only (security updates, no new features) with no published end date. This is more precise than calling it abandoned, but does not guarantee a Linux aarch64 client build.
+
+See [nabto4-client-sdk-availability-and-identity-2026-11-19.md](nabto4-client-sdk-availability-and-identity-2026-11-19.md) for source links, profile semantics, the IV observation, and vendor questions. No integration code was changed.
