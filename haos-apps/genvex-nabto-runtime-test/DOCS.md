@@ -2,7 +2,7 @@
 
 This is an isolated test app for the Raspberry Pi 4 / Home Assistant OS ARM64 host.
 
-## Version 0.2.0 — runtime and CLI inspection
+## Version 0.3.0 — SDK API and local-network checks
 
 The app:
 
@@ -11,35 +11,42 @@ The app:
 - Uses the official Nabto 4 CLI v1.3.0 release and its bundled Nabto Client SDK 4.9.11 shared library.
 - Supplies an x86-64 Ubuntu 24.04 userspace library tree.
 - Reports the CLI ELF interpreter and shared-library dependencies captured at build time.
-- Runs the Nabto CLI version command under QEMU.
-- Runs the Nabto CLI `--help` command under QEMU so the available CLI operations can be reviewed.
-- Writes the diagnostic output to the app log.
+- Runs the CLI version command with an isolated temporary Nabto home directory.
+- Calls the CLI certificate-list operation against that empty temporary home; certificate output is suppressed.
+- Calls the CLI local-discovery operation with a 25-second timeout; all discovered device identifiers and raw output are suppressed.
+- Removes the temporary test home and captured output when the app stops.
 
-## What it does not do
+Important source-code clarification: the Nabto CLI calls `nabtoStartup()` and `nabtoInstallDefaultStaticResources()` in its common initialization path before processing `--version`, `--help`, `--certs` or `--discover`. Therefore, the successful 0.2.0 version/help checks already proved that this SDK startup path completed. Version 0.3.0 adds separate SDK API calls and a local-network discovery test.
 
-- It does not request, store, or print Genvex credentials.
-- It does not create a Nabto certificate or private key.
-- It does not discover or contact a Genvex controller.
-- It does not open a Nabto profile or session.
-- It does not invoke RPCs or open tunnels.
-- It does not change the existing Genvex integration.
+## Safety and scope
 
-The version and help checks are intended to verify that the CLI and its dynamic dependencies can be loaded and that the command parser runs under QEMU. They do not prove that remote networking, authentication, RPC, or tunnelling works.
+- No Genvex credentials are requested, stored or printed.
+- No certificate or private key is created.
+- The test uses a fresh temporary home directory, so it does not inspect any existing Nabto user profiles or certificates.
+- Certificate names/fingerprints and discovered device identifiers are never written to the app log.
+- Local discovery is read-only and limited to the local network.
+- No remote hostname is contacted.
+- No user profile/session is opened.
+- No RPC, pairing, stream, tunnel or controller command is invoked.
+- The existing Home Assistant Genvex integration is not changed.
+
+The `--discover` CLI branch calls Nabto's local-device discovery API. This is a useful first test of QEMU-translated networking, but it does not prove remote connectivity, authentication, RPC or tunnelling.
 
 ## Expected result
 
-The app log should contain:
+The app log should show:
 
 ```text
-PASS: Nabto CLI/SDK version command completed
-PASS: Nabto CLI help command completed
+PASS: Nabto SDK startup, static-resource installation and version API completed
+PASS: Nabto certificate enumeration API completed
+PASS: Nabto discovery command completed
 ```
 
-The help output should list the available CLI options. The ELF report should show the x86-64 interpreter and shared-library dependencies identified during the image build.
+Discovery may report zero output lines if no compatible Nabto device is found on the local network. A timeout or failure is diagnostic information, not proof that remote connectivity is impossible.
 
 ## Install the update
 
-After updating the local app files, use Settings > Apps to check for updates/reload local apps, then rebuild/reinstall version 0.2.0 if prompted. Open the app log after starting it.
+Use Settings > Apps to reload/check local apps and install version 0.3.0. Start the app and inspect its log. If the Supervisor offers a rebuild option, rebuild the local app image after updating the files.
 
 ## Stop the test
 
@@ -47,8 +54,9 @@ Stop the app from Settings > Apps after inspecting the log. It is configured for
 
 ## References
 
+- Nabto CLI source and initialization flow: https://github.com/nabto/nabto-cli/blob/master/src/nabto_cli.cpp
 - Nabto CLI v1.3.0: https://github.com/nabto/nabto-cli/releases/tag/v1.3.0
-- Nabto CLI README and documented operations: https://github.com/nabto/nabto-cli
-- Nabto CLI build: https://github.com/nabto/nabto-cli/blob/master/.github/workflows/build.yml
+- Nabto CLI README: https://github.com/nabto/nabto-cli
+- Legacy Nabto API client application guide (TEN025): https://downloads.nabto.com/assets/docs/TEN025%20Writing%20a%20Nabto%20API%20client%20application.pdf
 - QEMU user-mode documentation: https://www.qemu.org/docs/master/user/main.html
 - Home Assistant app Dockerfile guide: https://contributors.home-assistant.io/apps/guides/dockerfile/
