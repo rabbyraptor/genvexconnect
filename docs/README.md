@@ -9,6 +9,7 @@
 | [Verified facts manifest](remote-nabto-verified-facts.md) | Current verified results, exact SDK statuses, identity provisioning, architecture, remaining gates |
 | [RPC / ARM64 next steps](remote-nabto-next-steps.md) | Read-only query discovery and Linux ARM64 validation plan |
 | [Investigation journal](remote-nabto-investigation.md) | Full history and evolving hypotheses; includes older, now-superseded status statements |
+| [Mobile app RPC resource investigation](mobile-app-rpc-resource-investigation-2026-11-19.md) | Android/iOS app identity and static extraction plan for production RPC XML |
 | [Homey source vs remote RPC](homey-source-vs-remote-rpc-2026-11-19.md) | Local Optima 270 register map and why it is not a remote RPC schema |
 | [RPC findings](remote-nabto-rpc-findings.md) | Earlier RPC research and open questions |
 | [Nabto 4 SDK and identity research](nabto4-client-sdk-availability-and-identity-2026-11-19.md) | Upstream SDK/CA/architecture background |
