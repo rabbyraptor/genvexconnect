@@ -17,7 +17,7 @@ def encode_candidate(query, data, trailer=1):
 def encode_known_local(data):
     """Reimplements GenvexCommandDatapointReadList.buildCommand from public LAN source."""
     elements = b"".join(bytes([obj]) + address.to_bytes(4, "big") for obj, address in data)
-    return b"\\x00\\x00\\x00\\x2d".decode("unicode_escape").encode("latin1") + len(data).to_bytes(2, "big") + elements + bytes([1])
+    return bytes([0, 0, 0, 45]) + len(data).to_bytes(2, "big") + elements + bytes([1])
 
 class ReadonlyCandidateTests(unittest.TestCase):
     def setUp(self):
