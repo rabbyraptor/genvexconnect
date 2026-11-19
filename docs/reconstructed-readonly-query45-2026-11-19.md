@@ -61,3 +61,9 @@ The candidate response schema `list(values: int16)` reflects the publicly docume
 ## Risk/constraints
 
 Remote reachability of query 45, device handler behavior, XML request's trailing byte, exact response layout, and licensing/distribution of the legacy binary **remain OPEN**. A valid local schema and working ping do not prove a new query is present remotely. Keep the existing HAOS integration untouched.
+
+## Prepared single-sensor authenticated read-only test
+
+A dedicated, standalone probe is now available at [`scripts/probe_remote_datapoint45_readonly.py`](../scripts/probe_remote_datapoint45_readonly.py). It uses the already provisioned, encrypted RSA-1024 test profile, registers **only** the candidate RPC opcode 45, and sends **at most one** read for `obj=0, address=20` after the XML is accepted. It does not enable write opcode 43, make arbitrary-ID requests, print raw responses, alter Home Assistant files, or store credentials in Git. It uses the existing test profile and suppresses personal identifiers in printed output.
+
+The script has **not been executed against the Genvex gateway**. Its local XML acceptance by the actual Nabto 4 SDK and the response decoding remain to be tested. If the SDK returns a diagnostic, record only sanitized status/event codes. A plausible numerical temperature still requires independent comparison against the known local integration.
