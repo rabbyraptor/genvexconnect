@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<unabto_queries xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.nabto.com/unabto/query_model.xsd">
+  <!-- HYPOTHESIS ONLY: reconstructed from known LAN command, not remote verified -->
+  <query id="45" name="candidate_read_datapoints.json" description="Read-only candidate for Optima 270 datapoints">
+    <request>
+      <list name="datapoints">
+        <parameter name="obj" type="uint8" />
+        <parameter name="address" type="uint32" />
+      </list>
+      <parameter name="trailer" type="uint8" default="1" />
+    </request>
+    <response format="json">
+      <list name="values"><parameter name="value" type="int16" /></list>
+    </response>
+  </query>
+</unabto_queries>
