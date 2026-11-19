@@ -295,3 +295,16 @@ This is a local-network implementation. Its configuration requires a Genvex IP a
 This is a useful independent implementation for validating the Optima 270 register map and the semantics of the values we eventually expose through Home Assistant. Its read-only probe is especially useful as a model for safe telemetry validation. We should not transplant its fan-control policy wholesale; our immediate focus remains remote data access and preserving the existing integration's entity/model layer.
 
 The project's address map reports some firmware-dependent behavior: setpoint read address 7 can be inactive/always zero, and read address 24 may not reliably reflect a commanded fan stage. This reinforces the need to treat fan duty/RPM as observed state and a setpoint as requested state, rather than conflating them.
+
+
+## 2026-11-19: DATA packet structure and repeated fan-change correlation
+
+A new passive analysis of three user-supplied fan-change captures identified the 70-byte packet's exact Nabto framing: 16-byte DATA header, 4-byte CRYPTO payload header, 2-byte suite code `0x230A`, and 48 bytes of AES-CBC/HMAC-SHA256 crypto data. The crypto data is 16-byte IV + one 16-byte ciphertext block + 16-byte truncated HMAC; under the published uNabto padding scheme, the plaintext is at most 15 bytes.
+
+All nine manually marked fan changes across the 15:08, 15:12 and 15:17 captures have a 70-byte client DATA request 74–385 ms before the entered timestamp. Each request is followed by a 24-byte `NOTIFY_MICRO_ACK` and a DATA response. This is strong correlation, not proof of the RPC meaning.
+
+A notable anomaly: all 2,834 server-to-phone DATA packets in the three captures have the same first 16 crypto-data bytes (`00..0f`), matching the public uNabto repository's explicitly dummy `nabto_random()` implementation. This requires confirmation against the actual LS Control firmware/build; it is not being treated as a proven vulnerability or as a way to decrypt/forge packets.
+
+Detailed offsets, capture timings, public-source mapping, and caveats are documented in [nabto-data-packet-structure-2026-11-19.md](nabto-data-packet-structure-2026-11-19.md).
+
+No packet replay, credential extraction, or integration-code changes were performed.
