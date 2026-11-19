@@ -2,7 +2,7 @@
 
 ## Version 0.4.0 — experimental authenticated read-only batch through QEMU
 
-**Status: prepared in GitHub; not built or executed on the user's HAOS host in this revision.**
+**Status: built, started, and read-only five-sensor authenticated RPC 45 batch SUCCESSFULLY EXECUTED on the user's Raspberry Pi 4 HAOS on 2026-11-19.**
 
 This release extends the previously working 0.3.0 isolated test app without changing the existing local Home Assistant integration:
 
@@ -41,7 +41,7 @@ echo "HAOS batch test exit status: $STATUS"
 
 The script asks for: HAOS SSH target (user@host **without** `-p`), a **separate SSH port** (default `22222`; the user's current HAOS SSH forwarding uses this port), Nabto identity, Nabto device hostname, and the existing key passphrase. Port 22 is not assumed. The SSH account must have access to `docker exec` on the HAOS host; merely reaching an SSH terminal addon does not guarantee that permission. Do not commit or paste secrets into GitHub or public logs.
 
-Expected success: x86_64 Python SDK startup=0, resources=0, profile session=0, query XML setup=0, RPC status=0, `Read-only batch decoded: 5/5`, clean SDK shutdown. This is a **prediction** pending live HAOS/QEMU execution, not a recorded result.
+Expected success: x86_64 Python SDK startup=0, resources=0, profile session=0, query XML setup=0, RPC status=0, `Read-only batch decoded: 5/5`, clean SDK shutdown. **All these statuses were confirmed** in the user's live HAOS/QEMU batch output; 5/5 responses were decoded in 1,150 ms for the single RPC invocation.
 
 **Safety caveats:** This is proprietary Nabto 4 SDK under emulation with legacy RSA-1024 credentials. Profile transfer via SSH is transient, but does leave sensitive encrypted key material briefly in the addon container's writable filesystem. The passphrase is transmitted via SSH over stdin and exists in both processes' memory. A hard crash or lost SSH connection may leave the temporary directory; remove any leftover `/tmp/genvex-haos-batch.*` folders from the isolated addon container before next tests, and do not expose debug output containing identity/hostname. SDK redistribution terms remain unresolved. Runtime stability, timeouts and subsequent reconnects remain untested.
 
@@ -109,3 +109,26 @@ Stop the app from Settings > Apps after inspecting the log. It is configured for
 - QEMU user-mode documentation: https://www.qemu.org/docs/master/user/main.html
 - Home Assistant app Dockerfile guide: https://contributors.home-assistant.io/apps/guides/dockerfile/
 - Home Assistant app host networking and discovery guidance: https://contributors.home-assistant.io/apps/guides/hardware/
+
+## Verified HAOS ARM64/QEMU five-sensor RPC 45 batch — 2026-11-19
+
+**VERIFIED from the user's successful Raspberry Pi 4 HAOS terminal test**, orchestrated from Steam Deck through SSH on its explicitly configured port, into the running isolated test addon v0.4.0. The addon boot log independently showed `aarch64`, functioning QEMU x86_64, successful x86_64 Python ctypes import, and Nabto 4 Client SDK **4.9.11**. The temporary encrypted client profile was transferred for the test; the remote query was run with the bundled x86_64 Python probe under QEMU, **not native ARM64 code**.
+
+- SDK startup **0**, static resources **0**, authenticated profile session **0**, reconstructed RPC interface XML registration **0**.
+- Exactly **one read-only RPC ID 45** with ordered obj=0 addresses **20, 21, 22, 23, 26**, and trailer=1. RPC status **0**, elapsed **1,150 ms** for this invocation.
+- Response decoded **5/5** signed 16-bit values in requested order:
+
+| Sensor | Address | Raw int16 | Interpreted value |
+| --- | ---: | ---: | ---: |
+| Supply air | 20 | 367 | 6.70 °C |
+| Outdoor air | 21 | 295 | -0.50 °C |
+| Exhaust air | 22 | 313 | 1.30 °C |
+| Extract air | 23 | 377 | 7.70 °C |
+| Humidity | 26 | 65 | 65 % |
+
+- Client session closed **0**, SDK shutdown **0**, SDK temporary profile cleaned, and orchestration reported success.
+
+**Milestone:** real device telemetry from an authenticated proprietary Nabto 4/Micro gateway is now proven **from HAOS Raspberry Pi ARM64 via isolated x86_64 QEMU SDK runtime**. This is a single successful test run, **not** a supported native ARM64 SDK, a shipping Home Assistant integration, a latency benchmark, a long-running polling service, or verified writes. Batch response value order is strongly corroborated by the independently verified single-address measurements but is not accompanied by per-item response identifiers. The existing LAN UDP integration remained unchanged. Maintain credential protection and check the licensing/redistribution rights of the proprietary SDK before production distribution.
+
+**Next safe engineering work:** establish restart/reconnect behavior, bounded polling and secret lifecycle in the isolated test runtime; then design a remote data-coordinator/transport adapter isolated from the working LAN integration. No write RPCs.
+
