@@ -334,3 +334,17 @@ Not yet confirmed:
 ### Recommended decision
 
 Do not start implementing a custom Nabto Micro client or reverse-engineered cloud login yet. First request written answers from Nabto and LS Control/Genvex on SDK availability, CA identity authorization, ARM64 support, redistribution and commercial terms. In parallel, ask about Smart Connect Center data access for Optima 270. Those answers determine whether the production architecture should be a supported Nabto client sidecar, an official cloud/data integration, or a local-only fallback.
+
+
+## Full login capture cross-reference (2026-11-19)
+
+A later user-supplied login session was captured simultaneously as two Proxyman HAR entries and a full packet capture. The two HAR entries again show POST operations to `https://api.lscontrol.dk:4160/`:
+
+- `com#3=7`, `usno#5` empty; HTTP 200, body `{"Status":"1"}`.
+- `com#3=8`, `usno#5=1`; HTTP 200, body `{"Status":"1"}`.
+
+Both requests also contain the same manufacturer marker, a redacted static-looking application/service field, a redacted device ID, and empty `us#6` and `pwu#7` fields. No account email, account password, bearer token or session cookie is visible in these HAR requests. The exact semantics of the operation and user-number fields remain unknown. The response status string must not be treated as proof of authentication or device-operation success.
+
+The corresponding full PCAP contains two TLS 1.3 connections to `api.lscontrol.dk:4160`, two TLS connections to `lscontrol.nabto.com:443`, UDP 5570 discovery, STUN activity on UDP 3478/3479, controller-associated UDP 5566 traffic, a Nabto Micro DATA/CRYPTO session to `80.208.69.3:30795`, and successful WebSocket upgrades to `/handshake` and `/gateway`. The WebSocket application roles remain unknown; no WebSocket application frames are visible in this capture.
+
+See [remote-login-flow-capture-2026-11-19.md](remote-login-flow-capture-2026-11-19.md) for the detailed sanitized packet and HAR analysis, including timing caveats and the distinction between confirmed protocol structure and unverified service roles.
