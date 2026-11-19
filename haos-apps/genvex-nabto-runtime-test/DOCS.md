@@ -1,5 +1,15 @@
 # Genvex Nabto Runtime Test
 
+## SSH-free local HAOS stability probe (after one-time encrypted profile provisioning)
+
+The standalone [`scripts/run_haos_local_remote_stability.sh`](../../scripts/run_haos_local_remote_stability.sh) is invoked **from the existing HAOS host root terminal**. It has **no SSH code or prompts**. Unlike the earlier Steam Deck bridge, it assumes the existing public certificate and **encrypted** key have been provisioned once to the host-only directory `/mnt/data/supervisor/genvex-nabto-remote-profile/` under names `client.crt` and `client-encrypted.key`; mode 0700 on directory, 0600 on files. Credentials are NEVER stored in GitHub or the add-on source directory.
+
+Provision only once, separately: create the protected host directory from the HAOS host terminal; then use an authorized file transfer (e.g. `scp -P 22222` from the Steam Deck) to put the **existing encrypted** key and certificate there. The local script checks for their presence, copies them temporarily into the running isolated app for each test series, and removes the temporary copy in an EXIT trap. Protect HAOS backups and restrict any access to the credential directory. A crash or killed process may leave a temporary directory in the test container; inspect and remove only known `/tmp/genvex-haos-local.*` leftovers if needed.
+
+Host invocation with env vars `GENVEX_DEVICE_ID` (the verified **12-digit decimal device identifier**, no hostname) and `GENVEX_NABTO_IDENTITY` (registered account email): the script constructs the RPC target solely as `${GENVEX_DEVICE_ID}.remote.lscontrol.dk`, with decimal format validation. It only prompts for the encrypted key's passphrase (silent, via the attached TTY). It invokes the **unchanged existing v0.4.0** Python probe through x86_64 QEMU with stdin-provided JSON settings for two read-only RPC 45 batches separated by 15 seconds. Each batch is bounded to 75 seconds, and error exit aborts the series. It does not touch the existing local HA integration or send write RPCs.
+
+The two-run test is a smoke test rather than a longevity or automatic-reconnect proof. No addon rebuild or new HAOS app version is needed. The host shell must provide `docker`, `tar`, `curl`, `stty`, `timeout` inside the test container, and a working `/dev/tty`.
+
 ## Version 0.4.0 — experimental authenticated read-only batch through QEMU
 
 **Status: built, started, and read-only five-sensor authenticated RPC 45 batch SUCCESSFULLY EXECUTED on the user's Raspberry Pi 4 HAOS on 2026-11-19.**
