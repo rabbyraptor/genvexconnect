@@ -327,7 +327,7 @@ The two HairingX Python libraries inspected here publish MIT licenses. Their cur
 - `nilan_connect` is in Alpha development status and requires Python `>=3.14`.
 - The companion HA integration pins `nilan_connect==0.7.0` and declares `iot_class: local_polling`.
 
-This makes the code legally easier to evaluate for reuse than an unlicensed repository, but it is not automatically a drop-in dependency for every Home Assistant Core release or deployment. Before adopting it, verify the Python runtime used by the target HA release, test the package in the actual HA environment, and pin a reviewed version. For a commercial hub, also retain license notices and track upstream changes.
+This makes the code legally easier to evaluate for reuse than an unlicensed repository, but it is not automatically a drop-in dependency for every Home Assistant Core release or deployment. Before adopting it, verify the Python runtime used by the target HA release, test the package in the actual HA environment, and pin a reviewed version.
 
 Sources:
 - https://github.com/HairingX/modbus_event_connect/blob/main/LICENSE
@@ -335,3 +335,69 @@ Sources:
 - https://github.com/HairingX/nilan_connect/blob/main/LICENSE
 - https://github.com/HairingX/nilan_connect/blob/main/pyproject.toml
 - https://github.com/HairingX/ha_nilan_connect/blob/main/custom_components/nilan_connect/manifest.json
+
+
+## HAOS-first reassessment (2026-11-19)
+
+The investigation priority is now exclusively: **make remote Genvex monitoring work in the existing Home Assistant OS installation**. Commercial packaging, product strategy, redistribution scenarios and future customer support are out of scope unless they directly block a working HAOS implementation.
+
+### What the source code tells us about the current HA integration
+
+The current `superrob/genvexconnect` integration:
+
+- Is a normal Home Assistant custom integration with platforms for sensor, binary sensor, climate, switch, number, button and select.
+- Depends on `genvexnabto==1.5.4`.
+- Creates `GenvexNabto(authenticatedEmail)`, then either discovers a device on the local network or accepts a manually configured local IP and port.
+- Waits for local discovery, calls `connectToDevice()`, waits for the connection and then waits for fresh data.
+- Does not initialize a Nabto Client SDK, create/open a Nabto profile, resolve a remote hostname through a basestation, or establish a remote P2P/relay session.
+
+The email entered in this integration is the device's paired/authorized email identity for its local Micro Nabto connection. It is not, by itself, a Genvex Connect cloud login implementation.
+
+Source files:
+- https://github.com/superrob/genvexconnect/blob/main/custom_components/genvex_connect/manifest.json
+- https://github.com/superrob/genvexconnect/blob/main/custom_components/genvex_connect/__init__.py
+- https://github.com/superrob/genvexconnect/blob/main/custom_components/genvex_connect/config_flow.py
+
+### The ARM64 finding is now more conclusive
+
+The Python wrapper's `setup.py` hard-codes the Linux platform directory to `linux64`; the repository's packaged native libraries are for x86_64 Linux. It does not contain a Linux aarch64 build.
+
+The Nabto Android repository does contain an `arm64-v8a` JNI library, but that is built for Android and is not a Linux shared library suitable for direct loading by HAOS.
+
+An independent Nabto 4 project, `danibram/caleon`, confirms the distinction from a real implementation:
+- Its ordinary transport is a pure-Rust local UDP implementation and builds for Linux ARM64.
+- Its optional official Nabto 4.3 SDK transport is explicitly x86_64 Linux only.
+- It obtains the closed SDK libraries from the same Nabto Python wrapper distribution.
+- It explicitly documents that the SDK mode is unavailable on ARM NAS/Raspberry Pi.
+
+This is strong corroboration that the missing Linux ARM64 Micro Client SDK is a real platform limitation, not just an omission in our Python wrapper setup script.
+
+Sources:
+- https://github.com/nabto/nabto4-python-wrapper/blob/master/setup.py
+- https://github.com/nabto/android-client-api
+- https://github.com/danibram/caleon
+- https://github.com/danibram/caleon/blob/main/README.md
+- https://github.com/danibram/caleon/blob/main/Dockerfile
+
+### What this means for the current HAOS target
+
+Assuming the HAOS host is the Raspberry Pi 4 / 64-bit ARM installation already identified in this project:
+
+- The existing local Genvex integration can run on ARM because it is Python and uses the local UDP transport.
+- The existing x86_64 Nabto Client SDK wrapper cannot be imported as-is on that host.
+- The Android ARM64 JNI library is not a valid replacement.
+- Nabto Edge's ARM64 SDK is not a valid replacement because Edge cannot speak the legacy Micro protocol.
+- A custom HAOS add-on does not magically solve a missing native ARM64 library: it still runs on the host's Linux architecture unless it emulates another architecture, which would add complexity and would not be a sensible first test.
+
+### Updated practical options, ranked for HAOS
+
+1. **Find an actual Linux aarch64 Nabto 4/Micro Client SDK binary or supported source build.** This is the cleanest path if Nabto has one that is not publicly listed. If obtained, it could be wrapped in a small Python package or a dedicated HAOS add-on and tested independently of the HA integration.
+2. **Determine whether the remote app exposes a documented read-only RPC or service API that does not require the closed Client SDK.** The existing Genvex entity/model layer could then be reused behind a separate remote transport. We must first establish the real RPC interface and authentication requirements from authorized evidence.
+3. **Investigate a pure-Python implementation of the remote Micro client only if the required protocol, identity material and crypto/session setup are documented or otherwise legitimately available.** The local HairingX implementation is not enough: it uses the local null-data suite and local discovery assumptions, while the observed app traffic uses suite `0x230A` (AES-CBC/HMAC-SHA256). Do not simply change the suite constant and assume remote operation will work.
+4. **Use the existing local integration when HAOS is on the same LAN as the ventilation unit.** This is already the proven baseline, but does not solve the remote summer-house requirement.
+
+### Immediate next experiment
+
+Before changing the integration, establish the exact HAOS host architecture and runtime from Home Assistant's own System Information page, then check whether any available Nabto 4 client artifact matches that architecture and ABI. If the host is aarch64 and no Linux Micro client exists, stop trying to install the x86_64 wrapper on HAOS and concentrate on the documented remote RPC/API path or obtaining a compatible client library.
+
+No new credentials or remote requests are needed for this architecture check.
