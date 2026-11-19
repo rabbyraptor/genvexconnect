@@ -1,0 +1,61 @@
+# Phase 1 — source-grounded read-only Optima 270 sensor validation
+
+Date: 2026-11-19  
+Branch: `remote-nabto-connection`  
+**Current state: prepared, not executed against the live gateway.**
+
+## Baseline and success criterion
+
+The project already independently verified SDK 4.9.11 remote `ping.json` / ID 17 on x86_64 and on HAOS ARM64/QEMU, and a first single-sensor `candidate_read_datapoints.json` **RPC ID 45** on Steam Deck. The latter returned `raw=367`, decoded `6.7 °C` for the supply-air sensor (obj=0, address=20). Official Genvex Connect iOS app showed `Supply air: 6.70 °C` in a user-provided screenshot. See [verified facts](remote-nabto-verified-facts.md).
+
+The next milestone is **read-only, address-specific multi-sensor coverage**, without yet using a multi-element RPC batch or any control/write operation. Each sensor is requested separately to isolate errors. A later distinct milestone will test batching only after individual reads have been validated.
+
+## Phase 1 test matrix (all source-derived, not guessed)
+
+All operations use the already-verified RPC **ID 45**, a single list entry `obj=0`, `trailer=1`, and one response `int16`. Scale/offset is from [public Optima 270 model](https://github.com/superrob/genvexnabto/blob/main/src/genvexnabto/models/optima270.py):
+
+| Read | Address | Conversion | Original app screenshot at 22:33 | Live independent test |
+| --- | ---: | --- | ---: | --- |
+| Supply air | 20 | (raw - 300)/10 °C | 6.70 °C | **VERIFIED** 367 -> 6.70 °C |
+| Outdoor air | 21 | (raw - 300)/10 °C | 0.20 °C | **PENDING** |
+| Exhaust air | 22 | (raw - 300)/10 °C | 1.80 °C | **PENDING** |
+| Extract air | 23 | (raw - 300)/10 °C | 7.60 °C | **PENDING** |
+| Humidity | 26 | raw % | 66 % | **PENDING** |
+
+App readings are **historical snapshots**, not exact expected values at future test times. Temperatures can change between captures; compare contemporaneously. If a sensor produces an invalid/out-of-range result, do not auto-correct or infer a different query layout. Stop and inspect safely.
+
+## Artifacts
+
+- [`scripts/probe_remote_sensors_phase1.py`](../scripts/probe_remote_sensors_phase1.py): five individual RPC 45 calls **maximum**, with known addresses only; aborts at first failed RPC/decoding error. Uses the pre-existing x86_64 SDK and encrypted test profile. Suppresses account, host, key, passphrase, raw JSON and full URLs.
+- [`tests/test_remote_sensors_phase1.py`](../tests/test_remote_sensors_phase1.py): static offline checks for the five addresses, single read-only RPC ID 45, and list/response types.
+- Earlier one-sensor working reference: [`scripts/probe_remote_datapoint45_readonly.py`](../scripts/probe_remote_datapoint45_readonly.py).
+
+Before committing the plan, a separate locally constructed phase-1 prototype passed **six offline tests** for URL JSON, five-address mapping, XML shape, normal/invalid responses and sanitized error events. No gateway calls have been made with the new phase-1 test file. These prototype tests are not a substitute for executing the repo's static test suite and the live gateway probe.
+
+## Running in existing Linux x86_64 Steam Deck environment
+
+Use the same existing account identity and device hostname as earlier tests **without pasting them in chat or committing them**. Set them interactively (the read prompts below keep identity out of shell history, although the script receives them as environment variables):
+
+```bash
+umask 077
+SCRIPT=$(mktemp /tmp/genvex-phase1.XXXXXX.py) || exit 1
+curl -fsSL 'https://raw.githubusercontent.com/rabbyraptor/genvexconnect/remote-nabto-connection/scripts/probe_remote_sensors_phase1.py' -o "$SCRIPT" || { rm -f "$SCRIPT"; exit 1; }
+read -r -p "Nabto identity (email): " GENVEX_NABTO_IDENTITY
+read -r -p "Gateway hostname: " GENVEX_NABTO_HOST
+GENVEX_NABTO_IDENTITY="$GENVEX_NABTO_IDENTITY" GENVEX_NABTO_HOST="$GENVEX_NABTO_HOST" timeout -k 5s 75s python3 "$SCRIPT"
+STATUS=$?
+rm -f "$SCRIPT"
+unset GENVEX_NABTO_IDENTITY GENVEX_NABTO_HOST
+echo "Test exit status: $STATUS"
+```
+
+Note: because the script currently reports incomplete sensor coverage in its final line, **use that coverage number**, not the shell's process exit status alone, to decide if the milestone passed. On failure it stops further read RPCs and prints only sanitized diagnostics.
+
+## Gate to proceed
+
+- SDK startup, session, XML registration each succeed.
+- Five one-element calls return status 0 and decode one signed integer each.
+- App or local HA comparison is consistent with the model's measurement scales at approximately the same time.
+- Document exact **source-defined** address, conversion, sanitized observed data, and any failure.
+- Only then add a *separate* test for batching or test RPC 45 on HAOS ARM64/QEMU.
+- Do not change existing local Home Assistant integration or use query ID 43/write functions.
