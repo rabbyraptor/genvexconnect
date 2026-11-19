@@ -453,3 +453,105 @@ ha info 2>/dev/null | grep -Ei 'arch|machine|version|operating_system' || true
 ```
 
 Expected architecture names include `aarch64` (64-bit ARM) or `x86_64` (64-bit Intel/AMD). This check does not change configuration or contact the Genvex device.
+
+
+## QEMU user-mode feasibility on Raspberry Pi 4 (2026-11-19)
+
+The confirmed HAOS host is:
+
+- Home Assistant OS 18.5
+- Machine: `raspberrypi4-64`
+- Host architecture: `aarch64`
+
+A new candidate route is to run the official Nabto 4 Linux x86_64 CLI under **QEMU Linux user-mode emulation** inside a dedicated ARM64 Home Assistant app.
+
+### Why this is technically plausible
+
+QEMU user-mode can launch Linux programs compiled for a different CPU architecture on the same operating system kernel. It translates guest system calls to the host kernel. QEMU's documentation explicitly notes that Linux user-mode processes can run inside containers.
+
+This differs from full system emulation:
+- It does not boot a second x86_64 operating system or emulate a whole PC.
+- The ARM64 HAOS Linux kernel remains the host kernel.
+- QEMU translates the x86_64 process instructions and system calls.
+- The emulated process can use host-provided resources, subject to QEMU's syscall and ABI support.
+
+QEMU documentation:
+- https://www.qemu.org/docs/master/user/
+- https://www.qemu.org/docs/master/user/main.html
+- https://www.qemu.org/docs/master/about/emulation.html
+
+### Nabto CLI artifact now identified
+
+The official Nabto CLI v1.3.0 release (2026-10-27) publishes `nabto-cli-linux.zip`. Its release notes identify that artifact as Linux x86_64 and say it uses Nabto Client SDK 4.9.11.
+
+The current official build workflow:
+- builds the Linux artifact on `ubuntu-24.04`;
+- downloads the Nabto 4.9.11 `linux64` client library;
+- packages the CLI and `libnabto_client_api.so` together.
+
+The CLI README explicitly identifies this as the legacy Nabto 4/Micro client, not Edge.
+
+References:
+- https://github.com/nabto/nabto-cli/releases/tag/v1.3.0
+- https://github.com/nabto/nabto-cli/blob/master/.github/workflows/build.yml
+- https://github.com/nabto/nabto-cli/blob/master/CMakeLists.txt
+- https://github.com/nabto/nabto-cli/blob/master/README.md
+
+### Runtime dependencies that must be handled
+
+The release ZIP bundles the Nabto SDK shared library, but that does not mean it bundles the complete Linux runtime. The executable is built on Ubuntu 24.04 and may depend on the x86_64 ELF loader, glibc, libstdc++ and other system libraries.
+
+Therefore the ARM64 app must provide an x86_64 userspace runtime compatible with the binary. A likely test layout is:
+- ARM64 app base and ARM64 QEMU user emulator;
+- QEMU's x86_64 user-mode executable;
+- the official Nabto CLI and its bundled Nabto shared library;
+- a small Ubuntu 24.04 x86_64 runtime/sysroot for the ELF loader and required libraries.
+
+QEMU's `-L` option provides the ELF interpreter prefix/sysroot. We must inspect the actual release binary's ELF interpreter and dynamic dependencies before deciding the minimum runtime contents. Do not assume Debian Bookworm's glibc is new enough for a binary built on Ubuntu 24.04.
+
+### QEMU availability on ARM64
+
+Debian publishes `qemu-user-static` for arm64. The package includes statically linked user-mode emulators, including x86-64 emulation. The full Debian package is large, so the app build should extract and copy only the required `qemu-x86_64-static` executable into the final image rather than installing every emulator and its package metadata.
+
+References:
+- https://packages.debian.org/bookworm/arm64/qemu-user-static
+- https://packages.debian.org/bookworm/qemu-user-static
+
+### HAOS packaging implications
+
+A dedicated ARM64 Home Assistant app is still the appropriate isolation boundary:
+- HA Core remains native ARM64 and does not load an x86_64 Python extension.
+- The Nabto CLI runs as a separate QEMU-emulated process.
+- A small native ARM64 bridge/service can communicate with it over a local Unix socket or loopback TCP.
+- The existing Genvex integration can later communicate with that bridge without importing the x86_64 shared library.
+
+Home Assistant app build guidance supports ARM64 app images and documents multi-architecture builds:
+- https://contributors.home-assistant.io/apps/guides/dockerfile/
+- https://contributors.home-assistant.io/apps/guides/publishing/
+- https://contributors.home-assistant.io/apps/guides/testing/
+
+### Important limitations and unverified points
+
+This is a feasibility hypothesis, not a proven working configuration.
+
+Still to test:
+1. The exact official Nabto CLI v1.3.0 binary starts under ARM64-hosted `qemu-x86_64`.
+2. Its dynamic loader and all shared-library dependencies resolve from the selected x86_64 sysroot.
+3. The CLI can initialize the Nabto 4.9.11 SDK under emulation.
+4. QEMU's translated socket operations support the UDP/TCP behavior used by the Nabto client.
+5. Threading, timers, signals and crypto operations used by the SDK behave correctly.
+6. Runtime overhead on the Raspberry Pi 4 is acceptable for a low-frequency ventilation integration.
+
+The QEMU documentation confirms syscall translation and Linux threading support in general, but it does not certify this particular Nabto binary or its networking behavior. A small isolated test must prove those points before we build a Genvex connection flow.
+
+### Revised next steps
+
+1. Build a minimal ARM64 test app containing QEMU user-mode and the official Nabto CLI release.
+2. Inspect the release binary's ELF architecture, interpreter and dynamic dependencies during the image build.
+3. Run only the CLI version/help command under emulation first; do not provide credentials or contact the Genvex device in this first test.
+4. If that succeeds, run a harmless local socket test under QEMU to verify translated networking.
+5. Only then test Nabto SDK initialization and continue with the separately unresolved Genvex identity/profile and RPC configuration.
+
+This QEMU route supersedes the earlier statement that an add-on would not be a sensible first experiment: a dedicated add-on can isolate the emulator and x86_64 runtime without modifying HAOS or Home Assistant Core. It does not remove the need for valid Genvex remote identity configuration or RPC definitions.
+
+No Genvex credentials, private keys, certificates, tokens or new remote requests are involved in this feasibility test.
