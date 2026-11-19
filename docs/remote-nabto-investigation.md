@@ -658,3 +658,14 @@ Do not describe the overall flow as a proven strictly sequential chain in which 
 ### Current API-first conclusion
 
 The HAR responses still contain no telemetry or control values. A pure REST translation layer based only on the two observed API operations is therefore unsupported by current evidence. A higher-level translation layer may still be useful, but it would need a verified remote transport/API beneath it. The remote Nabto Micro session is now independently visible in the full capture.
+
+
+## Marked fan-speed-change capture update (2026-11-19)
+
+A new PCAP with a precise `FAN_SPEED_CHANGE` marker confirms that a remote Nabto Micro UDP session was active during the user action. The phone exchanged DATA/CRYPTO packets using suite `0x230A` with `80.208.69.3:30721`; the 24-byte notifications decode as `NOTIFY_MICRO_ACK`.
+
+A 70-byte client DATA request occurred 1.619 seconds after the marker and received a 70-byte DATA response. The same request/response pattern recurred 13.574 seconds later, with an identical server response payload. This means the 70-byte exchange is a candidate for comparison, but it cannot yet be labelled as the fan-speed write. The regular 310-/134-byte exchanges continued around the marker, with one 2.046-second interval that may be worth comparing in future captures but is not conclusive on its own.
+
+The remote UDP port was `30721` in this session, reinforcing that the port varies and must not be hard-coded.
+
+See [fan-speed-change-capture-2026-11-19.md](fan-speed-change-capture-2026-11-19.md) for the full packet-level analysis and evidence boundaries.
