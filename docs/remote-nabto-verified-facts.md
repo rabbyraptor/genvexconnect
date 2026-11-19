@@ -1,8 +1,8 @@
 # Remote Nabto 4 — verified facts manifest
 
-**Status:** authenticated remote Nabto RPC 17 (ping) and RPC 45 (single datapoint read) proven on 2026-11-19; supply-air interpretation independently corroborated by the user's official Genvex Connect app screenshot.  
+**Status:** authenticated remote Nabto RPC 17 (ping) and RPC 45 (five independently addressed datapoint reads) proven on 2026-11-19; supply-air interpretation independently corroborated by the user's official Genvex Connect app screenshot.  
 **Target:** Genvex Connect / Optima 270; eventual Home Assistant OS on Raspberry Pi (Linux aarch64).  
-**Evidence level:** authenticated remote ping on Linux x86_64 Steam Deck and on Raspberry Pi HAOS ARM64/QEMU; additionally, read-only datapoint RPC ID 45 returned an SDK-success response on Steam Deck x86_64. RPC 45 has not yet been tested on HAOS/QEMU. This is emulation for HAOS, not native ARM64 or a production integration.  
+**Evidence level:** authenticated remote ping on Linux x86_64 Steam Deck and on Raspberry Pi HAOS ARM64/QEMU; additionally, read-only datapoint RPC ID 45 returned five SDK-success responses on Steam Deck x86_64, one source-defined sensor per RPC. RPC 45 has not yet been tested on HAOS/QEMU. This is emulation for HAOS, not native ARM64 or a production integration.  
 **Scope:** experimental remote transport only. The working local UDP integration is unchanged.
 
 This file is the **single source of truth for the current project state**. The other documents preserve investigation history, hypotheses and capture evidence. When they conflict with this document's verified later experiments, prefer this manifest and the underlying captured output.
@@ -29,6 +29,7 @@ This file is the **single source of truth for the current project state**. The o
 | **Remote authenticated RPC** | **VERIFIED** | With the same 1024-bit profile and the device's private, account-associated `<12-digit-id>.remote.lscontrol.dk` hostname: `nabtoRpcInvoke('nabto://<device>/ping.json?ping=1885957735') = 0`, yielding the gateway response below. This is the key end-to-end milestone. |
 | **HAOS ARM64 + QEMU remote RPC** | **VERIFIED** | On Raspberry Pi HAOS, isolated test app `app_local_genvex_nabto_runtime_test` ran Nabto CLI v1.3.0 / SDK 4.9.11 through `qemu-x86_64-static -L /opt/x86_64-sysroot`; encrypted RSA-1024 profile transferred securely via SSH, `ping.json` RPC returned exit status `0` and the same six numeric gateway values as the Steam Deck baseline; temporary profile removal reported `True`. The native SDK process remains x86_64 emulated. |
 | **RPC 45 / datapoint read** | **VERIFIED ON X86_64** | SDK accepted source-derived XML (0), invoked RPC 45 for one known read-only datapoint (obj=0, address=20) (0), and decoded one signed 16-bit raw value 367 -> *candidate* supply-air temperature 6.7 °C. Official app screenshot at 22:33 showed **Supply air 6.70 °C**, matching the independently obtained remote value exactly; HAOS/QEMU RPC 45 support remains OPEN. No writes. |
+| **Five-source-defined sensor remote reads** | **VERIFIED ON X86_64** | One authenticated Nabto SDK session registered a reconstructed read-only RPC ID 45 XML and completed **5/5 individually addressed** sensor reads with status 0 and correctly decoded signed-int16 values. Addresses 20/21/22/23/26; see the result table below. Batch requests and HAOS/QEMU for RPC 45 not yet tested. |
 | Native Linux aarch64 Nabto 4 client | **OPEN** | No native Linux aarch64 SDK/client found or validated; no completed Home Assistant remote adapter. |
 | Additional Genvex RPC operations | **PARTIALLY OPEN** | Read-only datapoint RPC **45** verified for a single sensor. Other addresses, batched reads, setpoint read ID 42 and all write/control operations remain untested. No complete production XML recovered. Local register addresses are distinct from application query IDs. |
 | Route details | **OPEN** | A successful remote response does **not** distinguish direct P2P from Nabto relay; do not claim which was used without separate evidence. |
@@ -119,6 +120,22 @@ Related: [RPC 45 derivation](reconstructed-readonly-query45-2026-11-19.md) · [r
 The screenshot also showed potential follow-up benchmarks: outdoor air **0.20 °C**, exhaust air **1.80 °C**, extract air **7.60 °C**, humidity **66 %**, supply fan **60.00 %**, extract fan **58.00 %**, bypass off, and controller version **11**. These are **snapshot reference readings, not guaranteed to persist** and have not yet been retrieved with the independent RPC client. The screenshot was supplied privately in the conversation and is **not** committed to this repository.
 
 **Result:** A single **source-derived, authenticated remote sensor datapoint** can be read using our own Nabto 4 SDK client and its reported real-world interpretation **matches the official Genvex application** at the displayed value. It is still one sample: accuracy over time, multi-datapoint list handling, query 42, and HAOS/QEMU RPC 45 remain to validate. No existing HA integration changes, writes, or sensitive identifiers exposed.
+
+### Phase 1: five individual remote sensor reads — 2026-11-19
+
+**VERIFIED by user-supplied terminal output** from Linux x86_64 Steam Deck using the existing authorized RSA-1024 profile and Nabto SDK 4.9.11. SDK startup, resources, session, XML setup, session closure and shutdown all returned status `0`. All five read-only RPC 45 calls decoded successfully and test exited 0:
+
+| Optima 270 datapoint | Address | Raw | Decoded | SDK invocation duration |
+| --- | ---: | ---: | ---: | ---: |
+| Supply air | 20 | 365 | 6.50 °C | 335 ms |
+| Outdoor air | 21 | 299 | -0.10 °C | 17 ms |
+| Exhaust air | 22 | 313 | 1.30 °C | 16 ms |
+| Extract air | 23 | 376 | 7.60 °C | 16 ms |
+| Humidity | 26 | 66 | 66 % | 16 ms |
+
+Each address was read separately, using the reconstructed RPC 45 model's list of **one** `obj=0, address=<listed>` item, and `trailer=1`. These are source-documented Optima 270 datapoint addresses, **not enumerated or guessed IDs**. The supplied app screenshot predates this capture and is only an approximate reference, not a simultaneous ground truth. The first invocation likely incurred setup overhead, but this causal explanation is not yet independently measured. One run cannot establish typical latency or stability. Reference: [phase 1 validation](remote-phase1-sensor-validation-2026-11-19.md).
+
+**Next unverified milestone:** perform one read-only multi-datapoint request to verify batch encoding and response order; subsequently validate the same operation inside the isolated HAOS/QEMU runtime. Never assume writes are supported. No changes to the current local HA integration.
 
 ## Safety, privacy and engineering guardrails
 
