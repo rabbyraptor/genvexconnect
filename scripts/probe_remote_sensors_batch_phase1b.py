@@ -181,6 +181,7 @@ try:
               flush=True)
 except RuntimeError as exc:
     print("Stopped:", str(exc), flush=True)
+    raise SystemExit(6)
 finally:
     if opened:
         print("Session close:", close(session), flush=True)
