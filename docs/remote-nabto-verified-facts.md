@@ -1,8 +1,8 @@
 # Remote Nabto 4 — verified facts manifest
 
-**Status:** authenticated remote Nabto RPC 17 (ping) and RPC 45 (five independently addressed datapoint reads) proven on 2026-11-19; supply-air interpretation independently corroborated by the user's official Genvex Connect app screenshot.  
+**Status:** authenticated remote Nabto RPC 17 (ping) and RPC 45 (five independent sensor reads and one five-item batch) proven on 2026-11-19; supply-air interpretation independently corroborated by the user's official Genvex Connect app screenshot.  
 **Target:** Genvex Connect / Optima 270; eventual Home Assistant OS on Raspberry Pi (Linux aarch64).  
-**Evidence level:** authenticated remote ping on Linux x86_64 Steam Deck and on Raspberry Pi HAOS ARM64/QEMU; additionally, read-only datapoint RPC ID 45 returned five SDK-success responses on Steam Deck x86_64, one source-defined sensor per RPC. RPC 45 has not yet been tested on HAOS/QEMU. This is emulation for HAOS, not native ARM64 or a production integration.  
+**Evidence level:** authenticated remote ping on Linux x86_64 Steam Deck and on Raspberry Pi HAOS ARM64/QEMU; additionally, read-only datapoint RPC ID 45 returned five successful one-sensor reads **and one successful five-sensor batch in a single RPC** on Steam Deck x86_64. RPC 45 has not yet been tested on HAOS/QEMU. This is emulation for HAOS, not native ARM64 or a production integration.  
 **Scope:** experimental remote transport only. The working local UDP integration is unchanged.
 
 This file is the **single source of truth for the current project state**. The other documents preserve investigation history, hypotheses and capture evidence. When they conflict with this document's verified later experiments, prefer this manifest and the underlying captured output.
@@ -135,7 +135,23 @@ The screenshot also showed potential follow-up benchmarks: outdoor air **0.20 °
 
 Each address was read separately, using the reconstructed RPC 45 model's list of **one** `obj=0, address=<listed>` item, and `trailer=1`. These are source-documented Optima 270 datapoint addresses, **not enumerated or guessed IDs**. The supplied app screenshot predates this capture and is only an approximate reference, not a simultaneous ground truth. The first invocation likely incurred setup overhead, but this causal explanation is not yet independently measured. One run cannot establish typical latency or stability. Reference: [phase 1 validation](remote-phase1-sensor-validation-2026-11-19.md).
 
-**Next unverified milestone:** perform one read-only multi-datapoint request to verify batch encoding and response order; subsequently validate the same operation inside the isolated HAOS/QEMU runtime. Never assume writes are supported. No changes to the current local HA integration.
+**Next unverified milestone:** validate the newly successful five-element batch inside the isolated HAOS/QEMU runtime. Never assume writes are supported. No changes to the current local HA integration.
+
+### Phase 1B — verified read-only RPC 45 five-element batch (2026-11-19)
+
+**VERIFIED from user's Steam Deck terminal output:** same existing authenticated x86_64 Nabto SDK 4.9.11 test profile, with explicit passphrase via stdin. `nabtoStartup`, `nabtoInstallDefaultStaticResources`, `nabtoOpenSession` and `nabtoRpcSetDefaultInterface` all returned **0**. Exactly one `nabtoRpcInvoke` for query **45** with the ordered five-item request `obj=0`, addresses **20, 21, 22, 23, 26**, trailer=1, returned **RPC status 0** in **318 ms**. Its response decoded to **five signed int16 values**:
+
+| Address | Sensor | Raw | Converted |
+| ---: | --- | ---: | ---: |
+| 20 | Supply air | 365 | 6.50 °C |
+| 21 | Outdoor air | 299 | -0.10 °C |
+| 22 | Exhaust air | 313 | 1.30 °C |
+| 23 | Extract air | 377 | 7.70 °C |
+| 26 | Humidity | 65 | 65 % |
+
+Log ended `Read-only batch decoded: 5/5`, `Result: BATCH_DECODED`, session close 0, SDK shutdown 0, cleaned temporary profile and wrapper success. This demonstrates **one working five-address remote batch**, including response count and values consistent with individual reads and expected position ordering. Since no response-side address IDs were present, response **ordering is strongly corroborated rather than independently proven for every possible list**. An additional repeated/reordered batch could check this if needed. The 318 ms is one observed elapsed time and not a latency benchmark.
+
+**Now next gate:** run the same read-only batch inside the **existing isolated** HAOS Raspberry Pi 4 ARM64/QEMU test runtime. Do not change the working Home Assistant integration, commit private credentials or SDK binaries, or enable writes. Confirm SDK/CLI invocation and response decoding in the emulated environment; only then plan HA entity mapping and runtime deployment.
 
 ## Safety, privacy and engineering guardrails
 
@@ -149,7 +165,7 @@ Each address was read separately, using the reconstructed RPC 45 model's list of
 
 ## Next experiments (ordered)
 
-1. **Validate the verified *read-only* RPC 45:** compare obj=0/address=20 against the existing local integration, then test additional source-documented read-only Optima 270 datapoints and batching separately, with sanitized outputs. Never attempt writes or assume other query models. The original production XML remains useful but is no longer a prerequisite for cautious read-only progress.
+1. **Validate the verified *read-only* RPC 45 batch on HAOS/QEMU:** x86_64 single-point reads and a five-sensor batch are now successful; reproduce the batch in the isolated ARM64/QEMU test environment, then benchmark stability and safely map to HA entities. Never attempt writes or assume other query models. The original production XML remains useful but is no longer a prerequisite for cautious read-only progress.
 2. **Reference client:** preserve the proven Python/ctypes experiment as a **local/private** test fixture; extract a sanitized, non-secret template only after the interface is known. Do not commit SDK binaries or working credentials.
 3. **ARM64 path:** investigate a licensed native Nabto 4 Client SDK for Linux aarch64; separately evaluate whether an isolated emulated x86_64 service can be supported on HAOS as a **fallback**. **Remote RPC on HAOS ARM64 through QEMU has now succeeded.** Next evaluate its maintainability and security, including CPU/memory, reconnection, restart behavior and supported SDK licensing before considering it a deployable fallback.
 4. **Integration architecture:** abstract remote transport behind the existing Home Assistant entities only after the read RPC schema and runtime packaging are verified. Keep local and remote modes isolated, with explicit credential handling and a tested fallback.
