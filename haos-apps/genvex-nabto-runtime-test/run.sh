@@ -54,7 +54,7 @@ fi
 bashio::log.info "Checking local Nabto discovery over QEMU networking (read-only)"
 if timeout 25s "${QEMU}" -L "${SYSROOT}" "${NABTO}" --home-dir "$TEST_HOME" --discover >"$DISCOVERY_OUTPUT" 2>&1; then
     discovery_lines="$(awk 'END { print NR+0 }' "$DISCOVERY_OUTPUT")"
-    bashio::log.info "PASS: Nabto discovery command completed; output lines: ${discovery_lines}"
+    bashio::log.info "Nabto discovery process returned; output lines: ${discovery_lines}"
     bashio::log.info "Discovered device identifiers and all raw output are intentionally suppressed"
 else
     result=$?
