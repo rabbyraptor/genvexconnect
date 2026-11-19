@@ -210,3 +210,110 @@ These projects strengthen the conclusion that the known public community integra
 The public code gives us the Optima 270 point map and local Micro Nabto transport. Public Nabto material gives us historical RPC client concepts and LS Control's broad architecture. What is still missing is the bridge between them: the current Genvex app's concrete remote host/identity configuration and its RPC interface definitions or a supported remote UDP tunnel.
 
 Without that bridge, implementing a remote client now would require guessing protocol endpoints or app-specific credentials. That would be brittle and could send credentials to the wrong service. The next productive step is technical confirmation from LS Control/Nabto or an authorized inspection of the app's own connection metadata while it is operating—not blind endpoint probing.
+
+
+## Follow-up research: independent Python Micro Nabto implementation and remote packet distinction (2026-11-19)
+
+### 1. A third independent local implementation is now available
+
+The newer HairingX projects provide two related repositories:
+
+- https://github.com/HairingX/nilan_connect
+- https://github.com/HairingX/modbus_event_connect
+- Home Assistant integration: https://github.com/HairingX/ha_nilan_connect
+
+The Nilan Connect README explicitly says that Genvex Optima 270 values have been read from a real unit. It also explicitly describes the client as communicating with the gateway over the local `micro_nabto` protocol, with no cloud connection. The companion HA integration likewise describes itself as LAN-only.
+
+The important new detail is that `modbus_event_connect` contains a pure-Python, asyncio-based Micro Nabto transport:
+
+- `MicroNabtoConnection` owns a UDP datagram endpoint.
+- It sends discovery broadcasts to `255.255.255.255:5570`.
+- It can rediscover a known device ID on the local network.
+- It performs the U_CONNECT handshake, ping, DATA exchanges and request/response correlation.
+- It handles Micro ACK notifications, retransmissions, idle sessions, reconnect backoff and device-busy responses.
+- The library deliberately records connection diagnostics without exposing the paired email or device ID.
+
+Primary source files:
+- https://github.com/HairingX/modbus_event_connect/blob/main/src/modbus_event_connect/micro_nabto/_connection.py
+- https://github.com/HairingX/modbus_event_connect/blob/main/src/modbus_event_connect/micro_nabto/_wire.py
+- https://github.com/HairingX/nilan_connect/blob/main/src/nilan_connect/_optima_270.py
+- https://github.com/HairingX/ha_nilan_connect
+
+This is a useful independent reference for the local transport and for a more robust HA data model. It is not a remote client implementation: the connection sends UDP datagrams to a configured host/port and its rediscovery mechanism uses local broadcast. No CA/profile provisioning, basestation rendezvous, NAT traversal or relay client is implemented in these files.
+
+### 2. The local-versus-remote crypto difference is now independently corroborated
+
+The HairingX Python wire implementation constructs local DATA requests with crypto code `0x000A`. The official uNabto source defines this as `CRYPT_W_NULL_DATA`: a CRYPT payload using the null-data security mode, not AES encryption.
+
+The remote Genvex Connect capture already documented in `observed-lscontrol-cloud-api.md` contains DATA/CRYPTO packets with code `0x230A`. The official uNabto definitions compose this as:
+
+- CRYPT operation: `0x0002`
+- SECR mode: `0x0008`
+- AES-CBC: `0x2000`
+- HMAC-SHA256: `0x0300`
+- Combined: `0x230A`
+
+This gives us a much stronger explanation for why the local Python/Java clients cannot simply be pointed at the remote endpoint. Their local request builder uses the null-data suite and local gateway handshake assumptions; the observed remote traffic uses AES-CBC/HMAC-SHA256. The encrypted application payload is not available from the capture.
+
+Sources:
+- https://github.com/HairingX/modbus_event_connect/blob/main/src/modbus_event_connect/micro_nabto/_wire.py
+- https://github.com/nabto/unabto/blob/master/src/unabto/unabto_packet_util.h
+- https://github.com/nabto/unabto/blob/master/src/unabto/unabto_protocol_defines.h
+- https://github.com/nabto/unabto/blob/master/src/unabto/unabto_crypto.c
+
+### 3. Reinterpretation of the captured remote endpoint
+
+The user-authorized passive capture documented in `observed-lscontrol-cloud-api.md` contains recurring UDP traffic to `80.208.69.3:30815`, including 70-byte DATA/CRYPTO packets using `0x230A` and 24-byte `NOTIFY_MICRO_ACK` responses.
+
+The endpoint's ownership and role have not been independently verified. It must not yet be labelled as the Genvex device, a Nabto relay, or a cloud API.
+
+Nabto's published legacy architecture explains why this distinction matters: the basestation helps devices register and clients locate them; after connection establishment, client and device communicate directly when possible, with relay as a fallback. Therefore an observed public UDP peer could be part of a direct peer path or a relay path. Packet structure alone does not distinguish those cases.
+
+Source:
+- https://downloads.nabto.com/assets/docs/TEN025%20Writing%20a%20Nabto%20API%20client%20application.pdf
+- https://www.nabto.com/partners/ls-control/
+
+### 4. What the public sources say about the current client boundary
+
+Nabto's LS Control partner page describes the LS Control architecture as uNabto on embedded PIC32 hardware, Ionic/Cordova apps using Nabto RPC, and a .NET server application using the Nabto Client SDK. It also describes CA-based authentication integrated with LS Control's custom identity management.
+
+The public Cordova plugin README marks the old `createSignedKeyPair(email, password)` CA flow as deprecated and says the CA services require customer-specific setup. The same README says new solutions should use a different security design, such as PPKA or authentication tokens. This means we must not treat the Genvex app password as a generic Nabto profile password or invent a CA endpoint.
+
+The public Nabto CLI README says the legacy Nabto 4 Client SDK libraries are required to build the client and are distributed separately. Nabto Edge has Linux ARM64 support, but Nabto's own documentation explicitly says Edge and Micro are incompatible. Edge cannot be substituted for the existing Genvex Micro device.
+
+Sources:
+- https://github.com/nabto/cordova-plugin-nabto
+- https://github.com/nabto/nabto-cli
+- https://www.nabto.com/docs/developer/guides/overview/edge-vs-micro.html
+- https://github.com/nabto/nabto-embedded-sdk
+
+### 5. Updated technical assessment
+
+What is now well supported by evidence:
+
+- The local Optima 270 point map is available from several independent implementations.
+- At least three independent community implementations support the local Micro Nabto path.
+- The newer HairingX transport provides a pure-Python reference for local Micro Nabto framing and robust session handling.
+- The user's remote Genvex Connect capture contains Nabto Micro DATA packets using the AES-CBC/HMAC-SHA256 suite and Micro ACK notifications.
+- LS Control's published architecture has historically used a Nabto Client SDK on its server side and custom CA-based identity management.
+
+What remains unknown:
+
+- Whether Genvex Connect v4.0.3 uses exactly the same legacy Cordova/CA flow described in the public LS Control material.
+- The actual role of `80.208.69.3:30815` in the observed session.
+- The supported remote client identity/profile configuration for this particular Genvex account and device.
+- The production Optima 270 RPC interface definitions beyond the public test app's `ping.json`.
+- Whether a supported legacy Nabto 4 Linux ARM64 client library is available for a distributable HAOS add-on.
+
+### 6. Revised next steps — no blind endpoint probing
+
+The next work should use the evidence already collected and source-level analysis:
+
+1. Keep the local Micro Nabto implementation unchanged as a working baseline.
+2. Treat the observed remote UDP exchange as the confirmed remote Nabto-format path, while leaving the endpoint role explicitly unassigned.
+3. Continue source analysis of the official Nabto client API and LS Control test app to separate profile creation, profile opening, host preparation, RPC invocation and tunnel setup.
+4. Use only passive observation of normal app operation if another capture becomes necessary; do not replay requests, guess RPC names, probe undocumented endpoints or test credential payloads.
+5. Keep remote transport isolated behind an adapter. Do not change the Optima 270 model/entity layer until a supported remote session and a documented/read-only RPC are available.
+6. Evaluate the old Client SDK as a product dependency only after its supported platforms, licensing and redistribution terms are known. Do not substitute Edge or Android JNI binaries for a Linux Micro client.
+
+No credentials, private keys, certificates, tokens or redacted application values have been added to this document.
