@@ -635,3 +635,26 @@ After the user installs and runs 0.3.0:
 1. Confirm that the isolated `--certs` operation completes without error.
 2. Inspect the discovery output-line count (without exposing device identifiers).
 3. If discovery behaves correctly, design a separate, explicitly bounded test for remote SDK/profile behavior only after the actual Genvex Connect identity mechanism and authorized remote endpoint are established. Do not guess credentials, profile names, basestation settings or RPC URLs.
+
+
+## Full remote login capture update (2026-11-19)
+
+A full user-authorized login PCAP and two matching LS Control API HAR exports have now been analyzed. The detailed sanitized record is in [remote-login-flow-capture-2026-11-19.md](remote-login-flow-capture-2026-11-19.md).
+
+Newly confirmed observations:
+
+- Two multipart POST operations to `api.lscontrol.dk:4160`: `com#3=7` with `usno#5` empty, then `com#3=8` with `usno#5=1`. Both return HTTP 200 and `{"Status":"1"}`. Field meanings remain unknown; the requests expose no email/password/token/cookie.
+- Two TLS connections with SNI `lscontrol.nabto.com` to `52.29.115.156:443`.
+- Two WebSocket upgrades returning HTTP 101: device-specific `/handshake` at `34.249.112.159:80`, and `/gateway` at `3.255.115.248:80`. The `/gateway` TCP connection remains open through the capture, but no WebSocket application frames are visible. Neither endpoint's application role is established.
+- UDP 5566 controller-associated exchanges, STUN activity on UDP 3478/3479, and local discovery broadcasts on UDP 5570.
+- A remote UDP session to `80.208.69.3:30795` with the same Nabto Micro DATA/CRYPTO structure and crypto suite `0x230A` already identified in earlier captures. The 24-byte notification packets include `NOTIFY_MICRO_ACK` (code 3).
+
+The new PCAP contains 395 packets over approximately 28.37 seconds. Its remote UDP endpoint role remains unassigned (device/peer, relay, or other Nabto infrastructure). The remote UDP port differs from earlier captures and must be treated as session-specific.
+
+### Interpretation correction
+
+Do not describe the overall flow as a proven strictly sequential chain in which the LS Control API finishes before all Nabto activity begins. The full PCAP shows overlapping connections, and the HAR timestamps do not establish a reliable one-to-one mapping for every encrypted TLS record. The supported conclusion is that the API, Nabto infrastructure, controller/STUN traffic, WebSocket handshakes and remote Micro UDP session all occur during the same login/connection attempt; their causal dependencies remain unknown.
+
+### Current API-first conclusion
+
+The HAR responses still contain no telemetry or control values. A pure REST translation layer based only on the two observed API operations is therefore unsupported by current evidence. A higher-level translation layer may still be useful, but it would need a verified remote transport/API beneath it. The remote Nabto Micro session is now independently visible in the full capture.
