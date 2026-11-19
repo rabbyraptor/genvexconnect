@@ -35,7 +35,7 @@ fi
 
 bashio::log.info "Test home directory created; existing Nabto user data will not be read"
 bashio::log.info "x86_64 Python ctypes smoke test:"
-if "${QEMU}" -L "${SYSROOT}" "${SYSROOT}/usr/bin/python3" -c "import ctypes, json, urllib.parse; print(\"PASS: x86_64 Python ctypes import\")"; then
+if "${QEMU}" -L "${SYSROOT}" -E LD_LIBRARY_PATH="${SYSROOT}/usr/local/lib" "${SYSROOT}/usr/local/bin/python3" -c "import ctypes, json, urllib.parse; print(\"PASS: x86_64 Python ctypes import\")"; then
     bashio::log.info "PASS: x86_64 Python runtime works under QEMU"
 else
     bashio::log.error "FAIL: x86_64 Python runtime"
