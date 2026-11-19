@@ -348,3 +348,14 @@ Both requests also contain the same manufacturer marker, a redacted static-looki
 The corresponding full PCAP contains two TLS 1.3 connections to `api.lscontrol.dk:4160`, two TLS connections to `lscontrol.nabto.com:443`, UDP 5570 discovery, STUN activity on UDP 3478/3479, controller-associated UDP 5566 traffic, a Nabto Micro DATA/CRYPTO session to `80.208.69.3:30795`, and successful WebSocket upgrades to `/handshake` and `/gateway`. The WebSocket application roles remain unknown; no WebSocket application frames are visible in this capture.
 
 See [remote-login-flow-capture-2026-11-19.md](remote-login-flow-capture-2026-11-19.md) for the detailed sanitized packet and HAR analysis, including timing caveats and the distinction between confirmed protocol structure and unverified service roles.
+
+
+## Marked fan-speed-change PCAP (2026-11-19)
+
+A separate user-supplied PCAP and marker file were analyzed. The marker records `2026-11-19 15:00:22.145117760 FAN_SPEED_CHANGE` in the user's local time (UTC+01:00), equivalent to 14:00:22.145118 UTC.
+
+A remote Nabto Micro UDP session to `80.208.69.3:30721` was active across the marker. A 70-byte client DATA request occurred 1.619 seconds after the marker and received a 24-byte `NOTIFY_MICRO_ACK`, followed by a 70-byte DATA response. However, the same 70-byte request/response pattern occurred again 13.574 seconds later, with an identical server response payload. It is therefore not proven to be the fan-speed write; it may be a periodic query or another repeated operation.
+
+The ongoing 310-/134-byte DATA exchanges continued before and after the marker. There was a 2.046-second interval between two client packets around the marker, but this single timing difference is not enough to identify a command.
+
+Detailed packet timestamps, sequence numbers, counts and limitations are documented in [fan-speed-change-capture-2026-11-19.md](fan-speed-change-capture-2026-11-19.md).
