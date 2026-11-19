@@ -115,3 +115,85 @@ Source: https://github.com/nabto/nabto-cli
 - Do not assume a Genvex account password is itself a Nabto client profile password; the old CA flow and current Genvex app behavior must be confirmed.
 - Do not ship a dependency on a discontinued or unlicensed binary without a redistribution/maintenance plan.
 - For a plug-and-play product, prefer a supported ARM64 SDK or an official LS Control integration interface over bundling an undocumented x86_64 client.
+
+
+## Deeper inspection: public Python wrapper and native Client API (2026-11-19)
+
+The public `nabto/nabto4-python-wrapper` repository was inspected at source level. This yields a more concrete client-side API map than the previous high-level README review.
+
+### 1. The wrapper exposes the actual legacy client operations
+
+The wrapper's C extension (`extension/src/nabto.c`) binds these native Client API operations:
+
+- `nabtoStartup(home_directory)` and `nabtoShutdown()`.
+- `nabtoCreateProfile(user_id, password)`: creates a CA-signed profile for a user that already exists in a central user-management service.
+- `nabtoCreateSelfSignedProfile(user_id, password)`: creates a self-signed profile; the wrapper documentation explicitly says its identity is not trusted unless the device trusts that certificate fingerprint.
+- `nabtoGetFingerprint(user_id)`.
+- `NabtoSession.open(user_id, key_password)`: calls `nabtoOpenSession` using an already-created profile.
+- `NabtoSession.rpcSetDefaultInterface(interface_xml)`.
+- `NabtoSession.rpcInvoke(nabto_url)`: synchronous RPC invocation.
+- TCP tunnel open/close/status operations.
+
+The wrapper's Python README demonstrates the profile/session/tunnel lifecycle. The C extension additionally shows the RPC bindings, even though the README's quick example focuses on tunnelling.
+
+Sources:
+- https://github.com/nabto/nabto4-python-wrapper/blob/master/README.md
+- https://github.com/nabto/nabto4-python-wrapper/blob/master/extension/src/nabto.c
+- https://github.com/nabto/nabto4-python-wrapper/blob/master/extension/linux64/include/nabto_client_api.h
+
+### 2. The Python wrapper's platform packaging is not ARM64-ready as published
+
+The wrapper's `setup.py` maps every `sys.platform == "linux"` build to the directory named `extension/linux64`. The repository contains Linux64 headers/library layout, not a Linux ARM64-specific target in that packaging logic. Therefore the published Python wrapper cannot be treated as a ready-to-install Raspberry Pi/HAOS ARM64 dependency.
+
+This is a packaging observation, not proof that the underlying Nabto C Client SDK could never be built for ARM64. It means we would need an ARM64-compatible native client library and a deliberate build/package path rather than installing this wrapper unchanged.
+
+The wrapper is also not itself a pure-Python implementation: its extension links against `libnabto_client_api`. Merely installing the Python package does not remove the native-library architecture dependency.
+
+Source:
+- https://github.com/nabto/nabto4-python-wrapper/blob/master/setup.py
+- https://github.com/nabto/nabto4-python-wrapper/tree/master/extension
+
+### 3. Profile creation and opening are separate operations
+
+The API distinction matters:
+
+- `nabtoCreateProfile(id, password)` creates a CA-signed certificate/profile through the configured central user-management service.
+- `nabtoOpenSession(id, password)` opens a session using a profile already stored on the client.
+- `nabtoCreateSelfSignedProfile` is a different trust model and cannot be assumed to work with a production Genvex gateway unless that gateway already trusts the fingerprint.
+
+The native header documents errors including `NABTO_PORTAL_LOGIN_FAILURE`, `NABTO_CERT_SIGNING_ERROR`, and `NABTO_OPEN_CERT_OR_PK_FAILED`. This confirms the legacy client has explicit profile/CA setup and certificate lifecycle, rather than simply taking a device ID and password and connecting.
+
+No attempt should be made to feed the Genvex Connect account password into these functions without knowing that the Genvex app actually provisions the same Nabto profile. The current public sources do not establish that mapping.
+
+Source:
+- https://github.com/nabto/nabto4-python-wrapper/blob/master/extension/linux64/include/nabto_client_api.h
+
+### 4. RPC invocation needs an interface definition
+
+The Python wrapper's RPC flow is:
+1. Open a Nabto session with a locally available profile.
+2. Call `rpcSetDefaultInterface(interface_xml)` with an RPC interface definition.
+3. Call `rpcInvoke("nabto://<device-host>/<query>")`.
+4. Receive the RPC result as a string (the wrapper converts the C API response to a Python string).
+
+The Cordova plugin exposes the same conceptual flow, but with per-host or default interface registration and a separate `prepareInvoke(devices)` call. The Python wrapper inspected here does not expose `prepareInvoke` as a Python method; do not assume the two wrappers have identical method surfaces.
+
+Sources:
+- https://github.com/nabto/nabto4-python-wrapper/blob/master/extension/src/nabto.c
+- https://github.com/nabto/cordova-plugin-nabto/blob/master/www/nabto.js
+
+### 5. What this means for our next implementation step
+
+We can now define the client-side software boundary without inventing the protocol:
+
+- A process/service owns the Nabto client runtime and its private profile directory.
+- It exposes a small local interface to Home Assistant.
+- It uses a known RPC interface definition and explicit RPC URLs.
+- It returns structured results to the existing Genvex model/entity layer.
+- Credentials and private-key material remain in the service's protected storage and are never written to HA YAML, logs, or entity attributes.
+
+However, we still lack two concrete inputs needed for a successful Genvex RPC:
+- an authorized client profile accepted by the Genvex/LS Control CA, and
+- the Optima 270 RPC interface definition/query names beyond the demonstrated `ping.json` example.
+
+The public Python wrapper is useful as an API reference and potential x86_64 diagnostic harness, but its current Linux packaging is not a ready ARM64 solution. The open-source uNabto repository is the embedded/device-side SDK; it should not be confused with the separate legacy Nabto Client SDK used by the Python wrapper.
