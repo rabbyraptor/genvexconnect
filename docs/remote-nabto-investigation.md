@@ -594,3 +594,44 @@ References:
 - Home Assistant base images support `aarch64`, and the official Dockerfile guide recommends Debian/Ubuntu base images when software requires glibc: https://contributors.home-assistant.io/apps/guides/dockerfile/
 
 The next action is to install this local app on the actual HAOS host and inspect the image build result. If the build fails, use the exact Docker build error to refine the sysroot and package contents before attempting any Genvex network activity.
+
+
+## Nabto CLI initialization verified and HAOS test app v0.3.0 (2026-11-19)
+
+### Source-level correction to the 0.2.0 interpretation
+
+Inspection of the official Nabto CLI source `src/nabto_cli.cpp` shows that `main()` calls `init(result)` immediately after parsing arguments and **before** dispatching `--version`, `--help`, `--certs` or `--discover`.
+
+The shared `init()` function calls:
+
+1. `nabtoStartup(homeDir)` (or `nabtoStartup(NULL)` when no custom home is supplied);
+2. `nabtoInstallDefaultStaticResources(NULL)`.
+
+Consequently, the successful 0.2.0 `--version` and `--help` runs already proved that Nabto SDK startup and default static-resource installation completed under QEMU. The earlier conversational interpretation that these commands ran before SDK initialization was incorrect; the upstream source resolves this.
+
+Source: https://github.com/nabto/nabto-cli/blob/master/src/nabto_cli.cpp
+
+### Version 0.3.0 diagnostic scope
+
+The test app has been advanced to 0.3.0 on the `remote-nabto-connection` branch.
+
+It adds two read-only operations, each using a fresh temporary Nabto home directory:
+
+- `--certs`: exercises certificate-store enumeration without accessing any pre-existing user profile. Output is captured and suppressed so certificate names and fingerprints do not enter logs.
+- `--discover`: exercises the CLI's local Nabto discovery API through QEMU. Output is captured and suppressed so discovered device IDs do not enter logs. The process is limited to 25 seconds.
+
+The temporary directory and captured output are removed when the app stops. No profile is opened, no certificate is created, and no pairing, RPC, stream, tunnel, remote hostname or Genvex control request is attempted.
+
+### Discovery result interpretation
+
+The upstream CLI's `--discover` branch calls `showLocalDevices()` and then exits with status 0 without checking the helper's return value. Therefore, a zero process exit status does **not** prove that the discovery API succeeded. The test records only the number of output lines and suppresses all raw output. A nonzero line count is evidence that the CLI emitted discovery results; zero lines is inconclusive between no local devices and an internal discovery failure.
+
+This test exercises local-network discovery only. It does not establish remote Nabto connectivity or reveal the remote Genvex identity/profile configuration.
+
+### Next decision point
+
+After the user installs and runs 0.3.0:
+
+1. Confirm that the isolated `--certs` operation completes without error.
+2. Inspect the discovery output-line count (without exposing device identifiers).
+3. If discovery behaves correctly, design a separate, explicitly bounded test for remote SDK/profile behavior only after the actual Genvex Connect identity mechanism and authorized remote endpoint are established. Do not guess credentials, profile names, basestation settings or RPC URLs.
