@@ -5,9 +5,9 @@ Baseline: [verified facts manifest](remote-nabto-verified-facts.md)
 
 ## 1. Finding the real telemetry RPC schema
 
-**Confirmed:** authenticated remote `ping.json` / query 17 works on Linux x86_64 with an official Nabto 4 SDK; it returns identifiers and a pong word. It is **not** a controller telemetry endpoint.
+**Confirmed:** authenticated remote `ping.json` / query 17 works on Linux x86_64 and HAOS ARM64/QEMU. **Additionally, reconstructed read-only query ID 45 now works remotely on Linux x86_64** for one known Optima 270 datapoint (obj=0, address=20), returning raw 367 and candidate temperature 6.7 °C; independent physical/local comparison is still needed.
 
-**Not confirmed:** any production Optima 270 query ID, JSON name, parameter type, or mapping from the existing LAN UDP point model to Nabto RPC.
+**Not confirmed:** complete production Optima 270 XML or vendor RPC names, read-only query 42, other datapoint addresses/batching, writes or RPC 45 under HAOS/QEMU. The query ID 45 and a compatible request/response schema are now validated for one device reading, reconstructed from the public LAN code.
 
 ### Discovery order
 
@@ -16,7 +16,7 @@ Baseline: [verified facts manifest](remote-nabto-verified-facts.md)
 3. Once a specific **read-only** RPC is established by source evidence, run it through the *existing* x86_64 Python/ctypes reference client; whitelist numeric/known nonsensitive response fields.
 4. Record one experiment per operation: provenance of XML definition, query name and numeric ID, input types, output types, successful SDK return code, sanitized output, and device/firmware version. No writes until read operations have been fully characterized.
 
-**Do not** enumerate or brute-force query IDs or infer a write command from captured DATA packet lengths. Lack of a documented interface is a real discovery gate. A `get_interface_info.json` request appears in Nabto CLI's **optional strict-check** code path but must **not** be assumed supported by this controller or treated as the full interface description.
+**Do not** enumerate or brute-force query IDs or infer a write command from captured DATA packet lengths. RPC 45 now provides a source-grounded read-only path without obtaining the entire original XML; the full vendor interface is still unknown. A `get_interface_info.json` request appears in Nabto CLI's **optional strict-check** code path but must **not** be assumed supported by this controller or treated as the full interface description.
 
 ### Known RPC model
 
@@ -61,3 +61,7 @@ The native library reference runs **Linux x86_64**. Raspberry Pi 4 with 64-bit H
 - Treat 1024-bit RSA / 3DES / old CA signatures as compatibility-only and a security constraint; production suitability requires additional review.
 - Do not claim path is peer-to-peer vs relay solely from successful `nabtoRpcInvoke`.
 - Restrict experiments to a user-authorized gateway.
+
+## 2026-11-19 milestone: first remotely read datapoint
+
+Steam Deck authenticated SDK 4.9.11 test: reconstructed XML query 45 registered **0**; single RPC read of `obj=0,address=20` returned **0**; one decoded signed-int16 sensor value **367**; candidate derived air temperature **6.7 °C**. This is an end-to-end remote controller read, not merely ping. Compare against existing local HA sensor before treating it as accurate; then validate additional documented read-only addresses and one HAOS/QEMU RPC 45 test. See [RPC 45 derivation and result](reconstructed-readonly-query45-2026-11-19.md).
