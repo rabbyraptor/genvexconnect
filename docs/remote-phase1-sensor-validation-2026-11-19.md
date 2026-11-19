@@ -2,7 +2,7 @@
 
 Date: 2026-11-19  
 Branch: `remote-nabto-connection`  
-**Current state: prepared, not executed against the live gateway.**
+**Current state: COMPLETE on Linux x86_64 Steam Deck — five independently addressed read-only RPC 45 calls successful; HAOS/QEMU still pending.**
 
 ## Baseline and success criterion
 
@@ -17,10 +17,10 @@ All operations use the already-verified RPC **ID 45**, a single list entry `obj=
 | Read | Address | Conversion | Original app screenshot at 22:33 | Live independent test |
 | --- | ---: | --- | ---: | --- |
 | Supply air | 20 | (raw - 300)/10 °C | 6.70 °C | **VERIFIED** 367 -> 6.70 °C |
-| Outdoor air | 21 | (raw - 300)/10 °C | 0.20 °C | **PENDING** |
-| Exhaust air | 22 | (raw - 300)/10 °C | 1.80 °C | **PENDING** |
-| Extract air | 23 | (raw - 300)/10 °C | 7.60 °C | **PENDING** |
-| Humidity | 26 | raw % | 66 % | **PENDING** |
+| Outdoor air | 21 | (raw - 300)/10 °C | 0.20 °C | **VERIFIED READ** 299 -> -0.10 °C |
+| Exhaust air | 22 | (raw - 300)/10 °C | 1.80 °C | **VERIFIED READ** 313 -> 1.30 °C |
+| Extract air | 23 | (raw - 300)/10 °C | 7.60 °C | **VERIFIED READ** 376 -> 7.60 °C |
+| Humidity | 26 | raw % | 66 % | **VERIFIED READ** 66 -> 66 % |
 
 App readings are **historical snapshots**, not exact expected values at future test times. Temperatures can change between captures; compare contemporaneously. If a sensor produces an invalid/out-of-range result, do not auto-correct or infer a different query layout. Stop and inspect safely.
 
@@ -30,7 +30,7 @@ App readings are **historical snapshots**, not exact expected values at future t
 - [`tests/test_remote_sensors_phase1.py`](../tests/test_remote_sensors_phase1.py): static offline checks for the five addresses, single read-only RPC ID 45, and list/response types.
 - Earlier one-sensor working reference: [`scripts/probe_remote_datapoint45_readonly.py`](../scripts/probe_remote_datapoint45_readonly.py).
 
-Before committing the plan, a separate locally constructed phase-1 prototype passed **six offline tests** for URL JSON, five-address mapping, XML shape, normal/invalid responses and sanitized error events. No gateway calls have been made with the new phase-1 test file. These prototype tests are not a substitute for executing the repo's static test suite and the live gateway probe.
+Before committing the plan, a separate locally constructed phase-1 prototype passed **six offline tests** for URL JSON, five-address mapping, XML shape, normal/invalid responses and sanitized error events. The user has subsequently executed the committed phase-1 test file successfully on the authorized device; results are documented below. These prototype tests are not a substitute for executing the repo's static test suite and the live gateway probe.
 
 ## Running in existing Linux x86_64 Steam Deck environment
 
@@ -49,7 +49,7 @@ unset GENVEX_NABTO_IDENTITY GENVEX_NABTO_HOST
 echo "Test exit status: $STATUS"
 ```
 
-Note: because the script currently reports incomplete sensor coverage in its final line, **use that coverage number**, not the shell's process exit status alone, to decide if the milestone passed. On failure it stops further read RPCs and prints only sanitized diagnostics.
+The current script exits nonzero for incomplete sensor coverage. As always, also inspect its `Read-only sensors decoded: 5/5` line. On failure it stops further read RPCs and prints only sanitized diagnostics.
 
 ## Gate to proceed
 
@@ -59,3 +59,21 @@ Note: because the script currently reports incomplete sensor coverage in its fin
 - Document exact **source-defined** address, conversion, sanitized observed data, and any failure.
 - Only then add a *separate* test for batching or test RPC 45 on HAOS ARM64/QEMU.
 - Do not change existing local Home Assistant integration or use query ID 43/write functions.
+
+## Executed phase 1: five individual sensor readings (2026-11-19)
+
+**USER-VERIFIED on Steam Deck x86_64, official Nabto 4 Client SDK 4.9.11, authenticated remote gateway.** All startup/resources/profile/XML statuses were **0**. Exactly five sequential source-defined read-only RPC-ID-45 requests, each for one item with obj=0, trailer=1, completed and decoded. No write operations or changes to the existing Home Assistant integration.
+
+| Label | Address | Raw int16 | Converted value | Observed RPC elapsed time |
+| --- | ---: | ---: | ---: | ---: |
+| Supply air | 20 | 365 | 6.50 °C | 335 ms |
+| Outdoor air | 21 | 299 | -0.10 °C | 17 ms |
+| Exhaust air | 22 | 313 | 1.30 °C | 16 ms |
+| Extract air | 23 | 376 | 7.60 °C | 16 ms |
+| Humidity | 26 | 66 | 66 % | 16 ms |
+
+End-of-run summary: `Read-only sensors decoded: 5/5`; session closed 0, SDK shutdown 0, temporary profile cleaned up, shell exit 0. Times are individual SDK invocation durations in a single run, **not** a latency distribution, guaranteed speed or independent measurement of transport route. The first call may include on-demand connection setup, but that is not separately measured.
+
+Earlier official iOS screenshot at **22:33** reported supply 6.70 °C, outdoor 0.20 °C, exhaust 1.80 °C, extract 7.60 °C and humidity 66 %. The two identical values and plausible small temperature changes are useful corroboration, but do not prove strict synchrony for the other measurements.
+
+**Outcome:** Phase 1 individual read-only sensor coverage **passed on Steam Deck**. Next gate: run an isolated single multi-item **read-only** RPC-ID-45 batch for the same five source-defined addresses; verify response count/order/mapping and device behavior. Only after batch verification should HAOS/QEMU and integration work proceed. Native ARM64 SDK, certified binary redistribution and production resilience remain open.
