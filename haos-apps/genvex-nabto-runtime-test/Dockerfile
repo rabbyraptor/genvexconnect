@@ -28,10 +28,19 @@ RUN set -eux; \
     install -m 0644 "${SDK}" /opt/nabto/libnabto_client_api.so; \
     readelf -h /opt/nabto/nabto-cli | grep -q 'Advanced Micro Devices X86-64'; \
     readelf -h /opt/nabto/libnabto_client_api.so | grep -q 'Advanced Micro Devices X86-64'; \
-    echo "=== Nabto CLI dynamic dependencies ==="; \
-    readelf -d /opt/nabto/nabto-cli | grep NEEDED || true; \
-    echo "=== Nabto SDK dynamic dependencies ==="; \
-    readelf -d /opt/nabto/libnabto_client_api.so | grep NEEDED || true; \
+    { \
+      echo "Nabto CLI release: ${NABTO_CLI_VERSION}"; \
+      echo "=== CLI file type ==="; \
+      file /opt/nabto/nabto-cli; \
+      echo "=== CLI ELF interpreter ==="; \
+      readelf -l /opt/nabto/nabto-cli | grep 'Requesting program interpreter' || true; \
+      echo "=== CLI shared-library dependencies ==="; \
+      readelf -d /opt/nabto/nabto-cli | grep NEEDED || true; \
+      echo "=== Nabto SDK file type ==="; \
+      file /opt/nabto/libnabto_client_api.so; \
+      echo "=== Nabto SDK shared-library dependencies ==="; \
+      readelf -d /opt/nabto/libnabto_client_api.so | grep NEEDED || true; \
+    } > /opt/nabto/elf-report.txt; \
     test -x /usr/bin/qemu-x86_64-static
 
 # Stage 2: Ubuntu 24.04 x86-64 runtime libraries.
