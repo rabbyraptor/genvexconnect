@@ -30,3 +30,21 @@ Static extraction can proceed offline:
 ## Next gate
 
 Request an authorized APK/IPA (or an extracted, non-sensitive app-owned JS/XML asset). Once obtained, perform the static source/asset inspection and identify the first *documented read-only* Optima 270 RPC for the already-working remote Nabto 4 test client.
+
+## 2026-11-19 follow-up: public-source discovery and prepared offline scanner
+
+Searches across Nabto's official source, indexed public pages, and GitHub code for LS Control/Genvex/Nilan `unabto_queries.xml`, `rpcSetDefaultInterface`, and production `ping.json` derivatives found **no trustworthy production Optima 270 remote query model**. The general Nabto demo XML IDs do not apply to LS Control. This is a search outcome, not proof that the model cannot be recovered.
+
+A **local-only, static ZIP/APK scanner** is now committed at [`scripts/inspect_nabto_resources.py`](../scripts/inspect_nabto_resources.py). It accepts an authorized official APK, an APKS/XAPK ZIP-style bundle (with nested APKs), or a legacy HTML-DD ZIP archive; it does not install or execute anything, invoke Nabto, or read credentials. It reports only candidate file locations, RPC symbol names and parsable XML query names, IDs, and argument types. It bounds individual file sizes, total decompression and entry count. No app binaries are to be committed.
+
+**Usage on Steam Deck once an authorized package is available:**
+
+```bash
+python3 scripts/inspect_nabto_resources.py '/path/to/GenvexConnect.apk'
+```
+
+For a split APK bundle use the corresponding ZIP-style `.apks` or `.xapk` filename. The scanner has **not been used on a real Genvex app artifact yet**. It cannot rule out models stored in compiled DEX/native binaries, encrypted files, runtime downloads or non-XML JS strings. If the package has only compiled assets, further static analysis will be necessary.
+
+The third metadata probe produced Nabto event `2000027` = `QUERY_MODEL_NO_SUCH_REQUEST` (source: `nabto/cordova-plugin-nabto/www/nabto-constants.js`) because the loaded XML defined `ping.json` only. Do not reinterpret that as a gateway error. No repeated metadata probe required.
+
+**First user dependency remaining:** provide (or locally inspect) a legitimate official app package or corresponding sanitized, app-owned XML/JavaScript resource. Do not use modified/untrusted APK sites.
