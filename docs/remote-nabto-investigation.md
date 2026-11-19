@@ -673,9 +673,9 @@ See [fan-speed-change-capture-2026-11-19.md](fan-speed-change-capture-2026-11-19
 
 ## 2026-11-19: Nabto DATA wire-format analysis
 
-The three fan-change captures now show nine repeated 70-byte client DATA transactions correlated with the user markers. The packet structure is mapped to the public uNabto source: DATA header + CRYPTO payload + suite `0x230A` (AES-CBC/HMAC-SHA256). The 70-byte form contains one AES ciphertext block, so its plaintext is at most 15 bytes under the published padding scheme.
+The three cumulative fan-change PCAP snapshots show nine distinct 70-byte client DATA transactions correlated with the user markers. The packet structure is mapped to the public uNabto source: DATA header + CRYPTO payload + suite `0x230A` (AES-CBC/HMAC-SHA256). The 70-byte form contains one AES ciphertext block, so its plaintext is at most 15 bytes under the published padding scheme.
 
-The captures also show a constant responder-side 16-byte IV-like value (`00..0f`) across 2,834 DATA packets. This matches the public source's explicitly dummy random implementation, but the exact firmware/build is not confirmed. Treat this as an anomaly to raise with Nabto/LS Control, not as a proven vulnerability or a basis for packet manipulation.
+The largest cumulative v3 capture shows a constant responder-side 16-byte IV-like value (`00..0f`) across **1,325 distinct DATA/CRYPTO packets**. The earlier 2,834 count erroneously summed overlapping PCAP snapshots. This matches the public source's explicitly dummy random implementation, but the exact firmware/build is not confirmed. Treat this as an anomaly to raise with Nabto/LS Control, not as a proven vulnerability or a basis for packet manipulation.
 
 The capture also includes CP_REQ_SP / CP_CONN_SP certificate/control-plane exchange before the DATA session. The data packet itself does not contain the 96-byte DATA key material required by the public uNabto crypto implementation.
 
