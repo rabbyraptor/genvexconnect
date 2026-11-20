@@ -44,6 +44,12 @@ The IPC portion created the dedicated no-internet Docker bridge successfully, bu
 
 The user's next HAOS run again created the disposable internal Docker bridge, then printed `Successfully copied ...` and failed with `container rootfs is marked read-only`. Inspection of the **current GitHub branch source** showed the corrected test already uses tar/stdin and contains **no executable `docker cp` call**; the actual output thus indicates an older script version was executed (possibly raw-file or archive caching). This is **not** evidence of an actual authenticated IPC result. A distinct [versioned IPC v2 runner](../scripts/run_haos_ipc_two_container_test_v2.sh) was added to avoid the old raw-file URL and pins its downloaded source archive to immutable commit `6d069565b983e16e99ef7df4e4d868ce54eaa4a3`; it prints an explicit v2/tar marker and tests copied test files on tmpfs. **v2 has not yet been executed**.
 
+### Two-container private IPC with authorization — VERIFIED 2026-11-20
+
+**VERIFIED from the user's HAOS terminal output:** The [versioned IPC v2 runner](../scripts/run_haos_ipc_two_container_test_v2.sh) ran successfully on a dedicated no-internet Docker bridge, using two disposable read-only containers and tmpfs. The exact v2 marker and tar-over-exec file-staging messages appeared; both server and client scripts staged successfully. The actual HTTP handshake showed **401 without bearer token**, **401 with incorrect bearer token**, and an authorized **200 containing five validated synthetic sensor readings**. The harness printed `PASS: ISOLATED TWO-CONTAINER TOKEN IPC`. No live Nabto SDK, Genvex account, device RPC or real profile was used. This verifies the isolated test transport, not automatic secret distribution, encryption, App/Core connectivity, persistence, or actual live sensor delivery.
+
+New [source-only contract tests](../experimental/genvex_remote/test_worker_api_contract.py) now exercise synthetic RPC45 -> serial polling worker -> atomic snapshot state -> bearer-authenticated HTTP response shaping -> strict consumer parser, including no snapshot before first poll and 503 after a failed subsequent poll. **These new tests have been committed but not yet run on HAOS.**
+
 ## Evidence labels
 
 - **VERIFIED:** observed successfully in our controlled tests, with SDK return values or independent certificate checks.
