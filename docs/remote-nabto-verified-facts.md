@@ -40,6 +40,10 @@ This file is the **single source of truth for the current project state**. The o
 
 The IPC portion created the dedicated no-internet Docker bridge successfully, but **failed before server/client HTTP testing** with Docker error `container rootfs is marked read-only` while using `docker cp` to copy scripts into a disposable read-only container. This is a deployment/test harness limitation, **not evidence that IPC authentication or data exchange passed or failed**. The script was amended to stream a tar archive via `docker exec -i ... tar -xf - -C /tmp/genvex-ipc` and deliver the temporary token via `docker exec -i ... cat > /tmp/genvex-ipc/token`, preserving the read-only rootfs. The revised IPC test is awaiting verification; no real credentials or Genvex RPC were involved.
 
+### IPC retry still received old copy behavior — 2026-11-20
+
+The user's next HAOS run again created the disposable internal Docker bridge, then printed `Successfully copied ...` and failed with `container rootfs is marked read-only`. Inspection of the **current GitHub branch source** showed the corrected test already uses tar/stdin and contains **no executable `docker cp` call**; the actual output thus indicates an older script version was executed (possibly raw-file or archive caching). This is **not** evidence of an actual authenticated IPC result. A distinct [versioned IPC v2 runner](../scripts/run_haos_ipc_two_container_test_v2.sh) was added to avoid the old raw-file URL and pins its downloaded source archive to immutable commit `6d069565b983e16e99ef7df4e4d868ce54eaa4a3`; it prints an explicit v2/tar marker and tests copied test files on tmpfs. **v2 has not yet been executed**.
+
 ## Evidence labels
 
 - **VERIFIED:** observed successfully in our controlled tests, with SDK return values or independent certificate checks.
