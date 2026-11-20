@@ -7,6 +7,7 @@
 | Document | Purpose |
 | --- | --- |
 | [Resource catalogue](remote-nabto-resources.md) | Curated official Nabto / Home Assistant documentation, upstream Github repositories, reverse-engineering links and verified runtime evidence |
+| [Offline certificate enrollment prototype](../experimental/genvex_remote/enrollment_core.py) | RSA-1024/CSR and encrypted PKCS8 candidate generation plus simulated CA-response checks; no live HTTP or installed App changes |
 | [UI onboarding + automatic certificate architecture](remote-ha-ui-onboarding-architecture.md) | Why the QEMU App exists, desired real HA integration, login/config flow, automatic CSR/certificate issuance and secret lifecycle |
 | [Remote HA entity bridge plan](remote-ha-entity-plan.md) | First five read-only entity specifications, offline test model, secure runtime-to-HA bridge requirements and deployment gates |
 | [Verified facts manifest](remote-nabto-verified-facts.md) | Current verified results, exact SDK statuses, identity provisioning, architecture, remaining gates |
