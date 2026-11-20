@@ -10,6 +10,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Thread
 from typing import Callable
 
+from private_bind_v2 import validate_v2_bind
 from snapshot_api import handle_read_request
 from snapshot_api_v2 import V2_PATH, handle_v2_read_request
 
@@ -27,11 +28,9 @@ class ExperimentalV2HTTPServer:
         self, *, bind_host: str, port: int, token: str,
         device_id: str, snapshot_provider: Callable[[], dict | None],
         v2_snapshot_provider: Callable[[], dict | None],
+        private_opt_in: bool = False,
     ):
-        if bind_host != "127.0.0.1" or type(port) is not int or not (
-            port == 0 or 1024 <= port <= 65535
-        ):
-            raise ValueError("Experimental v2 bridge requires loopback-only bind")
+        validate_v2_bind(bind_host, port, private_opt_in=private_opt_in)
         if not callable(snapshot_provider) or not callable(v2_snapshot_provider):
             raise ValueError("Both snapshot providers are required")
         self._thread = None
