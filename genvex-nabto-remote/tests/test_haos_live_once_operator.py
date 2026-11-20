@@ -30,6 +30,7 @@ class LauncherTests(unittest.TestCase):
         self.assertEqual(cmd[cmd.index("--network") + 1], "bridge")
         self.assertEqual(cmd[cmd.index("--log-driver") + 1], "none")
         self.assertIn("readonly", " ".join(cmd))
+        self.assertIn("sdk_snapshot_adapter.py", " ".join(cmd))
         for credential in (b"hidden@example.com", b"private", b"123456789012"):
             self.assertNotIn(credential, " ".join(cmd).encode())
         self.assertEqual(calls[1][0][1:3], ["rm", "-f"])
