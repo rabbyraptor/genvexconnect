@@ -26,7 +26,7 @@ class SnapshotHTTPServer:
                  device_id: str, snapshot_provider: Callable[[], dict | None]):
         if not bind_host or bind_host == "0.0.0.0" and port != 18275:
             raise ValueError("Invalid private bridge binding")
-        if not isinstance(port, int) or not 1024 <= port <= 65535:
+        if not isinstance(port, int) or not (1024 <= port <= 65535 or (port == 0 and bind_host == "127.0.0.1")):
             raise ValueError("Invalid bridge port")
         self._thread = None
         self._server = None
