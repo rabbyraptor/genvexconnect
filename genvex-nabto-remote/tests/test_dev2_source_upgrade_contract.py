@@ -136,7 +136,7 @@ class Dev2UpgradeContractTests(unittest.TestCase):
         (self.bin / "ssh").chmod(0o700)
         (self.bin / "ha").write_text(
             "#!/bin/sh\n"
-            "printf '%s\\\n' 'state: stopped' 'boot: manual' 'version: 0.1.0-dev1'\n"
+            "printf '%s\\n' 'state: stopped' 'boot: manual' 'version: 0.1.0-dev1'\n"
         )
         (self.bin / "ha").chmod(0o700)
         (self.bin / "docker").write_text("#!/bin/sh\nexit 1\n")
