@@ -49,15 +49,17 @@ for role in server client; do
     --read-only --tmpfs /tmp:rw,nosuid,nodev,size=32m,mode=1777 \
     --entrypoint /bin/sh "$IMAGE" -c 'sleep 240' >/dev/null
   docker exec "$NAME" mkdir /tmp/genvex-ipc
-  docker cp "$SRC/." "$NAME:/tmp/genvex-ipc/"
+  # Docker cp can reject writable tmpfs writes on a read-only container.
+  # Stream a tar archive through docker exec instead.
+  tar -C "$SRC" -cf - . | docker exec -i "$NAME" tar -xf - -C /tmp/genvex-ipc
 done
 
 # Token created with native Python CSPRNG. It is NEVER included in a Docker
 # argument, environment variable, console log, or repo file.
 docker exec "$SERVER" python3 -c 'import secrets; print(secrets.token_urlsafe(32))' > "$ROOT/token"
 chmod 600 "$ROOT/token"
-docker cp "$ROOT/token" "$SERVER:/tmp/genvex-ipc/token"
-docker cp "$ROOT/token" "$CLIENT:/tmp/genvex-ipc/token"
+docker exec -i "$SERVER" sh -c 'umask 077; cat > /tmp/genvex-ipc/token' < "$ROOT/token"
+docker exec -i "$CLIENT" sh -c 'umask 077; cat > /tmp/genvex-ipc/token' < "$ROOT/token"
 docker exec "$SERVER" chmod 600 /tmp/genvex-ipc/token
 docker exec "$CLIENT" chmod 600 /tmp/genvex-ipc/token
 
