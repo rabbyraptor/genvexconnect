@@ -78,6 +78,7 @@ COPY --from=x86python /usr/lib/x86_64-linux-gnu/libexpat.so.1* /opt/x86_64-sysro
 COPY runtime/ /opt/genvex-remote/runtime/
 COPY run.sh /run.sh
 RUN chmod 0755 /run.sh \
+    && python3 -m compileall -q /opt/genvex-remote/runtime \
     && /usr/local/bin/qemu-x86_64-static -L /opt/x86_64-sysroot /opt/nabto/nabto-cli -v \
     && /usr/local/bin/qemu-x86_64-static -L /opt/x86_64-sysroot -E LD_LIBRARY_PATH=/opt/x86_64-sysroot/usr/local/lib /opt/x86_64-sysroot/usr/local/bin/python3 -c 'import ctypes, json, urllib.parse; print("x86_64 Python ctypes OK")'
 
