@@ -8,6 +8,7 @@ import stat
 import struct
 import tempfile
 import unittest
+from unittest.mock import patch
 
 MODULE = Path(__file__).resolve().parents[1] / "runtime/profile_provision.py"
 spec = importlib.util.spec_from_file_location("genvex_private_profile_provision", MODULE)
@@ -55,6 +56,45 @@ class ProvisioningTests(unittest.TestCase):
         with self.assertRaises(FileExistsError):
             provisioner.provision(io.BytesIO(bundle()), data_dir=self.data)
         self.assertFalse(list(outside.iterdir()))
+
+    def test_atomic_no_clobber_when_target_created_after_precheck(self):
+        original = provisioner._rename_noreplace
+
+        def competing_creator(parent_fd, staged, target):
+            # Simulate another process creating an EMPTY directory after
+            # the early existence check but before atomic publication.
+            (self.data / "profile").mkdir(mode=0o700)
+            original(parent_fd, staged, target)
+
+        with patch.object(provisioner, "_rename_noreplace", competing_creator):
+            with self.assertRaises(FileExistsError):
+                provisioner.provision(io.BytesIO(bundle()), data_dir=self.data)
+        self.assertEqual(list((self.data / "profile").iterdir()), [])
+        self.assertFalse(list(self.data.glob(".profile-stage-*")))
+
+    def test_atomic_no_clobber_when_target_symlink_created_during_promotion(self):
+        original = provisioner._rename_noreplace
+        outside = self.data.parent / "outside"
+        outside.mkdir()
+
+        def competing_symlink(parent_fd, staged, target):
+            (self.data / "profile").symlink_to(outside, target_is_directory=True)
+            original(parent_fd, staged, target)
+
+        with patch.object(provisioner, "_rename_noreplace", competing_symlink):
+            with self.assertRaises(FileExistsError):
+                provisioner.provision(io.BytesIO(bundle()), data_dir=self.data)
+        self.assertTrue((self.data / "profile").is_symlink())
+        self.assertEqual(list(outside.iterdir()), [])
+        self.assertFalse(list(self.data.glob(".profile-stage-*")))
+
+    def test_fail_closed_if_atomic_rename_unavailable(self):
+        with patch.object(provisioner, "_rename_noreplace",
+                          side_effect=ValueError("Atomic no-replace unsupported")):
+            with self.assertRaises(ValueError):
+                provisioner.provision(io.BytesIO(bundle()), data_dir=self.data)
+        self.assertFalse((self.data / "profile").exists())
+        self.assertFalse(list(self.data.glob(".profile-stage-*")))
 
     def test_rejects_truncated_payload(self):
         with self.assertRaises(ValueError):
