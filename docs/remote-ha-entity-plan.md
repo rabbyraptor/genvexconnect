@@ -30,6 +30,16 @@ An **offline-only** [legacy CA enrollment prototype](../experimental/genvex_remo
 
 The user expects **Settings → Devices & services → Add integration → Genvex Remote** with an ordinary login/config form. The user should **never** have to use SSH/terminal, transfer certificates, create CSRs, copy encrypted keys, or type the local key-unlock passphrase for routine operation. The runtime App must internally handle private key + CSR generation, vendor legacy CA certificate enrollment, persistent protected credential lifecycle and SDK startup; the separate HA integration owns device/entity UI. The old standalone test app exists because its x86_64 SDK cannot run in native ARM64 HA Core. Full [architecture and security gates](remote-ha-ui-onboarding-architecture.md).
 
+## Implemented foundational contracts (development branch only)
+
+- [Registration HTTP transport](../experimental/genvex_remote/registration_http.py): known legacy CA endpoint, strict TLS, bounded POST, no redirects; **not invoked automatically**.
+- [Transactional enrollment](../experimental/genvex_remote/enrollment_service.py): injected transport and explicitly pinned CA, with versioned credential installation only after verification.
+- [Private profile store](../experimental/genvex_remote/profile_store.py): private persistent generations and atomic active pointer, without overwriting the existing key on failed enrollment; cleanup/rotation after crash is still to be designed.
+- [Fresh snapshot contract](../experimental/genvex_remote/snapshot_contract.py): checks device ID, schema, complete five readings, UTC timestamp, freshness and finite values, so the eventual HA coordinator never displays failed/stale data as live.
+- [Offline CI workflow](../.github/workflows/remote-nabto-offline.yml): exercises fake CA, safe storage, URL transport and snapshot logic; **CI execution outcome not independently confirmed in this update**.
+
+**All of these are isolated development files, not yet imported by the installed HAOS runtime or an integration. No new live cert was issued.**
+
 ## Remaining bridge (must be implemented before live HA entities)
 
 Build a private, well-defined **HAOS runtime → Home Assistant data bridge**. The current v0.4.0 app exposes a one-shot manual RPC script, not a polling service, shared state/API or Home Assistant Config Entry. No false live-data dashboard shortcut.
