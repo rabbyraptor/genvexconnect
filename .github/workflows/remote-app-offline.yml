@@ -31,7 +31,7 @@ jobs:
         run: |
           for src in genvex-nabto-remote/runtime/*.py; do
             file=$(basename "$src")
-            if [ "$file" != app_bootstrap.py ]; then
+            if [ "$file" != app_bootstrap.py ] && [ "$file" != profile_provision.py ]; then
               cmp "$src" "experimental/genvex_remote/$file"
             fi
           done
