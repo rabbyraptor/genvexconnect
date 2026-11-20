@@ -56,7 +56,7 @@ ROOT=/mnt/data/supervisor/apps/local/genvex_nabto_remote
   exit 1
 }
 # No file enumeration. Only fixed executable/source files in the known
-# local App SOURCE folder. Do not touch apps/data or options.json.
+# local App SOURCE folder. Never touch Supervisor private data or options.
 for rel in config.yaml Dockerfile run.sh runtime/app_bootstrap.py \
            runtime/profile_provision.py; do
   file="$ROOT/$rel"
