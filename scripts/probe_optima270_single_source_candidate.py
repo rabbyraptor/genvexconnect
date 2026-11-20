@@ -123,10 +123,9 @@ def _check_existing_profile(root: Path, identity: str) -> tuple[Path, Path, Path
     return cert, key, lib, identity.replace("@", "_at_")
 
 
-def execute_one_read(candidate):
+def execute_one_read(candidate, *, use_passphrase_stdin: bool = False):
     # Late import ensures OFFLINE preview cannot accidentally import the SDK.
     import ctypes as ct
-    import getpass
     import shutil
     import tempfile
     import time
@@ -137,9 +136,17 @@ def execute_one_read(candidate):
         raise ValueError("Authorized gateway hostname is not valid")
 
     cert, key, lib, profile_stem = _check_existing_profile(Path.home(), identity)
-    password = getpass.getpass("Existing encrypted key passphrase: ")
-    if not password:
-        raise ValueError("Empty passphrase")
+    print("PASS: existing SDK, encrypted test profile and target format verified", flush=True)
+    # The Steam Deck wrapper collects the passphrase with an explicit visible
+    # shell prompt and writes it through a pipe. Reading stdin avoids
+    # getpass.getpass() stalling on /dev/tty under nested timeout sessions.
+    # Never print, log or export the passphrase.
+    if not use_passphrase_stdin:
+        raise ValueError("Live runs require the approved passphrase-stdin wrapper")
+    password = sys.stdin.readline(1024).rstrip("\\r\\n")
+    if not password or len(password) > 1022:
+        raise ValueError("Empty or oversized encrypted-key passphrase")
+    print("PASS: encrypted-key input received; preparing SDK", flush=True)
 
     dll = ct.CDLL(str(lib))
     p = ct.c_void_p
@@ -234,6 +241,8 @@ def main(argv=None):
     parser.add_argument("--execute-live", action="store_true", help="Execute one live RPC45 read")
     parser.add_argument("--approved-read-only", action="store_true",
                         help="Confirm separate operator authorization for the single test")
+    parser.add_argument("--passphrase-stdin", action="store_true",
+                        help="Read key passphrase from piped stdin; required for live mode")
     args = parser.parse_args(argv)
 
     try:
@@ -241,8 +250,8 @@ def main(argv=None):
     except ValueError:
         parser.error("Unknown source-only candidate key")
     if not args.execute_live:
-        if args.approved_read_only:
-            parser.error("--approved-read-only must accompany --execute-live")
+        if args.approved_read_only or args.passphrase_stdin:
+            parser.error("Live-only flags cannot be used in offline preview")
         print("OFFLINE preview: no Nabto SDK or connection was opened")
         print("Candidate:", candidate.key, "address:", candidate.address,
               "obj=0, rpc_id=45, remote_status:", candidate.remote_status)
@@ -250,11 +259,11 @@ def main(argv=None):
               candidate.scale_offset, candidate.scale_divisor)
         return 0
 
-    if not args.approved_read_only:
-        parser.error("Live RPC requires separate approval and --approved-read-only")
+    if not args.approved_read_only or not args.passphrase_stdin:
+        parser.error("Live RPC requires separate approval and the Steam Deck stdin-passphrase wrapper")
 
     try:
-        execute_one_read(candidate)
+        execute_one_read(candidate, use_passphrase_stdin=True)
         return 0
     except (ValueError, RuntimeError, OSError) as exc:
         # Fixed category only: no raw SDK response or any sensitive identity.
