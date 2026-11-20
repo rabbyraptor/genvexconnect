@@ -225,3 +225,9 @@ These are not a substitute for the operator's real HAOS preflight.
 the retained backup and stopped/manual installed dev1 status. Do not
 trigger `ha store reload` or `ha apps update` before separately approving
 the Supervisor update/backup stage.
+
+## HAOS source-swap attempt blocked before promotion — BusyBox checksum option
+
+**OPERATOR VERIFIED (2026-11-20):** The Steam Deck successfully pulled the reviewed branch, generated the dev2 source-only tarball and checksum, and passed both independent read-only host gates for the stopped/manual installed dev1 App. The explicit source transaction then failed at the **remote archive checksum check**: HAOS BusyBox v1.37 `sha256sum` does not accept the GNU long option `--status`. The script printed `BLOCKED-archive-checksum` and returned nonzero. The failure occurs before the `mv` of the original source tree. Its EXIT cleanup is expected to remove the temporary source stage, but this is **not yet independently verified on HAOS**. Do not assume the swap occurred or retry it without another read-only gate.
+
+**SOURCE FIX:** The host archive checksum uses the portable `sha256sum -c` with output suppressed, which works with BusyBox and standard GNU tools. The first proposed `sha256sum -c -s` worked with HAOS BusyBox but failed the CI host implementation of sha256sum; replaced by `-c` without extra flags. The test harness enforces no long `--status` option in the remote command and exercises the swap/rollback using synthetic source trees. The Steam Deck checkout must be fast-forwarded to obtain this fix before any retry. No Supervisor catalog reload, App image update, credentials or Nabto traffic occurred.
