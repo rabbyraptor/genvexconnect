@@ -44,6 +44,9 @@ SRC="$BASE/genvex_nabto_remote"
 }
 # Walk ONLY the local source tree, never Supervisor's apps/data.
 # Deny any unexpected file/dir/symlink before archiving or future replacement.
+if ! find "$SRC" -mindepth 1 -print >/dev/null 2>&1; then
+  echo "BLOCKED: source tree enumeration failed"; exit 1;
+fi
 BAD=$(find "$SRC" -mindepth 1 -print | while IFS= read -r path; do
   rel=${path#"$SRC"/}
   case "$rel" in
