@@ -59,7 +59,7 @@ class MountUidDiagnosticTests(unittest.TestCase):
                 "esac\n"
             )
             stat = root / "stat"
-            stat.write_text("#!/bin/sh\\necho 755:0:0\\n")
+            stat.write_text("#!/bin/sh\necho 755:0:0\n")
             for exe in (ha, docker, stat):
                 exe.chmod(0o700)
             env = os.environ.copy()
