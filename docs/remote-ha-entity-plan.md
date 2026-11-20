@@ -71,6 +71,12 @@ The user's HAOS terminal output confirms [`run_haos_live_rpc_to_ipc_test_v2.sh`]
 
 [`polling_service.py`](../experimental/genvex_remote/polling_service.py) and [offline lifecycle tests](../experimental/genvex_remote/test_polling_service.py) are now staged, but **not yet HAOS-tested, connected to the SDK, or installed**. Remaining blocking deliverables: supervised SDK worker, secure shared secret provisioning, production App packaging, real Home Assistant config entry and enrollment/CA pinning.
 
+### SDK subprocess adapter — staged after 84/84 HAOS tests
+
+[`sdk_snapshot_adapter.py`](../experimental/genvex_remote/sdk_snapshot_adapter.py) now provides a native Python async bridge to the **already working isolated QEMU x86_64 snapshot probe**. The adapter uses a bounded subprocess, routes the existing unlock secret only over stdin (never as a command-line argument/environment variable), captures output without logging it, accepts exactly one validated structured snapshot marker, and kills/waits for the subprocess on timeout/cancellation. Its `poll_once()` method is directly compatible with `SnapshotState` and the serial 60-second `PollingService`. This is **source-only**: the installed App still has no persistent worker or secured token-provisioned IPC.
+
+[`test_sdk_snapshot_adapter.py`](../experimental/genvex_remote/test_sdk_snapshot_adapter.py) adds mock-subprocess tests for success, SDK failure redaction, timeout, cancellation, malformed output and polling integration. The pinned [native HAOS test runner](../scripts/run_haos_sdk_adapter_offline_v1.sh) exercises the full backend suite plus compilation **without touching the real Nabto profile or gateway**. **Test result pending.** Remaining production work includes daemon supervision/restart, credential lifecycle/CA pinning, bounded stream buffering, secure internal API and real HA Core config-flow test.
+
 ## Engineering gates before installation
 
 - Verify transport bridge in isolation: permissions, schema, heartbeat, malformed payload, stale timestamp, worker crash/restart, QEMU hard timeout and credential cleanup.
