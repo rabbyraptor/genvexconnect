@@ -65,6 +65,12 @@ Review [`remote-runtime-ipc-security.md`](remote-runtime-ipc-security.md) before
 
 The [combined native HAOS offline test runner](../scripts/run_haos_remote_dev_tests.sh) exercises the original enrollment/sensor tests, new serialized worker, isolated HA parser and compiles the entire HA scaffold. **Its result has not yet been reported from HAOS.**
 
+### Verified full remote-to-HTTP one-shot test and new polling scaffold — 2026-11-20
+
+The user's HAOS terminal output confirms [`run_haos_live_rpc_to_ipc_test_v2.sh`](../scripts/run_haos_live_rpc_to_ipc_test_v2.sh) passed: a real read-only remote RPC45 batch created a complete fresh snapshot, a second Docker container rejected missing/incorrect bearer tokens and accepted five **real** sensor values over HTTP. The device identity, timestamp and schema passed strict validation. This was **not Home Assistant Core**, and no long-lived worker was started.
+
+[`polling_service.py`](../experimental/genvex_remote/polling_service.py) and [offline lifecycle tests](../experimental/genvex_remote/test_polling_service.py) are now staged, but **not yet HAOS-tested, connected to the SDK, or installed**. Remaining blocking deliverables: supervised SDK worker, secure shared secret provisioning, production App packaging, real Home Assistant config entry and enrollment/CA pinning.
+
 ## Engineering gates before installation
 
 - Verify transport bridge in isolation: permissions, schema, heartbeat, malformed payload, stale timestamp, worker crash/restart, QEMU hard timeout and credential cleanup.
