@@ -1,0 +1,22 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Genvex Remote (udvikling)",
+        "description": "Indtast det 12-cifrede enheds-ID. Automatisk certifikatoprettelse og sikker kommunikation med runtime er endnu ikke aktiveret.",
+        "data": { "device_id": "Enheds-ID" }
+      }
+    },
+    "error": { "invalid_device_id": "Indtast præcis 12 almindelige cifre." },
+    "abort": { "already_configured": "Enheden er allerede konfigureret." }
+  },
+  "entity": {
+    "sensor": {
+      "supply_air": { "name": "Indblæsning" },
+      "outdoor_air": { "name": "Udeluft" },
+      "exhaust_air": { "name": "Afkast" },
+      "extract_air": { "name": "Udsugning" },
+      "humidity": { "name": "Luftfugtighed" }
+    }
+  }
+}
