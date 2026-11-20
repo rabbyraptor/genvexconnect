@@ -93,3 +93,5 @@ fake Supervisor and Docker; real HAOS execution is not yet verified.
 
 The fingerprint result must be reviewed before any approval to replace an
 existing local Supervisor source tree. This is not itself an upgrade.
+
+**Offline regression:** Source fingerprint gate passed [GitHub Actions 44829263224](https://github.com/rabbyraptor/genvexconnect/actions/runs/44829263224): 277 backend tests and 27 HA tests in each of two environments, including stopped/running/automatic-boot, missing code file and linked source path. No actual HAOS source fingerprints have yet been collected, and no update was performed.
