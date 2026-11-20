@@ -313,3 +313,19 @@ documents POST `/store/reload` for refreshing local App source changes.
 Source: https://contributors.home-assistant.io/apps/supervisor-api/store/
 
 No App update or backup has yet been authorized or executed. Confirm CLI capabilities and prepare a fail-closed backup/rollback-aware update procedure for separate operator approval.
+
+## Supervisor CLI backup capability verified; dev2 update prepared, not approved
+
+**Operator-verified:** On actual HAOS, the isolated App is still stopped/manual/installed `0.1.0-dev1`, Supervisor offers `0.1.0-dev2`, and `ha apps update --help` advertises the explicit `--backup` option. The same help **does not** advertise `--background` or `--version`. No App backup or update has been initiated by this read-only CLI probe.
+
+**Verified upstream implementation (Home Assistant CLI and Supervisor main):** `ha apps update [slug] --backup` passes a `backup: true` request for the single named App. Supervisor's AppManager.update first awaits `do_backup_partial(... apps=[app.slug])` before calling `app.update()`, so a failed backup prevents that update request from proceeding. The App update code remembers `last_state` and calls `start()` **only if it was STARTED/STARTUP before the update**. This supports our requirement to keep the already stopped experimental App stopped, but the operator must verify actual post-update state rather than assume it.
+
+Source references:
+- https://github.com/home-assistant/cli/blob/main/cmd/apps_update.go
+- https://github.com/home-assistant/supervisor/blob/main/supervisor/apps/manager.py
+- https://github.com/home-assistant/supervisor/blob/main/supervisor/apps/app.py
+- https://www.home-assistant.io/common-tasks/general/backups
+
+**Prepared but not executed:** `scripts/update_haos_genvex_remote_dev2_with_backup_v1.sh` has an inert `--preflight` and a separate `--execute-approved` option. It requires the exact stopped/manual/dev1 Supervisor state, dev2 update availability, nonrunning dedicated App container, critical verified dev1/dev2 source digests, no staging residue, disk headroom and CLI `--backup` support. It executes **only one** backup-enabled App update, without retry, then reads sanitized App metadata and requires installed dev2/stopped/manual. It never executes a start, stop, restore, local App source swap, store reload, or live Nabto RPC. This script is **not yet operator-approved** for HAOS execution.
+
+**Rollback limitations:** The old dev1 source tree is still retained. A Supervisor App update backup should contain the old App and data, but update success must not be confused with independent backup inventory verification. Do not automatically restore from the backup on failure; first inspect Supervisor state and the backup inventory. Restore semantics may affect App startup and private state and need separate approval.
