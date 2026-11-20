@@ -8,6 +8,7 @@ adapter, and must explicitly call start/stop. No attempt to replace v1 runtime.
 from __future__ import annotations
 
 from ipc_auth import IPCAuthError, authorize_read
+from private_bind_v2 import validate_v2_bind
 from polling_service import PollingService
 from sensor_model import remote_hostname
 from v2_polling_state import V2SnapshotState
@@ -18,7 +19,9 @@ class ExperimentalV2Runtime:
     """A single owner of polling, cached snapshot and loopback IPC."""
 
     def __init__(self, *, device_id: str, adapter: object, token: str,
-                 interval_seconds: float = 60, port: int = 0):
+                 interval_seconds: float = 60, port: int = 0,
+                 bind_host: str = "127.0.0.1",
+                 private_opt_in: bool = False):
         remote_hostname(device_id)
         if (getattr(adapter, "device_id", None) != device_id
                 or not callable(getattr(adapter, "poll_once", None))):
@@ -27,8 +30,7 @@ class ExperimentalV2Runtime:
             authorize_read(token, token)
         except IPCAuthError:
             raise ValueError("Invalid internal IPC token") from None
-        if type(port) is not int or (port != 0 and not 1024 <= port <= 65535):
-            raise ValueError("Invalid loopback test port")
+        validate_v2_bind(bind_host, port, private_opt_in=private_opt_in)
         self.state = V2SnapshotState(adapter)
         self.bridge = OptInV2SnapshotBridge(
             state=self.state, device_id=device_id
@@ -38,6 +40,8 @@ class ExperimentalV2Runtime:
         )
         self._token = token
         self._port = port
+        self._bind_host = bind_host
+        self._private_opt_in = private_opt_in
         self._server = None
 
     @property
@@ -51,11 +55,12 @@ class ExperimentalV2Runtime:
         return self._server._server.server_port
 
     async def start(self) -> None:
-        """Explicit action; HTTP is *always* 127.0.0.1 (not container public)."""
+        """Explicit action; only loopback or an approved private IPv4 interface."""
         if self._server is not None:
             raise RuntimeError("Experimental v2 runtime already started")
         self._server = self.bridge.new_loopback_server(
-            token=self._token, port=self._port
+            token=self._token, port=self._port,
+            bind_host=self._bind_host, private_opt_in=self._private_opt_in
         )
         try:
             await self._service.start()
