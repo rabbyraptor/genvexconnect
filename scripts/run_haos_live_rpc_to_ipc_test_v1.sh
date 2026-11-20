@@ -132,7 +132,13 @@ sed -n 's/^GENVEX_READONLY_SNAPSHOT=//p' "$WORK/rpc-output" > "$WORK/snapshot.js
 chmod 600 "$WORK/snapshot.json"
 # Copy only validated sensor JSON into private tmpfs; not the raw SDK log.
 docker exec -i "$SERVER" sh -c 'umask 077; cat > /tmp/genvex-live/snapshot.json' < "$WORK/snapshot.json"
-docker exec "$SERVER" sh -c 'cd /tmp/genvex-live && python3 -c '\''import json; from snapshot_contract import parse_snapshot; s=json.load(open("snapshot.json")); assert len(parse_snapshot(s,expected_device_id=s["device_id"])) == 5'\'''
+docker exec -e PYTHONPATH=/tmp/genvex-live "$SERVER" python3 -c '
+import json
+from snapshot_contract import parse_snapshot
+with open("/tmp/genvex-live/snapshot.json", encoding="utf-8") as stream:
+    snapshot = json.load(stream)
+assert len(parse_snapshot(snapshot, expected_device_id=snapshot["device_id"])) == 5
+'
 echo "PASS: one real RPC45 batch became a complete fresh snapshot"
 
 # Private, random one-run bearer token. No exposure in Docker argv/env/logs.
