@@ -38,13 +38,30 @@ class OneCandidateProbeSafetyTests(unittest.TestCase):
 
     def test_explicit_flags_allow_exactly_one_selected_candidate(self):
         seen = []
-        with patch.object(probe, "execute_one_read", side_effect=lambda candidate: seen.append(candidate)), \
+        def fake_execute(candidate, *, use_passphrase_stdin=False):
+            seen.append((candidate, use_passphrase_stdin))
+        with patch.object(probe, "execute_one_read", side_effect=fake_execute), \
              contextlib.redirect_stdout(io.StringIO()):
             self.assertEqual(probe.main([
-                "--key", "fan_rpm_supply", "--execute-live", "--approved-read-only"
+                "--key", "fan_rpm_supply", "--execute-live",
+                "--approved-read-only", "--passphrase-stdin"
             ]), 0)
         self.assertEqual(len(seen), 1)
-        self.assertEqual(seen[0].address, 35)
+        self.assertEqual(seen[0][0].address, 35)
+        self.assertTrue(seen[0][1])
+
+    def test_live_without_piped_passphrase_fails_before_any_sdk_work(self):
+        with patch.object(probe, "execute_one_read", side_effect=AssertionError("Called live SDK")), \
+             contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit) as ctx:
+                probe.main(["--key", "frost_protection_temp", "--execute-live", "--approved-read-only"])
+        self.assertEqual(ctx.exception.code, 2)
+
+    def test_piped_passphrase_flag_not_allowed_offline(self):
+        with contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit) as ctx:
+                probe.main(["--key", "frost_protection_temp", "--passphrase-stdin"])
+        self.assertEqual(ctx.exception.code, 2)
 
     def test_can_only_select_a_source_defined_single_candidate(self):
         for key in ("supply_air", "unknown", "all", "35", "", "alarm"):
