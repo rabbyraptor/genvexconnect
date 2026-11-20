@@ -26,3 +26,75 @@ class UnconfiguredReader:
 
     async def async_fetch_snapshot(self, device_id: str) -> dict[str, Any]:
         raise RuntimeUnavailable("The authenticated Nabto runtime bridge is not installed")
+
+class HTTPResponse(Protocol):
+    """Minimal async HTTP response surface for injected aiohttp transport."""
+
+    status: int
+
+    async def read(self) -> bytes:
+        """Read the bounded HTTP response body."""
+
+
+class HTTPRequestContext(Protocol):
+    async def __aenter__(self) -> HTTPResponse: ...
+    async def __aexit__(self, exc_type, exc, tb) -> None: ...
+
+
+class HTTPSession(Protocol):
+    def get(self, url: str, *, headers: dict[str, str],
+            timeout: float) -> HTTPRequestContext: ...
+
+
+class AuthenticatedSnapshotReader:
+    """Fail-closed HTTP consumer, usable only after trusted provisioning.
+
+    This is a transport component, not automatic discovery/onboarding.
+    The future HA setup must provide a trusted Supervisor-internal endpoint
+    and a securely provisioned token. No config-flow password is stored here.
+    """
+
+    def __init__(
+        self, session: HTTPSession, *, endpoint: str, token: str,
+    ) -> None:
+        from urllib.parse import urlsplit
+
+        parsed = urlsplit(endpoint)
+        if (parsed.scheme != "http" or parsed.hostname is None
+                or parsed.port is None or parsed.path != "/v1/snapshot"
+                or parsed.username or parsed.password or parsed.query
+                or parsed.fragment or not parsed.hostname.replace("-", "").isalnum()
+                or not parsed.hostname.isascii()):
+            raise ValueError("Invalid internal snapshot endpoint")
+        if not isinstance(token, str) or not 40 <= len(token) <= 128 or not token.isascii():
+            raise ValueError("Invalid internal transport token")
+        self._session = session
+        self._url = endpoint
+        self._token = token
+
+    async def async_fetch_snapshot(self, device_id: str) -> dict[str, Any]:
+        """Fetch exactly one bounded JSON snapshot without retry or token logging."""
+        import json
+        try:
+            async with self._session.get(
+                self._url,
+                headers={"Authorization": "Bearer " + self._token,
+                         "Accept": "application/json"},
+                timeout=8.0,
+            ) as response:
+                if response.status != 200:
+                    raise RuntimeUnavailable("Runtime snapshot unavailable")
+                # The production aiohttp adapter should additionally reject
+                # oversized responses before buffering the full body.
+                body = await response.read()
+                if len(body) > 4096:
+                    raise RuntimeUnavailable("Runtime snapshot unavailable")
+                document = json.loads(body)
+                if not isinstance(document, dict):
+                    raise ValueError("Invalid snapshot")
+                return document
+        except RuntimeUnavailable:
+            raise
+        except Exception:
+            # Never surface URL, token, raw HTTP error or SDK details.
+            raise RuntimeUnavailable("Runtime snapshot unavailable") from None
