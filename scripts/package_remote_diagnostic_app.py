@@ -34,7 +34,7 @@ def archive_sources() -> list[Path]:
             raise RuntimeError("Source file too large")
         if any(part.startswith(".") for part in rel.parts):
             raise RuntimeError("Hidden source path")
-        if path.suffix not in (".py", ".yaml", ""):
+        if path.suffix not in (".py", ".yaml", ".sh", ""):
             raise RuntimeError("Unexpected source extension")
     return sources
 
