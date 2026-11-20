@@ -56,6 +56,12 @@ New [source-only contract tests](../experimental/genvex_remote/test_worker_api_c
 
 **This is an end-to-end one-shot proof between two disposable containers**, not a real HA Core integration, deployed Supervisor App, long-running worker, unattended credential provisioning, production IPC security assessment or restart/reconnect validation.
 
+### Native HAOS polling lifecycle tests — VERIFIED 2026-11-20
+
+**VERIFIED from user-supplied HAOS console:** [`scripts/run_haos_polling_lifecycle_offline_v1.sh`](../scripts/run_haos_polling_lifecycle_offline_v1.sh) ran **84/84 Python tests successfully in 7.673 seconds** on the isolated ARM64 App and passed the Python source compilation check. This includes the offline polling lifecycle and fake RPC-to-authenticated-response tests; it does **not** prove a long-running Nabto session, unattended login, restart survival or HA Core integration.
+
+A new standalone [`sdk_snapshot_adapter.py`](../experimental/genvex_remote/sdk_snapshot_adapter.py) has since been staged as a QEMU subprocess adapter to the previously verified one-shot snapshot probe. Its [new tests](../experimental/genvex_remote/test_sdk_snapshot_adapter.py) use mock subprocesses to exercise timeouts, cancellation, strict output validation and compatibility with the existing polling lifecycle. **Those additional tests are not included in the above 84/84 result and are not yet verified on HAOS**. No running App or user profile has been changed.
+
 ## Evidence labels
 
 - **VERIFIED:** observed successfully in our controlled tests, with SDK return values or independent certificate checks.
