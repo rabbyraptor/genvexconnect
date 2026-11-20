@@ -1,0 +1,97 @@
+"""Tests of the offline, stdin-only private profile provisioning helper."""
+from __future__ import annotations
+
+import importlib.util
+import io
+from pathlib import Path
+import stat
+import struct
+import tempfile
+import unittest
+
+MODULE = Path(__file__).resolve().parents[1] / "runtime/profile_provision.py"
+spec = importlib.util.spec_from_file_location("genvex_private_profile_provision", MODULE)
+provisioner = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(provisioner)
+
+CERT = b"-----BEGIN CERTIFICATE-----\nFAKE\n-----END CERTIFICATE-----\n"
+KEY = (b"-----BEGIN ENCRYPTED PRIVATE KEY-----\nFAKE\n"
+       b"-----END ENCRYPTED PRIVATE KEY-----\n")
+
+
+def bundle(cert=CERT, key=KEY):
+    return (struct.pack(">I", len(cert)) + cert +
+            struct.pack(">I", len(key)) + key)
+
+
+class ProvisioningTests(unittest.TestCase):
+    def setUp(self):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        self.data = Path(temp.name) / "data"
+        self.data.mkdir(mode=0o700)
+
+    def test_import_creates_private_pem_pair(self):
+        provisioner.provision(io.BytesIO(bundle()), data_dir=self.data)
+        target = self.data / "profile"
+        self.assertEqual(stat.S_IMODE(target.stat().st_mode), 0o700)
+        for name, expected in (("client.crt", CERT),
+                               ("client-encrypted.key", KEY)):
+            path = target / name
+            self.assertEqual(path.read_bytes(), expected)
+            self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o600)
+        self.assertFalse(list(self.data.glob(".profile-stage-*")))
+
+    def test_rejects_existing_profile_without_modification(self):
+        provisioner.provision(io.BytesIO(bundle()), data_dir=self.data)
+        with self.assertRaises(FileExistsError):
+            provisioner.provision(io.BytesIO(bundle()), data_dir=self.data)
+        self.assertEqual((self.data / "profile/client-encrypted.key").read_bytes(), KEY)
+
+    def test_rejects_symlink_target(self):
+        outside = self.data.parent / "outside"
+        outside.mkdir()
+        (self.data / "profile").symlink_to(outside, target_is_directory=True)
+        with self.assertRaises(FileExistsError):
+            provisioner.provision(io.BytesIO(bundle()), data_dir=self.data)
+        self.assertFalse(list(outside.iterdir()))
+
+    def test_rejects_truncated_payload(self):
+        with self.assertRaises(ValueError):
+            provisioner.provision(io.BytesIO(bundle()[:-7]), data_dir=self.data)
+        self.assertFalse((self.data / "profile").exists())
+
+    def test_rejects_trailing_data(self):
+        with self.assertRaises(ValueError):
+            provisioner.provision(io.BytesIO(bundle() + b"extra"), data_dir=self.data)
+        self.assertFalse((self.data / "profile").exists())
+
+    def test_rejects_invalid_envelope(self):
+        with self.assertRaises(ValueError):
+            provisioner.provision(io.BytesIO(bundle(key=b"plain key")), data_dir=self.data)
+        self.assertFalse((self.data / "profile").exists())
+
+    def test_rejects_oversize_length_without_reading_payload(self):
+        stream = io.BytesIO(struct.pack(">I", provisioner.MAX_PEM + 1))
+        with self.assertRaises(ValueError):
+            provisioner.provision(stream, data_dir=self.data)
+
+    def test_rejects_world_writable_data_dir(self):
+        self.data.chmod(0o777)
+        with self.assertRaises(ValueError):
+            provisioner.provision(io.BytesIO(bundle()), data_dir=self.data)
+
+    def test_rejects_symlink_data_dir(self):
+        alias = self.data.parent / "alias"
+        alias.symlink_to(self.data, target_is_directory=True)
+        with self.assertRaises(ValueError):
+            provisioner.provision(io.BytesIO(bundle()), data_dir=alias)
+
+    def test_no_partial_profile_after_invalid_input(self):
+        with self.assertRaises(ValueError):
+            provisioner.provision(io.BytesIO(bundle(cert=b"invalid")), data_dir=self.data)
+        self.assertEqual(list(self.data.iterdir()), [])
+
+
+if __name__ == "__main__":
+    unittest.main()
