@@ -31,7 +31,44 @@ runpy.run_path(probe, run_name="__main__")
 
 
 class SDKSnapshotError(Exception):
-    """The isolated legacy client did not return one valid read-only batch."""
+    """Only a fixed, non-sensitive failure category may leave the SDK adapter."""
+
+    ALLOWED = frozenset({
+        "SDK_PROCESS_FAILURE", "SDK_TIMEOUT", "SDK_STARTUP_FAILED",
+        "SDK_RESOURCES_FAILED", "SDK_SESSION_FAILED", "SDK_XML_FAILED",
+        "SDK_RPC45_FAILED", "SDK_RESPONSE_INVALID", "SDK_CLOSE_FAILED",
+        "SDK_EARLY_EXIT", "SDK_SNAPSHOT_INVALID",
+    })
+
+    def __init__(self, code="SDK_PROCESS_FAILURE"):
+        self.code = code if code in self.ALLOWED else "SDK_PROCESS_FAILURE"
+        super().__init__(self.code)
+
+
+def classify_probe_failure(output: bytes) -> str:
+    """Read only literal stage markers; never echo the raw SDK output."""
+    try:
+        lines = output.decode("utf-8", "strict").splitlines()
+    except UnicodeError:
+        return "SDK_PROCESS_FAILURE"
+    stages = (
+        ("SDK startup:", "SDK_STARTUP_FAILED"),
+        ("Resources:", "SDK_RESOURCES_FAILED"),
+        ("Profile session:", "SDK_SESSION_FAILED"),
+        ("Candidate XML registered:", "SDK_XML_FAILED"),
+        ("Batch RPC status:", "SDK_RPC45_FAILED"),
+        ("Session close:", "SDK_CLOSE_FAILED"),
+        ("SDK shutdown:", "SDK_CLOSE_FAILED"),
+    )
+    for prefix, code in stages:
+        for line in lines:
+            if line.startswith(prefix):
+                number = line[len(prefix):].strip()
+                if number.isascii() and number.isdecimal() and int(number) != 0:
+                    return code
+    if any(line.startswith("Batch RPC status: 0") for line in lines):
+        return "SDK_RESPONSE_INVALID"
+    return "SDK_EARLY_EXIT"
 
 
 def parse_probe_output(output: bytes, *, device_id: str) -> dict:
@@ -47,7 +84,7 @@ def parse_probe_output(output: bytes, *, device_id: str) -> dict:
         parse_snapshot(snapshot, expected_device_id=device_id)
         return snapshot
     except (ValueError, UnicodeError, TypeError):
-        raise SDKSnapshotError("No valid SDK snapshot") from None
+        raise SDKSnapshotError("SDK_SNAPSHOT_INVALID") from None
 
 
 _MAX_PROBE_OUTPUT_BYTES = 32768
@@ -134,12 +171,16 @@ class SDKSnapshotAdapter:
                          + self._unlock_secret + "\n").encode("utf-8")
                     )
                 if proc.returncode != 0:
-                    raise SDKSnapshotError("SDK read failed")
+                    raise SDKSnapshotError(classify_probe_failure(out))
                 return parse_probe_output(out, device_id=self.device_id)
             except asyncio.CancelledError:
                 raise
+            except SDKSnapshotError:
+                raise
+            except TimeoutError:
+                raise SDKSnapshotError("SDK_TIMEOUT") from None
             except Exception:
-                raise SDKSnapshotError("SDK read failed") from None
+                raise SDKSnapshotError("SDK_PROCESS_FAILURE") from None
             finally:
                 if proc is not None and proc.returncode is None:
                     proc.kill()
