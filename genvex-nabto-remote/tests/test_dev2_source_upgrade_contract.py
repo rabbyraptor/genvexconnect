@@ -94,7 +94,8 @@ class Dev2UpgradeContractTests(unittest.TestCase):
         self.assertIn("sh -c", remote)
         self.assertIn(".genvex-remote-dev1-source-backup", remote)
         self.assertIn(".genvex-remote-dev2-source-stage", remote)
-        self.assertIn("sha256sum -c --status", remote)
+        self.assertIn("sha256sum -c -s", remote)
+        self.assertNotIn("sha256sum -c --status", remote)
         self.assertIn("mv $SRC $BACKUP", remote)
         self.assertIn("mv $STAGE/genvex_nabto_remote $SRC", remote)
         for forbidden in (
@@ -155,6 +156,18 @@ class Dev2UpgradeContractTests(unittest.TestCase):
         (self.bin / "ha").chmod(0o700)
         (self.bin / "docker").write_text("#!/bin/sh\nexit 1\n")
         (self.bin / "docker").chmod(0o700)
+        # Emulate BusyBox on the remote side: it supports -c -s but
+        # rejects GNU long-form --status when checking stdin digests.
+        (self.bin / "sha256sum").write_text(
+            "#!/bin/sh\n"
+            "if [ \"$1\" = -c ] && [ \"$2\" = --status ] && "
+            "[ \"$#\" -eq 2 ]; then\n"
+            "  echo 'BusyBox does not support --status' >&2\n"
+            "  exit 2\n"
+            "fi\n"
+            "exec /usr/bin/sha256sum \"$@\"\n"
+        )
+        (self.bin / "sha256sum").chmod(0o700)
         if fail_promotion:
             (self.bin / "mv").write_text(
                 "#!/bin/sh\n"
