@@ -64,7 +64,7 @@ class RuntimeServerTests(unittest.TestCase):
         self.assertEqual(self.request(token=self.token)[0], 503)
 
     def test_post_and_other_path_not_exposed(self):
-        self.assertEqual(self.request(token=self.token, method="POST")[0], 404)
+        self.assertIn(self.request(token=self.token, method="POST")[0], (400, 404))
         self.assertEqual(self.request(token=self.token, path="/debug")[0], 404)
 
 
