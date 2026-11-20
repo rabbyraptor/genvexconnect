@@ -1,0 +1,32 @@
+name: Remote Nabto offline-only tests
+
+on:
+  push:
+    branches:
+      - remote-nabto-connection
+    paths:
+      - "experimental/genvex_remote/**"
+      - ".github/workflows/remote-nabto-offline.yml"
+  pull_request:
+    paths:
+      - "experimental/genvex_remote/**"
+      - ".github/workflows/remote-nabto-offline.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline:
+    name: Certificate, profile store and sensor model checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install offline cryptography test dependency
+        run: python -m pip install "cryptography==46.0.4"
+      - name: Run tests (no live vendor account, network or secrets)
+        run: python -m unittest discover -s experimental/genvex_remote -p "test_*.py" -v
