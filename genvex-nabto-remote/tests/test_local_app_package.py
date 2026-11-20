@@ -53,11 +53,11 @@ class LocalAppPackageTests(unittest.TestCase):
             bin_dir.mkdir()
             shim = bin_dir / "ssh"
             calls = temp / "ssh-calls"
-            shim.write_text(
-                "#!/bin/sh\\n"
-                'printf "%s\\\\n" "$*" >> "$FAKE_SSH_CALLS"\\n'
-                "exit 0\\n"
-            )
+            shim.write_text(chr(10).join((
+                "#!/bin/sh",
+                'echo "$*" >> "$FAKE_SSH_CALLS"',
+                "exit 0",
+            )) + chr(10))
             shim.chmod(0o755)
             env = os.environ.copy()
             env["HOME"] = str(home)
