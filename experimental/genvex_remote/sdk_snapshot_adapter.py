@@ -7,8 +7,7 @@ enrollment path, persistent credential manager or production App yet.
 from __future__ import annotations
 
 import asyncio
-import os
-import sys
+import json
 from pathlib import Path
 
 from sensor_model import remote_hostname
