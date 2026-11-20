@@ -4,6 +4,7 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 import tarfile
+import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -16,6 +17,23 @@ spec.loader.exec_module(packager)
 
 
 class LocalAppPackageTests(unittest.TestCase):
+    def test_staging_script_safe_explicit_opt_in(self):
+        script = ROOT / "scripts" / "stage_remote_diagnostic_app_source.sh"
+        syntax = subprocess.run(["bash", "-n", str(script)], capture_output=True)
+        self.assertEqual(syntax.returncode, 0, syntax.stderr.decode())
+        content = script.read_text()
+        self.assertIn('MODE=$1', content)
+        self.assertIn('if [ "$MODE" = "--preflight" ]; then', content)
+        self.assertIn('"--stage"', content)
+        self.assertIn("genvex-nabto-remote-local-app-source.tar.gz", content)
+        self.assertIn("sha256sum --check", content)
+        self.assertIn("test ! -e", content)
+        self.assertIn("test ! -L", content)
+        self.assertIn("Supervisor not reloaded", content)
+        self.assertNotIn("ha apps install", content)
+        self.assertNotIn("ha apps start", content)
+        self.assertNotIn("docker run", content)
+
     def test_allowlist_excludes_credentials_and_unknown_files(self):
         paths = packager.archive_sources()
         rels = {p.relative_to(packager.SOURCE).as_posix() for p in paths}
