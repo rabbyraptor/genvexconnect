@@ -180,3 +180,30 @@ Efter brugerens bekræftelse på, at Genvex Connect-appen viser aktuelle måling
 **Sikker rettelse:** Steam Deck-runneren kræver nu, at operatøren indtaster både device-ID og det **tidligere fungerende fulde Nabto-hostnavn** via skjulte prompts. Den kontrollerer format og præcis overensstemmelse **lokalt før** nøgleadgangskode, Nabto SDK eller RPC. Hvis de ikke matcher, stopper den uden netværk og uden at udskrive nogen af værdierne. Ingen automatisk gentagelse, ingen ny sensor og ingen HAOS-ændring.
 
 **Vigtig begrænsning:** Det er en menneskelig, uafhængig sammenligning med det *tidligere dokumenteret fungerende* hostnavn – ikke en verifikation mod serveren. Operatøren må ikke bare konstruere det samme hostnavn på ny ud fra det samme ubekræftede ID; så mister kontrollen sin værdi. Hvis det tidligere hostnavn ikke kan findes lokalt, skal testen stoppes og den oprindelige succesfulde testkonfiguration gennemgås uden at eksponere device-ID eller credentials.
+
+## Andet live-forsøg – første succesfulde RPC45-læsning af adresse 24 (2026-11-20)
+
+**VERIFICERET ud fra operatørens Steam Deck-output:** Efter opdatering til `fc093a7`, hvor den indtastede 12-cifrede ID blev sammenholdt lokalt med det uafhængigt indtastede, tidligere fungerende Nabto-hostnavn, gav samme isolerede read-only test:
+
+```text
+PASS: device ID matches independently entered known working hostname
+===== ONE SOURCE-DEFINED RPC45 READ ONLY =====
+Candidate key: frost_protection_temp address: 24
+RPC status: 0
+Raw int16: 0 elapsed_ms: 312
+Source-scaled (NOT yet physically verified): -30.0
+Result: ONE_CANDIDATE_DECODED
+Session close status: 0
+SDK shutdown status: 0
+PASS: exactly one read-only candidate RPC45 probe completed
+```
+
+### Bevisniveau og konsekvens
+
+- **Remote-RPC-læsbarhed: VERIFIED** for `RPC45`, `obj=0`, `address=24`, med præcis én `int16`-værdi, `raw=0`, successtatus 0, observeret RPC-varighed **312 ms**. SDK-session og SDK-shutdown returnerede 0. Dette er et enkelt succesfuldt realforsøg.
+- **Skalering: SOURCE**: `(raw - 300)/10` giver matematisk **−30,0 °C**. Det er **ikke** dokumenteret, at dette er en faktisk frostbeskyttelsestemperatur. `raw=0` kan være en ubenyttet/manglende følers standardværdi, en gyldig ekstrem værdi, en variantafhængig registerbetydning eller noget andet; disse muligheder er **hypoteser**, ikke fakta.
+- **Home Assistant-entity: IKKE GODKENDT.** Behold adresse 24 uden for det aktive fem-sensor-katalog, `verified_read_plan` og HA-entities, indtil betydning og faktisk hardware/føler er afklaret ved uafhængig autoriseret visning eller dokumentation. Den eksisterende fem-målingers baseline ændres ikke.
+- **Tidligere `1000015`:** Efter brugerens uafhængige hostnavnskontrol forsvandt gatewayopslagsfejlen ved den efterfølgende kørsel. En forkert tidligere indtastet identitet er en plausibel forklaring, **ikke bevist**, da gatewayens tilgængelighed også kan have ændret sig mellem forsøgene. Vi må ikke omskrive den tidligere fejl til en bekræftet sensorafvisning.
+- **Privatliv:** Intet faktisk device-ID, hostnavn, e-mail, certifikat, privat nøgle, adgangskode eller rå SDK-JSON gemmes her.
+
+**Næste offline skridt:** Undersøg den mulige funktion og rå-nulværdi i den offentlige Optima270-model samt eventuelt producentmateriale. En alternativ live-sensoradresse kræver en ny separat operatørbeslutning; der sendes **ingen automatisk scanning**. Ingen installerede HAOS Apps, fungerende LAN-integration eller legitimationsoplysninger blev ændret.
