@@ -52,7 +52,7 @@ fi
 # Ask for that same full host independently and compare locally, without
 # logging or printing either the ID or the host.
 IFS= read -r -s -p "Tidligere fungerende Nabto-hostnavn (skjult): " KNOWN_HOST || exit 2
-printf '\\n'
+printf '\n'
 if [[ ! "$KNOWN_HOST" =~ ^[0-9]{12}\.remote\.lscontrol\.dk$ ]]; then
   echo "FAIL: known gateway hostname format invalid" >&2
   unset DEVICE_ID KNOWN_HOST
