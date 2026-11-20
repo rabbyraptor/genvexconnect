@@ -33,3 +33,10 @@ The App bootstrap currently validates `/data/profile/client.crt` and `client-enc
 
 ## Stop conditions
 Any ambiguous host path, permission mismatch, unexpected App state, existing target, symlink, or potentially exposed secret means stop with no modifications.
+
+## F2.2 synthetic atomic-promotion prototype (pending execution)
+- `scripts/remote_profile_atomic_prototype.py` generates **only built-in fake PEM fixtures** under an empty, private test directory; it cannot accept a real profile source and has no command-line interface.
+- It stages two files with private permissions, fsyncs them, and promotes the directory; on injected failure it removes staging files.
+- `tests/test_remote_profile_atomic_prototype.py` adds seven synthetic tests for promotion, permissions, injected rollback, nonempty-root refusal, symlink refusal and repeated invocation. **Tests not yet executed.**
+- Run on Steam Deck in the existing repository: `git pull --ff-only && python3 -m unittest discover -s tests -p 'test_remote_profile_atomic_prototype.py' -v`.
+- **Not a production importer:** `os.rename` is not a race-proof no-replace operation, source-file race prevention and Supervisor mount verification are still absent, and the prototype does not exercise concurrent processes. Do not use with real credentials or App paths.
