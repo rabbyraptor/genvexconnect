@@ -42,7 +42,7 @@ class HTTPRequestContext(Protocol):
 
 
 class HTTPSession(Protocol):
-    def get(self, url: str, *, headers: dict[str, str]) -> HTTPRequestContext: ...
+    def get(self, url: str, *, headers: dict[str, str], allow_redirects: bool = False) -> HTTPRequestContext: ...
 
 
 class AuthenticatedSnapshotReader:
@@ -73,12 +73,13 @@ class AuthenticatedSnapshotReader:
                     self._url,
                     headers={"Authorization": "Bearer " + self._token,
                              "Accept": "application/json"},
+                    allow_redirects=False,
                 ) as response:
                     if response.status != 200:
                         raise RuntimeUnavailable("Runtime snapshot unavailable")
-                    # The production aiohttp adapter should additionally reject
-                    # oversized responses before buffering the full body.
-                    body = await response.read()
+                    if response.content_length is not None and response.content_length > 4096:
+                        raise RuntimeUnavailable("Runtime snapshot unavailable")
+                    body = await response.content.read(4097)
                     if len(body) > 4096:
                         raise RuntimeUnavailable("Runtime snapshot unavailable")
                     document = json.loads(body)
