@@ -125,3 +125,45 @@ upgrade an existing local App directory.
 **Explicit approval boundary:** No copying source to HAOS, Supervisor reload,
 App update/rebuild, manual start, profile transfer or live polling is authorized
 by the source comparison or by the new dev2 version tag.
+
+## Supervisor update semantics confirmed against current documentation
+
+Home Assistant's current official App documentation states:
+
+- Local Apps are discovered by reading the local apps folder on store reload.
+  The slug remains `local_genvex_nabto_remote` for the existing app.
+- Raising `version` in `config.yaml` surfaces an available update;
+  updating builds the image for local source Apps and recreates the container.
+  The App-private `/data` directory persists through updates and is included
+  in App backups. A stopped/manual App must nevertheless be verified stopped
+  again after an update; do not rely on assumed restart behavior.
+- Supervisor's documented API offers an explicit **update**, distinct from
+  install, with a `backup` option whose default is **false**. We must
+  separately choose an update path with backup and explicitly verify backup
+  completion before any mutation; do not use `ha apps install` to force a
+  rebuild. The `ha store reload` operation reads local source again but
+  is separate from installing or updating the App.
+- App info may include **password-bearing options**. Never capture or print
+  raw `ha apps info` responses. Read only allowlisted metadata fields.
+
+References:
+
+- https://contributors.home-assistant.io/apps/how-apps-work/
+- https://contributors.home-assistant.io/apps/supervisor-api/store/
+- https://contributors.home-assistant.io/apps/supervisor-api/apps/
+
+**Offline dev2 gates (20 November 2026):** Native ARM64 image build and
+fake-only private-profile lifecycle for the `v0.1.0-dev2` manifest passed
+[GitHub Actions 44829551741](https://github.com/rabbyraptor/genvexconnect/actions/runs/44829551741).
+The local source archive and fake App/HA tests passed
+[GitHub Actions 44829571388](https://github.com/rabbyraptor/genvexconnect/actions/runs/44829571388):
+71 App tests, 27 HA transport tests. Format and hassfest passed. The HACS
+`Validate` workflow still fails repository-level topics/Issues checks;
+these are not evidence of an App runtime failure. CI artifacts are development
+artifacts, not production releases.
+
+**Not yet authorized:** replace existing local source directory, trigger
+Supervisor catalog reload or update, start the dev2 image, provision private
+PEMs, enable live Nabto or change the existing LAN integration. Source folder
+replacement and a safe rollback strategy still need an explicitly approved
+operator procedure that uses a verified archive and does not touch App data.
