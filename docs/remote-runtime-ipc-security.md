@@ -26,11 +26,13 @@
 - The actual x86_64 SDK has not accepted a *new* CA-issued key from our automated Python code, only the pre-existing profile.
 - The legacy SDK redistributability is not established.
 
-## Disposable bridge networking validation — ready, NOT YET EXECUTED
+## Disposable bridge networking validation — VERIFIED 2026-11-20
 
 [`scripts/run_haos_bridge_remote_rpc_test.sh`](../scripts/run_haos_bridge_remote_rpc_test.sh) is a host-side development test. It starts a **temporary container from the exact already installed Nabto runtime image** using `--network bridge`, `--read-only`, a volatile `/tmp` tmpfs, no mounts or exposed ports, capabilities dropped and `no-new-privileges`. It first checks DNS from inside that isolated network. It then copies only the existing encrypted certificate + key from the protected host profile into the temporary tmpfs and prompts locally for the pre-existing unlock passphrase without echoing it. The same tested QEMU Python probe performs **one five-address read-only RPC45**. Shell cleanup deletes the disposable container (and its tmpfs). The original running App and host profile are left unchanged.
 
-**Interpretation:** a successful *authenticated* RPC in bridge mode provides evidence that the remote Nabto path does not depend on Docker host networking on this specific HAOS setup. DNS success alone is **not sufficient**. A failure can be due to blocked outbound UDP/relay, Docker DNS/firewall, an incorrect profile input or external connectivity; avoid broad architecture conclusions from an unclassified failure. The script is a development-only diagnostic and not a production credential-delivery solution. It has not yet run on HAOS.
+**VERIFIED result:** the user's Raspberry Pi HAOS test returned bridge DNS PASS and authenticated Nabto SDK startup/resources/session/interface/RPC statuses all **0**, five read-only sensor values, a **1,212 ms** RPC, and close/shutdown statuses **0**. The disposable container was removed. This proves the specific authenticated remote path works without host networking, while **not yet** proving Supervisor App/Core IPC or restart behavior.
+
+**Interpretation:** a successful *authenticated* RPC in bridge mode provides evidence that the remote Nabto path does not depend on Docker host networking on this specific HAOS setup. DNS success alone is **not sufficient**. A failure can be due to blocked outbound UDP/relay, Docker DNS/firewall, an incorrect profile input or external connectivity; avoid broad architecture conclusions from an unclassified failure. The script is a development-only diagnostic and not a production credential-delivery solution. It has now run successfully on HAOS using the user's existing authorized device and encrypted profile.
 
 ## Next offline acceptance gate
 
