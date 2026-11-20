@@ -108,7 +108,17 @@ def provision(stream, *, data_dir: Path = Path("/data")) -> None:
     """Create a new private profile, never overwrite existing credentials."""
     cert, key = read_profile(stream)
     info = data_dir.lstat()
-    if not stat.S_ISDIR(info.st_mode) or info.st_mode & 0o077:
+    # Supervisor creates the App's /data as root-owned 0755 on the
+    # verified HAOS host. This directory is NOT the private PEM boundary:
+    # the newly published /data/profile must remain 0700 and files 0600.
+    # Require the executing account to own /data and disallow writes by
+    # group/others; a different owner could replace the staging directory
+    # even when it cannot read the private PEMs.
+    if (
+        not stat.S_ISDIR(info.st_mode)
+        or info.st_uid != os.geteuid()
+        or info.st_mode & 0o022
+    ):
         raise ValueError("Unsafe App data directory")
     target = data_dir / "profile"
     # An existing profile (including a symlink) is never replaced.
