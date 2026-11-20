@@ -66,6 +66,10 @@ A new standalone [`sdk_snapshot_adapter.py`](../experimental/genvex_remote/sdk_s
 
 The user ran the first [SDK adapter offline test runner](../scripts/run_haos_sdk_adapter_offline_v1.sh): **92 tests were executed, 90 passed and 2 errored**, specifically `test_real_subprocess_mock_success` and `test_adapter_is_compatible_with_snapshot_state_and_poller`. The adapter had lost its `import json` while `parse_probe_output()` still invoked `json.loads()`; the blanket subprocess error handling masked that missing import as `SDKSnapshotError`. The missing import was restored in [`sdk_snapshot_adapter.py`](../experimental/genvex_remote/sdk_snapshot_adapter.py), a [direct parser regression test](../experimental/genvex_remote/test_sdk_snapshot_adapter.py) was added, and a separate [immutable-source v2 HAOS test runner](../scripts/run_haos_sdk_adapter_offline_v2.sh) was prepared. **This fix has not yet been verified on HAOS.** No real device RPC, profile or enrolled identity was accessed in the failing test.
 
+### SDK subprocess adapter v3 on HAOS — VERIFIED 2026-11-20
+
+**VERIFIED from the user's HAOS terminal output:** the pinned [`run_haos_sdk_adapter_offline_v3.sh`](../scripts/run_haos_sdk_adapter_offline_v3.sh) completed **93 tests in 10.417 seconds, OK**, and printed `PASS: SDK ADAPTER OFFLINE TESTS AND COMPILATION`. No live device, certificate or credentials were accessed. This verifies the source-only subprocess adapter and polling tests under native ARM64; **it does not verify repeated live Nabto RPCs, daemon persistence, reboot recovery, or Home Assistant Core integration**.
+
 ## Evidence labels
 
 - **VERIFIED:** observed successfully in our controlled tests, with SDK return values or independent certificate checks.
