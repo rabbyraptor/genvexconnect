@@ -1,0 +1,31 @@
+# ARM64 HAOS runtime verification and next remote connection gate
+
+Verified by user on HAOS Raspberry Pi 4 (2026-11-20):
+
+- GitHub Actions native ARM64 image build passed its metadata and offline Python-import checks.
+- Downloaded `genvex-nabto-remote-arm64.tar.gz` passed `sha256sum -c SHA256SUMS`; compressed artifact ~99 MB.
+- Steam Deck rootless Podman loaded the image, reporting `Architecture=arm64`, `OS=linux`, `io.hass.type=app`, `io.hass.arch=aarch64`, and image size ~267 MB.
+- HAOS Docker loaded `genvex-nabto-remote:ci`, and offline native ARM64 Python imports passed with `--network none --read-only`.
+- Under QEMU, x86_64 Python passed with exit code 0.
+- Nabto CLI `-v` returned `4.9.11` with exit code 0 on a disposable writable container filesystem. With `--read-only` and `--tmpfs /root/.nabto:rw,nosuid,nodev,size=32m,mode=0700`, the CLI again returned `4.9.11` and the expected profile files appeared, including `logs/nabto-api-log.txt`, `nabto_config.ini`, roots and guest identity files.
+- A diagnostic `find -printf` command failed because the HAOS base image uses BusyBox. A subsequent BusyBox-compatible `find -print` test succeeded and verified the log file.
+
+These tests **do not establish remote connectivity or validate a live RPC45 call in this image**. No App installation, live credentials, host networking, or changes to the working LAN integration were involved.
+
+## Source review
+
+- `genvex-nabto-remote/runtime/sdk_snapshot_adapter.py` launches the x86_64 Python probe under `qemu-x86_64-static` and passes identity, host, and unlock secret over stdin. Its subprocess environment sets `HOME=/tmp` and `GENVEX_NABTO_PROFILE` to a supplied private profile directory.
+- `probe_remote_snapshot.py` invokes SDK `nabtoStartup(tmp)` using a disposable directory, copies the existing encrypted key and certificate into its temporary `users/` directory, and performs one read-only RPC45 batch. Thus the CLI's default `/root/.nabto` profile behavior is not proof that the probe requires that location; the two paths must be tested independently.
+- `app_bootstrap.py` currently copies certificate/key from `/share/genvex-remote-profile/` to `/data/profile/`. This shared import path is an unresolved private-key exposure concern and must not be recommended for a real App installation.
+- The HTTP snapshot bridge binds to container interfaces and uses a bearer token. Before enabling, verify Supervisor private networking, absence of host port publication, and token provisioning.
+- The default App entrypoint expects `/data/options.json` and an authorized profile; running the default entrypoint is not an offline smoke test.
+
+## Next acceptance gates
+
+1. Perform additional **offline, credential-free** verification of SDK probe prerequisites and isolation. Do not run the App entrypoint or request a real gateway connection yet.
+2. Design and test App-private enrollment or a controlled import into `/data`, avoiding `/share` and avoiding any alteration of the existing host profile.
+3. Validate the App-to-HA private transport and secret-safe token provisioning.
+4. Only after those gates, ask the user to authorize a bounded live read-only RPC45 attempt. Never ask the user to paste credentials or private keys into chat.
+5. Test restart persistence, failure/recovery and Home Assistant integration lifecycle before recommending installation.
+
+The working LAN integration remains untouched. The ARM64 image is a development artifact, not a production-ready HAOS App.
