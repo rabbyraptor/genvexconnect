@@ -20,6 +20,7 @@
 - [Isolated Home Assistant UI/sensor scaffold (not installed)](../experimental/home_assistant/README.md)
 - [Serial read-only RPC 45 polling worker](../experimental/genvex_remote/polling_worker.py)
 - [Single HAOS offline validation script](../scripts/run_haos_remote_dev_tests.sh)
+- [Two-container disposable IPC test](../scripts/run_haos_ipc_two_container_test.sh) (fake sensor values and private test network only)
 - [Offline Python certificate/enrollment and sensor code](../experimental/genvex_remote/enrollment_service.py)
 - [Automated native HAOS offline test runner](../scripts/run_haos_offline_enrollment_tests.sh)
 - [Isolated HAOS runtime App](../haos-apps/genvex-nabto-runtime-test/DOCS.md)
