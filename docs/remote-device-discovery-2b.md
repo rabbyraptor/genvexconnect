@@ -151,3 +151,16 @@ An optional **sensor-capability catalogue in a documentation/UI preview** can sh
 **Decision proposed for the maintenance roadmap:** retain a **global semantic union catalog**, filter by **validated model capabilities**, then choose enabled/disabled **only among supported, remotely verified sensors**. A generic Micro "return all supported readings and their metadata" query remains undiscovered. This route can still produce dynamic HA entity inventories, with careful model selection and user-respecting registry defaults.
 
 **Next evidence-gated step:** build an **offline** synthetic model-selection and planned-read manifest test, preserving all five existing keys/addresses, and prepare a separately approved read-only verification matrix for the other 12 source-defined Optima270 datapoints. Do not run a 17-item live batch, change installed Apps, query opcode 42, or send write opcode 43 without separate authorization.
+
+
+## Offline executable model-selection prototype (2B follow-up)
+
+**Implemented in experimental source only:**
+- [`model_lookup.py`](../experimental/genvex_remote/model_lookup.py): takes an already-extracted RPC17 `response` object, validates just five whitelisted uint32 model/version fields, intentionally discards `UserNames:`/other fields, and applies the existing upstream **Optima270** model signature `(Model=2010, Devicenumber=79265)`.
+- [`test_model_lookup.py`](../experimental/genvex_remote/test_model_lookup.py): synthetic model-selection tests for exact five verified RPC45 addresses, invalid metadata, unknown-model fail-closed behavior and no retention of account-related response fields.
+
+The function `planned_verified_reads(...)` **returns an ordered address tuple only**, without initiating Nabto communication. This explicitly tests a safe `ping numeric metadata → source-grounded model signature → verified read-address list` planning step, **not** proof that the actual gateway has been mapped automatically in a running HAOS App. Source-derived model signatures do not validate remote capabilities by themselves.
+
+**CI result:** [Remote Nabto offline tests](https://github.com/rabbyraptor/genvexconnect/actions/runs/44795217541) succeeded for commit `03296c65b93f1cf79e41b7847d972f68fa8697d9` (two `cryptography` versions); [formatting workflow](https://github.com/rabbyraptor/genvexconnect/actions/runs/44795217506) succeeded. These are not live-device or HA Core acceptance tests.
+
+**Safety and next work:** First verify on a separately authorized and redacted live RPC17 response that these numeric fields map as expected; do not print, persist or transport optional account-related fields. Once model selection is reliable, plan incremental verification of the 12 model-known but remote-unverified datapoints with strict read-only gating, bounded batch sizes and separate failures. **Never create active entities for an unknown model or speculative sensor.**
