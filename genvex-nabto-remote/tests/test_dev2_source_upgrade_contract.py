@@ -94,7 +94,7 @@ class Dev2UpgradeContractTests(unittest.TestCase):
         self.assertIn("sh -c", remote)
         self.assertIn(".genvex-remote-dev1-source-backup", remote)
         self.assertIn(".genvex-remote-dev2-source-stage", remote)
-        self.assertIn("sha256sum -c -s", remote)
+        self.assertIn("sha256sum -c >/dev/null", remote)
         self.assertNotIn("sha256sum -c --status", remote)
         self.assertIn("mv $SRC $BACKUP", remote)
         self.assertIn("mv $STAGE/genvex_nabto_remote $SRC", remote)
