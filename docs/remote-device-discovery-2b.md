@@ -164,3 +164,10 @@ The function `planned_verified_reads(...)` **returns an ordered address tuple on
 **CI result:** [Remote Nabto offline tests](https://github.com/rabbyraptor/genvexconnect/actions/runs/44795217541) succeeded for commit `03296c65b93f1cf79e41b7847d972f68fa8697d9` (two `cryptography` versions); [formatting workflow](https://github.com/rabbyraptor/genvexconnect/actions/runs/44795217506) succeeded. These are not live-device or HA Core acceptance tests.
 
 **Safety and next work:** First verify on a separately authorized and redacted live RPC17 response that these numeric fields map as expected; do not print, persist or transport optional account-related fields. Once model selection is reliable, plan incremental verification of the 12 model-known but remote-unverified datapoints with strict read-only gating, bounded batch sizes and separate failures. **Never create active entities for an unknown model or speculative sensor.**
+
+
+## 2B next implementation milestone — catalog-based read planning
+
+The [Optima270 expansion matrix](remote-optima270-rpc45-expansion-testmatrix.md) now identifies all **12** source-defined-but-remote-unverified RPC45 datapoints alongside the existing five verified measurements. Experimental [source-only catalog](../experimental/genvex_remote/optima270_source_only.py), [verified-only request plan](../experimental/genvex_remote/verified_read_plan.py) and [single-candidate offline-preview/opt-in test script](../scripts/probe_optima270_single_source_candidate.py) are committed as separate files. **No live RPC executed as part of the implementation.** The existing v1 snapshot, active LAN integration and HAOS Apps remain unchanged.
+
+The request planner permits **only** the five verified source addresses in their existing order. The additional 12 remain an offline research inventory until individually approved/read-only verified. A one-candidate test harness is staged but its default mode is offline, and live mode requires separate operator approval, a bounded run and controlled credential cleanup. Do not run this probe as part of automatic HA polling or package it into the installed App.
