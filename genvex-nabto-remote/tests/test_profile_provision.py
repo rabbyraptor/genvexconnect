@@ -121,14 +121,41 @@ class ProvisioningTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             provisioner.provision(io.BytesIO(bundle()), data_dir=self.data)
 
-    def test_rejects_group_accessible_data_dir(self):
-        for mode in (0o750, 0o770, 0o705):
+    def test_rejects_group_or_other_writable_data_dir(self):
+        for mode in (0o770, 0o775, 0o777, 0o722, 0o702):
             with self.subTest(mode=oct(mode)):
                 self.data.chmod(mode)
                 with self.assertRaises(ValueError):
                     provisioner.provision(io.BytesIO(bundle()), data_dir=self.data)
                 self.assertFalse((self.data / "profile").exists())
         self.data.chmod(0o700)
+
+    def test_supervisor_0755_data_dir_still_creates_private_profile(self):
+        self.data.chmod(0o755)
+        provisioner.provision(io.BytesIO(bundle()), data_dir=self.data)
+        self.assertEqual(stat.S_IMODE(self.data.stat().st_mode), 0o755)
+        target = self.data / "profile"
+        self.assertEqual(stat.S_IMODE(target.stat().st_mode), 0o700)
+        for name in (provisioner.CERT_NAME, provisioner.KEY_NAME):
+            self.assertEqual(stat.S_IMODE((target / name).stat().st_mode), 0o600)
+
+    def test_owner_read_only_permissions_can_be_non_private(self):
+        for mode in (0o750, 0o705):
+            with self.subTest(mode=oct(mode)):
+                temp = tempfile.TemporaryDirectory()
+                self.addCleanup(temp.cleanup)
+                root = Path(temp.name) / "data"
+                root.mkdir(mode=0o700)
+                root.chmod(mode)
+                provisioner.provision(io.BytesIO(bundle()), data_dir=root)
+                self.assertEqual(stat.S_IMODE((root / "profile").stat().st_mode), 0o700)
+
+    def test_rejects_data_dir_owned_by_different_identity(self):
+        with patch.object(provisioner.os, "geteuid",
+                          return_value=self.data.stat().st_uid + 1):
+            with self.assertRaises(ValueError):
+                provisioner.provision(io.BytesIO(bundle()), data_dir=self.data)
+        self.assertFalse((self.data / "profile").exists())
 
     def test_rejects_dangling_profile_symlink(self):
         (self.data / "profile").symlink_to(self.data / "missing", target_is_directory=True)
