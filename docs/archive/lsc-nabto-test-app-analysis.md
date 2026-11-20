@@ -1,6 +1,6 @@
 # Nabto LS Control test app: source-level clarification
 
-> **2026-11-19 update:** The assertions below about what *this upstream sample* demonstrates remain accurate: its LS Control ping is local. **Separately, our own authenticated Linux x86_64 Nabto SDK 4.9.11 test has now successfully executed remote `ping.json` (query 17) with status 0 and a gateway JSON response.** See the [verified facts manifest](remote-nabto-verified-facts.md). The complete production controller RPC model remains unknown.
+> **2026-11-19 update:** The assertions below about what *this upstream sample* demonstrates remain accurate: its LS Control ping is local. **Separately, our own authenticated Linux x86_64 Nabto SDK 4.9.11 test has now successfully executed remote `ping.json` (query 17) with status 0 and a gateway JSON response.** See the [verified facts manifest](../remote-nabto-verified-facts.md). The complete production controller RPC model remains unknown.
 
 Date: 2026-11-18
 

@@ -56,4 +56,4 @@ Sources:
 3. A separate, strictly read-only test of `get_interface_info.json` is reasonable for metadata, **not** a claim of automatic interface enumeration; if attempted, whitelist just interface ID/version and status and time-limit it.
 4. Do not try a sequence of guessed RPC IDs; maintain the already-working HAOS QEMU/Steam Deck reference and local HA integration intact.
 
-Cross-references: [verified facts](remote-nabto-verified-facts.md) · [RPC and ARM64 plan](remote-nabto-next-steps.md).
+Cross-references: [verified facts](../remote-nabto-verified-facts.md) · [RPC and ARM64 plan](remote-nabto-next-steps.md).

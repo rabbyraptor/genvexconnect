@@ -1,7 +1,7 @@
 # Genvex Connect mobile app asset investigation plan
 
 Date: 2026-11-19  
-Current baseline: [verified facts manifest](remote-nabto-verified-facts.md)
+Current baseline: [verified facts manifest](../remote-nabto-verified-facts.md)
 
 ## Identified app artifacts
 
@@ -35,7 +35,7 @@ Request an authorized APK/IPA (or an extracted, non-sensitive app-owned JS/XML a
 
 Searches across Nabto's official source, indexed public pages, and GitHub code for LS Control/Genvex/Nilan `unabto_queries.xml`, `rpcSetDefaultInterface`, and production `ping.json` derivatives found **no trustworthy production Optima 270 remote query model**. The general Nabto demo XML IDs do not apply to LS Control. This is a search outcome, not proof that the model cannot be recovered.
 
-A **local-only, static ZIP/APK scanner** is now committed at [`scripts/inspect_nabto_resources.py`](../scripts/inspect_nabto_resources.py). It accepts an authorized official APK, an APKS/XAPK ZIP-style bundle (with nested APKs), or a legacy HTML-DD ZIP archive; it does not install or execute anything, invoke Nabto, or read credentials. It reports only candidate file locations, RPC symbol names and parsable XML query names, IDs, and argument types. It bounds individual file sizes, total decompression and entry count. No app binaries are to be committed.
+A **local-only, static ZIP/APK scanner** is now committed at [`scripts/inspect_nabto_resources.py`](../../scripts/inspect_nabto_resources.py). It accepts an authorized official APK, an APKS/XAPK ZIP-style bundle (with nested APKs), or a legacy HTML-DD ZIP archive; it does not install or execute anything, invoke Nabto, or read credentials. It reports only candidate file locations, RPC symbol names and parsable XML query names, IDs, and argument types. It bounds individual file sizes, total decompression and entry count. No app binaries are to be committed.
 
 **Usage on Steam Deck once an authorized package is available:**
 

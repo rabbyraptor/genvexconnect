@@ -43,4 +43,4 @@ These address mappings come from a **public third-party local implementation**. 
 - **Source-established:** Homey repository implements known local register readings.
 - **Open:** actual production remote read query name, numeric ID, request/response schema, and whether it wraps these local register operations.
 
-Reference: [verified facts manifest](remote-nabto-verified-facts.md).
+Reference: [verified facts manifest](../remote-nabto-verified-facts.md).
