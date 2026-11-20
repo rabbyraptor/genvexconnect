@@ -103,7 +103,8 @@ echo "===== STAGING NEW EXPERIMENTAL APP SOURCE (NO INSTALL/START) ====="
   test ! -e "$STAGE" && test ! -L "$STAGE"
   mkdir -m 0700 "$STAGE"
   mkdir -m 0700 "$STAGE/genvex_nabto_remote" "$STAGE/genvex_nabto_remote/runtime"
-  trap '"'"'rm -rf "$STAGE"'"'"' EXIT
+  cleanup() { rm -rf -- "$STAGE"; }
+  trap cleanup EXIT
   tar -xz -C "$STAGE"
   test -f "$STAGE/genvex_nabto_remote/config.yaml"
   test -f "$STAGE/genvex_nabto_remote/Dockerfile"
