@@ -4,21 +4,22 @@ from __future__ import annotations
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .const import CONF_DEVICE_ID, DOMAIN
+from .const import CONF_DEVICE_ID, CONF_RUNTIME_ENDPOINT, CONF_RUNTIME_TOKEN, DOMAIN
 from .coordinator import GenvexRemoteCoordinator
-from .runtime_client import UnconfiguredReader
+from .runtime_client import AuthenticatedSnapshotReader
 
 PLATFORMS = (Platform.SENSOR,)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Fail closed until an authenticated App IPC reader is available.
-
-    The development scaffold deliberately NEVER claims sensor data is live.
-    A real, credentialed runtime reader must replace the unavailable reader.
-    """
-    reader = UnconfiguredReader()
+    """Fetch only authenticated snapshots from an explicitly configured App."""
+    reader = AuthenticatedSnapshotReader(
+        async_get_clientsession(hass),
+        endpoint=entry.data[CONF_RUNTIME_ENDPOINT],
+        token=entry.data[CONF_RUNTIME_TOKEN],
+    )
     coordinator = GenvexRemoteCoordinator(
         hass, entry.data[CONF_DEVICE_ID], reader,
     )
