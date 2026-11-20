@@ -50,6 +50,25 @@ class SDKAdapterTests(unittest.IsolatedAsyncioTestCase):
         response = await self.adapter().poll_once()
         self.assertEqual(response["values"]["humidity"], 65)
 
+    async def test_json_marker_parser_regression(self):
+        from datetime import datetime, timezone
+        payload = {
+            "schema_version": 1,
+            "device_id": "123456789012",
+            "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+            "health": "ok",
+            "values": {
+                "supply_air": 6.7, "outdoor_air": -0.1,
+                "exhaust_air": 1.5, "extract_air": 7.7, "humidity": 65.0,
+            },
+        }
+        output = ("diagnostic message\\nGENVEX_READONLY_SNAPSHOT="
+                  + json.dumps(payload) + "\\n").encode()
+        self.assertEqual(
+            parse_probe_output(output, device_id="123456789012")["values"]["humidity"],
+            65.0,
+        )
+
     async def test_adapter_is_compatible_with_snapshot_state_and_poller(self):
         state = SnapshotState(self.adapter())
         service = PollingService(state)
