@@ -113,6 +113,18 @@ class Dev2UpgradeContractTests(unittest.TestCase):
         old.mkdir()
         (old / "config.yaml").write_text('version: "0.1.0-dev1"\n')
         prior_hash = hashlib.sha256((old / "config.yaml").read_bytes()).hexdigest()
+        prior_files = {
+            "Dockerfile": "5c7edfb109ccad4b09a19ff28c3173e405bcb33eb26034174ee10de83d2f4cdd",
+            "run.sh": "50c68a9defb3c47621ab6d3b901b3e645ac19f539616457f469a1cb76a91f398",
+            "runtime/app_bootstrap.py": "9e8862450d6204d21136baae25ce37aa24aa591f1008842c5914911517db7db1",
+            "runtime/profile_provision.py": "3d35505bfc12b24cc0f68e0a437c6fce047ffe2613ab13ccb10fe2959ec1fe82",
+        }
+        (old / "runtime").mkdir()
+        fake_digests = {}
+        for relative, known in prior_files.items():
+            target = old / relative
+            target.write_text("FAKE " + relative)
+            fake_digests[known] = hashlib.sha256(target.read_bytes()).hexdigest()
         data = self.root / "private-app-data"
         data.mkdir()
         (data / "sentinel").write_text("DO NOT MODIFY")
@@ -122,6 +134,8 @@ class Dev2UpgradeContractTests(unittest.TestCase):
             "5c15ac644063f1a0fbcbcc3fd2050a56715922bf7f7f5640032b6f49bcdbfaac",
             prior_hash,
         )
+        for expected_digest, fake_digest in fake_digests.items():
+            source = source.replace(expected_digest, fake_digest)
         local_script = self.root / "isolated-transaction.sh"
         local_script.write_text(source)
         (self.bin / "ssh").write_text(
