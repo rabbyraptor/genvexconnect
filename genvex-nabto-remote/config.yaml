@@ -15,9 +15,11 @@ options:
   unlock_secret: ""
   ipc_token: ""
   poll_seconds: 60
+  diagnostic_only: false
 schema:
   device_id: str
   identity: str
   unlock_secret: password
   ipc_token: password
   poll_seconds: int(60,3600)
+  diagnostic_only: bool
