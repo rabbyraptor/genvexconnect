@@ -1,0 +1,95 @@
+"""Fake aiohttp contract tests for the HA consumer, without HA imports."""
+import asyncio
+import json
+import unittest
+
+# Reuse the independent package loader in test_snapshot.py.
+from test_snapshot import (
+    RuntimeUnavailable, SnapshotTest,
+)
+from dev_remote.runtime_client import AuthenticatedSnapshotReader
+
+
+class _Response:
+    def __init__(self, status=200, body=b"{}"):
+        self.status = status
+        self.body = body
+
+    async def read(self):
+        return self.body
+
+
+class _Context:
+    def __init__(self, response):
+        self.response = response
+
+    async def __aenter__(self):
+        return self.response
+
+    async def __aexit__(self, *_):
+        return None
+
+
+class _Session:
+    def __init__(self, response):
+        self.response = response
+        self.headers = None
+        self.url = None
+
+    def get(self, url, *, headers):
+        self.url = url
+        self.headers = headers
+        return _Context(self.response)
+
+
+class AuthenticatedReaderTests(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        self.token = "z" * 43
+        self.endpoint = "http://local_genvex_remote_runtime:18275/v1/snapshot"
+
+    def reader(self, response):
+        session = _Session(response)
+        return AuthenticatedSnapshotReader(
+            session, endpoint=self.endpoint, token=self.token,
+        ), session
+
+    async def test_authorized_get(self):
+        body = json.dumps({"schema_version": 1}).encode()
+        reader, session = self.reader(_Response(body=body))
+        result = await reader.async_fetch_snapshot("123456789012")
+        self.assertEqual(result, {"schema_version": 1})
+        self.assertEqual(session.headers["Authorization"], "Bearer " + self.token)
+        self.assertEqual(session.url, self.endpoint)
+
+    async def test_error_status_is_redacted(self):
+        reader, _ = self.reader(_Response(status=401, body=b"SECRET"))
+        with self.assertRaises(RuntimeUnavailable) as ctx:
+            await reader.async_fetch_snapshot("123456789012")
+        self.assertNotIn("SECRET", str(ctx.exception))
+        self.assertNotIn(self.token, str(ctx.exception))
+
+    async def test_oversize_rejected(self):
+        reader, _ = self.reader(_Response(body=b"x" * 4097))
+        with self.assertRaises(RuntimeUnavailable):
+            await reader.async_fetch_snapshot("123456789012")
+
+    async def test_non_object_rejected(self):
+        reader, _ = self.reader(_Response(body=b"[]"))
+        with self.assertRaises(RuntimeUnavailable):
+            await reader.async_fetch_snapshot("123456789012")
+
+    async def test_bad_endpoint_rejected(self):
+        for bad in (
+            "https://example.com/api",
+            "http://127.0.0.1:18275/v1/enroll",
+            "http://example.com:18275/v1/snapshot?token=sensitive",
+            "http://user:password@example.com:18275/v1/snapshot",
+            "http://example.com/v1/snapshot",
+        ):
+            with self.subTest(bad=bad):
+                with self.assertRaises(ValueError):
+                    AuthenticatedSnapshotReader(_Session(_Response()), endpoint=bad, token=self.token)
+
+
+if __name__ == "__main__":
+    unittest.main()
