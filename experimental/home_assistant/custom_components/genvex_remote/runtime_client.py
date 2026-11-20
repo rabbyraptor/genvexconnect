@@ -56,21 +56,7 @@ class AuthenticatedSnapshotReader:
     def __init__(
         self, session: HTTPSession, *, endpoint: str, token: str,
     ) -> None:
-        from urllib.parse import urlsplit
-
-        try:
-            parsed = urlsplit(endpoint)
-            host = parsed.hostname or ""
-            port = parsed.port
-        except ValueError:
-            raise ValueError("Invalid internal snapshot endpoint") from None
-        if (parsed.scheme != "http" or not host or port is None
-                or parsed.path != "/v1/snapshot" or parsed.username
-                or parsed.password or parsed.query or parsed.fragment
-                or len(host) > 253 or not host.isascii()
-                or not all(ch.isalnum() or ch in "-_." for ch in host)
-                or not (1 <= port <= 65535)):
-            raise ValueError("Invalid internal snapshot endpoint")
+        validate_private_endpoint(endpoint)
         if not isinstance(token, str) or not 40 <= len(token) <= 128 or not token.isascii():
             raise ValueError("Invalid internal transport token")
         self._session = session
@@ -104,3 +90,35 @@ class AuthenticatedSnapshotReader:
         except Exception:
             # Never surface URL, token, raw HTTP error or SDK details.
             raise RuntimeUnavailable("Runtime snapshot unavailable") from None
+
+def validate_private_endpoint(endpoint: str) -> None:
+    """Only accept private App DNS names or literal loopback/private IPs."""
+    from ipaddress import ip_address
+    from urllib.parse import urlsplit
+
+    if not isinstance(endpoint, str) or len(endpoint) > 512:
+        raise ValueError("Invalid private runtime endpoint")
+    try:
+        parsed = urlsplit(endpoint)
+        host = parsed.hostname or ""
+        port = parsed.port
+        ip = None
+        try:
+            ip = ip_address(host)
+        except ValueError:
+            pass
+    except ValueError:
+        raise ValueError("Invalid private runtime endpoint") from None
+    if (parsed.scheme != "http" or port != 18275
+            or parsed.path != "/v1/snapshot" or parsed.username
+            or parsed.password or parsed.query or parsed.fragment
+            or not host or not host.isascii() or len(host) > 253):
+        raise ValueError("Invalid private runtime endpoint")
+    if ip is not None:
+        if not (ip.is_private or ip.is_loopback) or ip.is_unspecified:
+            raise ValueError("Endpoint must be on a private network")
+    elif (not all(c.isalnum() or c in "-_." for c in host)
+          or "." in host or not host.startswith("app_")):
+        # Restrict to HAOS App hostnames; do not send bearer tokens to
+        # arbitrary public DNS names.
+        raise ValueError("Endpoint must be a HAOS App hostname")
