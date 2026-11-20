@@ -128,7 +128,7 @@ def run_diagnostic_only() -> None:
 
 def main() -> None:
     try:
-        options = read_options()
+        options = read_options(OPTIONS)
         if options.get("diagnostic_only") is True:
             # Detect even dangling symlinks; fail closed if private material
             # from another mode is already present in this App's /data.
