@@ -20,7 +20,7 @@ run_nabto() {
     "${QEMU}" -L "${SYSROOT}" "${NABTO}" "$@"
 }
 
-bashio::log.info "Genvex Nabto runtime test v0.4.0 starting"
+bashio::log.info "Genvex Nabto runtime test v0.5.0 starting"
 bashio::log.info "Native app architecture: $(uname -m)"
 
 bashio::log.info "QEMU version:"
@@ -34,6 +34,12 @@ else
 fi
 
 bashio::log.info "Test home directory created; existing Nabto user data will not be read"
+bashio::log.info "Native ARM64 certificate tooling smoke test (no key generated)"
+if python3 -c 'import cryptography; from cryptography import x509' >/dev/null 2>&1 && openssl version >/dev/null 2>&1; then
+    bashio::log.info "PASS: native OpenSSL and Python cryptography import"
+else
+    bashio::log.error "FAIL: native certificate tooling"
+fi
 bashio::log.info "x86_64 Python ctypes smoke test:"
 if "${QEMU}" -L "${SYSROOT}" -E LD_LIBRARY_PATH="${SYSROOT}/usr/local/lib" "${SYSROOT}/usr/local/bin/python3" -c "import ctypes, json, urllib.parse; print(\"PASS: x86_64 Python ctypes import\")"; then
     bashio::log.info "PASS: x86_64 Python runtime works under QEMU"
