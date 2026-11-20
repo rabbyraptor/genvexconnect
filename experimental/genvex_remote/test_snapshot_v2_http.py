@@ -13,6 +13,7 @@ from urllib.request import Request, urlopen
 
 from ipc_auth import new_ipc_token
 from polling_http_server import SnapshotHTTPServer
+from polling_http_server_v2_draft import ExperimentalV2HTTPServer
 from snapshot_v2_draft import make_v2_from_v1
 
 
@@ -43,11 +44,17 @@ class V2HTTPTests(unittest.TestCase):
         )
 
     def serve(self, *, opt_in):
-        server = SnapshotHTTPServer(
-            bind_host="127.0.0.1", port=0, token=self.token,
-            device_id=self.device, snapshot_provider=self.v1_provider,
-            v2_snapshot_provider=self.v2_provider if opt_in else None,
-        )
+        if opt_in:
+            server = ExperimentalV2HTTPServer(
+                bind_host="127.0.0.1", port=0, token=self.token,
+                device_id=self.device, snapshot_provider=self.v1_provider,
+                v2_snapshot_provider=self.v2_provider,
+            )
+        else:
+            server = SnapshotHTTPServer(
+                bind_host="127.0.0.1", port=0, token=self.token,
+                device_id=self.device, snapshot_provider=self.v1_provider,
+            )
         server.start()
         self.addCleanup(server.stop)
         return server._server.server_port
