@@ -236,7 +236,10 @@ def main(argv=None):
                         help="Confirm separate operator authorization for the single test")
     args = parser.parse_args(argv)
 
-    candidate = select_candidate(args.key)
+    try:
+        candidate = select_candidate(args.key)
+    except ValueError:
+        parser.error("Unknown source-only candidate key")
     if not args.execute_live:
         if args.approved_read_only:
             parser.error("--approved-read-only must accompany --execute-live")
