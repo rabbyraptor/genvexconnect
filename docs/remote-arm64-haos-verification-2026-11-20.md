@@ -312,3 +312,37 @@ requests. A static CI test checks the script syntax and command scope.
 An independent real-HAOS Supervisor startup and Core-to-App HTTP
 observation is still required. The production App and HA integration
 should not be enabled to consume diagnostic data.
+
+## SDK stdout cap, Supervisor safety flags, and current verified checks
+
+The QEMU SDK adapter previously used `asyncio.subprocess.Process.communicate`
+to accumulate all subprocess stdout and only checked its size in
+`parse_probe_output` afterwards. The App and experimental validated
+source copies now use a streaming read with a hard 32768-byte cap
+and kill/drain on overrun; the secret still goes through stdin only.
+Fake process tests cover one valid snapshot, 50 kB overflow,
+subprocess exit failure and timeout. The offline workflow succeeded
+for commit `c4b064a2545256221aeda740a21d4c8ea2248980`
+(run `44765797967`); no actual Nabto connection was used.
+
+Home Assistant's current App configuration reference explicitly supports:
+`boot: manual_only` (start-on-boot cannot be enabled),
+`stage: experimental` (avoid falsely appearing stable), and
+`tmpfs: true` (temporary SDK working copies stay under RAM-backed
+`/tmp`). The development App config now sets all three. Its
+`host_network: false`, absence of `ports` and absence of
+`map` remain unchanged. The offline workflow enforces these
+flags. Source:
+https://contributors.home-assistant.io/apps/reference/configuration/
+
+The actual App bootstrap was executed successfully with fake-only
+options and no credentials on a disposable CI ARM64 Docker image:
+image-build run `44764609498` succeeded, including the internal
+network diagnostic HTTP checks. A subsequent source-check
+`44766093099` succeeded after the new safety-flag assertions.
+The newer image build containing those flags must complete
+successfully before being treated as image-validated.
+
+None of these checks proves real remote RPC45 connectivity. No
+additional HAOS App was installed and no existing LAN integration
+or test App has been changed.
