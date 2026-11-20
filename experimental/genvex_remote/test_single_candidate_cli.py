@@ -117,6 +117,24 @@ class OneCandidateProbeSafetyTests(unittest.TestCase):
         self.assertEqual(probe._status_events(raw), (3227, 2000027))
         self.assertEqual(probe._status_events("not json"), ())
 
+    def test_nabto_gateway_event_is_distinguished_from_sensor_rejection(self):
+        self.assertEqual(
+            probe.classify_rpc_error(26, (1000015,)),
+            "GATEWAY_NOT_KNOWN_OR_UNAVAILABLE",
+        )
+        self.assertEqual(
+            probe.classify_rpc_error(26, (2000027,)),
+            "CLIENT_QUERY_MODEL_NO_SUCH_REQUEST",
+        )
+        self.assertEqual(
+            probe.classify_rpc_error(26, ()),
+            "SDK_REPORTED_JSON_ERROR",
+        )
+        self.assertEqual(
+            probe.classify_rpc_error(27, (1000015,)),
+            "SDK_OTHER_ERROR",
+        )
+
     def test_profile_identity_is_sanitized(self):
         with self.assertRaises(ValueError):
             probe._check_existing_profile(Path("/tmp"), "bad/path@example.org")
