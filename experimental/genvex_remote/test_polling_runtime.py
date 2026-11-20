@@ -64,7 +64,9 @@ class RuntimeServerTests(unittest.TestCase):
         self.assertEqual(self.request(token=self.token)[0], 503)
 
     def test_post_and_other_path_not_exposed(self):
-        self.assertIn(self.request(token=self.token, method="POST")[0], (400, 404))
+        status, payload = self.request(token=self.token, method="POST")
+        self.assertEqual(status, 400)
+        self.assertEqual(payload, {"error": "bad_request"})
         self.assertEqual(self.request(token=self.token, path="/debug")[0], 404)
 
 
