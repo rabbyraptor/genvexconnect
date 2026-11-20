@@ -14,7 +14,7 @@ fi
 
 echo
 echo "===== POSSIBLE LOCAL APP SOURCE DIRECTORIES ====="
-for p in /mnt/data/supervisor/addons/local /mnt/data/supervisor/addons /addons/local /local_apps; do
+for p in /mnt/data/supervisor/apps/local /mnt/data/supervisor/apps /mnt/data/supervisor/addons/local /mnt/data/supervisor/addons /addons/local /local_apps; do
   if [ -d "$p" ]; then
     echo "$p : PRESENT"
   else
@@ -23,6 +23,9 @@ for p in /mnt/data/supervisor/addons/local /mnt/data/supervisor/addons /addons/l
 done
 
 echo
+echo "===== SUPERVISOR PRIVATE DATA LOCATION (SOURCE PATH ONLY) ====="
+docker inspect --type container hassio_supervisor --format '{{range .Mounts}}{{if eq .Destination "/data"}}Supervisor /data source: {{.Source}}{{println}}{{end}}{{end}}'
+
 echo "===== TARGET APP EXISTS? ====="
 if docker inspect --type container app_local_genvex_nabto_remote >/dev/null 2>&1; then
   echo "New experimental App container: PRESENT (do not overwrite)"
