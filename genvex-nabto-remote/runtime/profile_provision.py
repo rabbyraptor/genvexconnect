@@ -74,11 +74,11 @@ def provision(stream, *, data_dir: Path = Path("/data")) -> None:
     """Create a new private profile, never overwrite existing credentials."""
     cert, key = read_profile(stream)
     info = data_dir.lstat()
-    if not stat.S_ISDIR(info.st_mode) or info.st_mode & 0o002:
+    if not stat.S_ISDIR(info.st_mode) or info.st_mode & 0o077:
         raise ValueError("Unsafe App data directory")
     target = data_dir / "profile"
     # An existing profile (including a symlink) is never replaced.
-    if target.is_symlink() or target.exists():
+    if os.path.lexists(target):
         raise FileExistsError("Private profile already provisioned")
     stage = Path(tempfile.mkdtemp(prefix=".profile-stage-", dir=data_dir))
     try:
