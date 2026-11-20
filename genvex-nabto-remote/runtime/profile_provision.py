@@ -107,7 +107,21 @@ def _write_private(path: Path, content: bytes) -> None:
 def provision(stream, *, data_dir: Path = Path("/data")) -> None:
     """Create a new private profile, never overwrite existing credentials."""
     cert, key = read_profile(stream)
-    info = data_dir.lstat()
+    # Hold a directory descriptor throughout publication: an lstat() of
+    # a path followed later by a fresh open() permits a swapped path.
+    parent_fd = os.open(
+        data_dir, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    )
+    try:
+        _provision_in_open_data_dir(cert, key, data_dir, parent_fd)
+    finally:
+        os.close(parent_fd)
+
+
+def _provision_in_open_data_dir(
+    cert: bytes, key: bytes, data_dir: Path, parent_fd: int
+) -> None:
+    info = os.fstat(parent_fd)
     # Supervisor creates the App's /data as root-owned 0755 on the
     # verified HAOS host. This directory is NOT the private PEM boundary:
     # the newly published /data/profile must remain 0700 and files 0600.
@@ -120,9 +134,13 @@ def provision(stream, *, data_dir: Path = Path("/data")) -> None:
         or info.st_mode & 0o022
     ):
         raise ValueError("Unsafe App data directory")
-    target = data_dir / "profile"
-    # An existing profile (including a symlink) is never replaced.
-    if os.path.lexists(target):
+    # lstat on a directory FD also notices dangling links, without
+    # changing the path through a separately resolved directory name.
+    try:
+        os.stat("profile", dir_fd=parent_fd, follow_symlinks=False)
+    except FileNotFoundError:
+        pass
+    else:
         raise FileExistsError("Private profile already provisioned")
     stage = Path(tempfile.mkdtemp(prefix=".profile-stage-", dir=data_dir))
     try:
@@ -137,13 +155,10 @@ def provision(stream, *, data_dir: Path = Path("/data")) -> None:
             os.fsync(stage_fd)
         finally:
             os.close(stage_fd)
-        parent_fd = os.open(data_dir, os.O_RDONLY | os.O_DIRECTORY |
-                            getattr(os, "O_NOFOLLOW", 0))
-        try:
-            _rename_noreplace(parent_fd, stage.name, "profile")
-            os.fsync(parent_fd)
-        finally:
-            os.close(parent_fd)
+        # The publication descriptor is the same inode that passed the
+        # owner/permission check; never reopen the parent path here.
+        _rename_noreplace(parent_fd, stage.name, "profile")
+        os.fsync(parent_fd)
     finally:
         if stage.exists():
             for name in (CERT_NAME, KEY_NAME):
