@@ -85,3 +85,17 @@ The user's HAOS terminal output confirms [`run_haos_live_rpc_to_ipc_test_v2.sh`]
 - Only then install `genvex_remote` as a second integration and add its sensors to a Lovelace dashboard.
 
 **Success criterion:** five actual, auto-refreshing sensor entities with no dependency on Steam Deck or manual SSH, even though the proprietary SDK is still emulated through QEMU.
+
+### Installation-candidate source staged 2026-11-20 (NOT installed)
+
+After 93/93 offline SDK adapter tests, a disposable HAOS live test produced two validated RPC45 snapshots, **with two intervening failed attempts**. Recovery and fail-closed behavior were demonstrated; stable polling is not yet proven.
+
+Source-only components added on `remote-nabto-connection`:
+- [`polling_runtime.py`](../experimental/genvex_remote/polling_runtime.py): read-only long-running native ARM64 polling process, private file-based credentials, 60-second default cadence, signal shutdown, fail-closed snapshots.
+- [`polling_http_server.py`](../experimental/genvex_remote/polling_http_server.py): token-authenticated GET `/v1/snapshot`, no device writes, no HTTP diagnostics, bounded queue, intended only for private App network.
+- [`test_polling_runtime.py`](../experimental/genvex_remote/test_polling_runtime.py): local HTTP auth, snapshot invalidation and credential-file permission tests. **Not yet executed on HAOS.**
+- [`experimental/home_assistant/custom_components/genvex_remote`](../experimental/home_assistant/custom_components/genvex_remote): HA coordinator now uses `AuthenticatedSnapshotReader`; config flow requires device ID, a private App endpoint on port 18275, and an IPC bearer token. HA never loads the Nabto SDK or the Nabto unlock passphrase. Redirects are disabled and response bodies are read with a 4097-byte cap. **No end-to-end HA Core test yet.**
+- [`run_haos_remote_install_preflight_v1.sh`](../scripts/run_haos_remote_install_preflight_v1.sh): pinned source-only offline acceptance test for both packages.
+
+**Critical installation blockers:** package a separately installable HAOS App using a lawful Nabto 4 SDK distribution path (legacy SDK licensing is unresolved), provision an authenticated private network and shared IPC token safely, supply user-facing encrypted profile/secret enrollment without exposing credentials, test the long-running service against real Nabto with 60-second polls and failure diagnostics, validate HA Core config flow/entity availability and HAOS reboot recovery. Do not copy the experimental scaffold into production or replace the working LAN integration yet. HTTP bearer token must never traverse a public/untrusted network; a private App network or stronger transport protection is mandatory.
+
