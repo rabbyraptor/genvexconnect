@@ -328,3 +328,14 @@ Efter den verificerede batchtest og det isolerede v2-kontraktudkast er der tilf�
 - **Ikke installerbart:** Den faktiske `experimental/home_assistant/custom_components/genvex_remote`-integration og dens v1-snapshot-parser, den eksisterende runtime `/v1/snapshot` og installerede HAOS Apps er uændrede. Den nye projektion er et kontraktbevis, ikke live-dataindsamling eller deployment.
 
 **Afventer før brug i HA:** Afklaring af hvordan runtime læser og tidsstempler både de fem basismålinger og de to valgfrie ventilatorer, versioneret separat v2-API, autentificeret IPC-transport, entity-tilgængelighed og test i isoleret HAOS-miljø. Ingen nye live-kald blev udført i dette udviklingstrin.
+
+
+## Opt-in isoleret v2 HTTP-endpoint: offline gennemført (2026-11-20)
+
+For at afprøve API-versionering uden at ændre det installerede runtime-system er der tilføjet [`snapshot_api_v2.py`](../experimental/genvex_remote/snapshot_api_v2.py), en **valgfri v2-provider-parameter** i [`polling_http_server.py`](../experimental/genvex_remote/polling_http_server.py) og [`test_snapshot_v2_http.py`](../experimental/genvex_remote/test_snapshot_v2_http.py).
+
+- **Standard er uændret:** Eksisterende runtime starter fortsat serveren uden `v2_snapshot_provider`. `GET /v1/snapshot` har uændret autorisation, fem målinger og v1-kontrakt. `GET /v2/snapshot` returnerer **404**, når der ikke eksplicit er injiceret en v2-provider.
+- **Kun ved eksplicit injektion:** `GET /v2/snapshot` kan returnere det validerede v2-format (fem obligatoriske + valgfrit *samlet* ventilatorpar) på samme interne, tokenbeskyttede HTTP-server. Dette er ikke slået til i `polling_runtime.py`, installationskode eller HA-integration.
+- **Sikkerhed og fejlisolering:** Bearer-token og rute valideres **før** provider kaldes. Ukendte ruter returnerer 404; metoder andet end GET kan ikke læse/skrive sensorer; HTTP-body afvises; ugyldigt/forkert device, ikke-frisk baseline og beskadiget v2 returnerer 503 uden rå detaljer. Respons genopbygges fra allowlistede, validerede felter.
+- **Offline integrationstest:** Loopbackserver mod syntetisk provider dækker både v1/v2 samtidig, fraværende v2-opt-in, tokenadgang, utilgængelig valgfri ventilatorpar uden opfundet nul, gyldig 0 %, forældet snapshot, forkert device og afvist request body. Testene bruger **ingen** live SDK, Nabto credentials, eksternt net eller HAOS-installation.
+- **Ikke løst endnu:** Den rigtige SDK-adapter leverer fortsat **kun v1-fem-sensor snapshot**. Den valgfrie v2-provider i tests er en syntetisk mock; testen dokumenterer ikke samtidige, live syv-adresse-aflæsninger. En fremtidig v2-producer skal tidskoble målte baseline- og fanværdier i **samme polling-cyklus** og undgå at genbruge gamle fanværdier med et nyere tidsstempel. Vi har bevidst **ikke** koblet `/v2/snapshot` til live-polleren, før producerens atomaritet og SDK-kald er planlagt/testet. Ingen ny device-read er udført.
