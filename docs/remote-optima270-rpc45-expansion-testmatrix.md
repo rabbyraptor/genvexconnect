@@ -215,3 +215,27 @@ PASS: exactly one read-only candidate RPC45 probe completed
 **Hvad sammenligningen støtter:** Værdien og den valgte kildeskalering er numerisk **konsistent** med appens viste temperaturer ved denne observation. Der er stadig ikke en verificeret mapping fra **adresse 24 til T8 eller T9**, da **begge** viste samme værdi; det er heller ikke dokumenteret, at målingen er en reel fysisk temperatur frem for en fraværende/ikke aktiv sensor eller en standardværdi.
 
 **Evidensstatus:** `RPC45 address24 read=VERIFIED`; `app numerical agreement=USER_OBSERVED`; `address24 equals T8/T9=OPEN`; `sensor physical validity=OPEN`. Behold adressen uden for det aktive fem-sensor-katalog, standard-read-plan og Home Assistant-entities. Ingen yderligere live-RPC eller sensor-scanning udført.
+
+## Officiel Genvex Connect-app: brugerens skærmbillede (2026-11-20)
+
+**Brugerens dokumentation:** Et iPhone-skærmbillede af Genvex Connect-appens informationsvisning viser følgende værdier og labels. Appen viser **kun T8 og T9 med T-numre**; de øvrige fire temperaturer vises under deres funktionsnavne, så der er **ingen evidens** for en mapping til T1–T7 i denne visning.
+
+| App-label | Observeret værdi | Remote RPC45 / status |
+| --- | ---: | --- |
+| Supply air | 6.70 °C | Adresse 20, tidligere remote-verificeret; ikke en samtidighedstest |
+| Outdoor air | 0.40 °C | Adresse 21, tidligere remote-verificeret |
+| Exhaust air | 1.80 °C | Adresse 22, tidligere remote-verificeret |
+| Extract air | 7.80 °C | Adresse 23, tidligere remote-verificeret |
+| Humidity sensor | 67 % | Adresse 26, tidligere remote-verificeret |
+| Bypass | Off | Ikke selvstændigt remote-verificeret som boolsk status |
+| Reheat | Off | Ikke selvstændigt remote-verificeret som boolsk status |
+| Preheat | Off | Ikke selvstændigt remote-verificeret som boolsk status |
+| Supply fan | 60.00 % | Adresse 18 er kun en kildebaseret kandidat |
+| Extract fan | 58.00 % | Adresse 19 er kun en kildebaseret kandidat |
+| T8 sensor | −30.00 °C | Eksakt adresse ukendt |
+| T9 sensor | −30.00 °C | Eksakt adresse ukendt |
+| Controller version | 11 | App-observeret; ingen separat remote registermapping verificeret |
+
+**Sammenligning med live-RPC:** Den særskilt verificerede RPC45-adresse 24 gav `raw=0`, kildeskaleret til `−30.0 °C`, som numerisk matcher **begge** T8/T9-appværdier. Der er ingen basis for at identificere adressen entydigt som den ene føler. `−30.0 °C` kan være en sentinel/ikke-tilsluttet føler, men det er **ikke bevist**. Målinger fra tidligere fem-adresse RPC45-tests og dette appskærmbillede er ikke dokumenteret som samtidige, så de er kun semantiske/omtrentlige referencepunkter, ikke præcise punkt-for-punkt-krydstjek.
+
+**Plan:** Behold fem aktive verificerede datapunkter. Adresse 24 er remote-læsbar, men semantisk uafklaret. Kandidaterne 18/19 og øvrige status-/temperaturadresser er fortsat source-only, indtil særskilt godkendte live-aflæsninger og uafhængig sammenligning foreligger. Ingen installerede HAOS Apps eller LAN-integrationen ændres.
