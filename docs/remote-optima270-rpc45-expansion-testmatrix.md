@@ -341,3 +341,15 @@ For at afprøve versionering uden at ændre nogen installeret eller bundlet HAOS
 - **Begrænsning:** Live SDK-adapteren udsender fortsat kun **fem v1-værdier**. Den injicerede v2-provider er en mock. Der er endnu ingen live syv-sensor polling, ingen tidsmæssig kobling mellem fan/baseline, ingen v2-integration i HA Core og ingen installation. Fremtidig integration må sikre at en valgt fanværdi ikke genbruges fra en tidligere poll under nyt tidsstempel.
 
 **CI-fund under udvikling:** Første implementeringsforsøg ændrede `experimental/genvex_remote/polling_http_server.py` uden at ændre den bundlet appkopi; den etablerede `remote-app-offline`-kontrol afviste korrekt forskellen. Den eksisterende v1-server blev derfor **gendannet identisk**, og v2-testserveren blev flyttet til separat prototype. Dette var en offline CI-fejl, ikke en Nabto-, enheds- eller HAOS-installationsfejl.
+
+
+## Offline RPC45-plan med syv adresser og ét måletidspunkt (2026-11-20)
+
+Der er nu en separat, **inert** [`seven_read_plan_v2_draft.py`](../experimental/genvex_remote/seven_read_plan_v2_draft.py) med [`test_seven_read_plan_v2_draft.py`](../experimental/genvex_remote/test_seven_read_plan_v2_draft.py). Det er en forberedelse til fremtidig **enkeltkalds-/enkeltmåletidspunkt-strategi**, ikke en live SDK-adapter.
+
+- Den præcise, faste read-only RPC45-liste er `[(0,20),(0,21),(0,22),(0,23),(0,26),(0,18),(0,19)]`, i den rækkefølge. Ingen scanning, write RPC, oprettet Nabto-session eller nye credentials.
+- Det syntetiske **komplette syv-elementers** svar dekodes til et v2-envelope med ét `timestamp_utc`, fem obligatoriske basalværdier og to valgfri fanprocenter, og valideres af den eksisterende v2-kontrakt. Ugyldig baseline, ufuldstændigt batch eller ugyldige int16-typer giver fejl for hele snapshot. Fysisk usandsynlige, men korrekt kodede ventilatorråværdier resulterer i et tomt `optional.fan_duty`-par uden falske 0 %.
+- Ved et fremtidigt **enkelt read-only RPC45-kald med alle syv adresser** vil råværdierne være fra én forespørgsel, hvilket er mere sammenhængende end to adskilte polling-kald. Det samlede syv-adresse batch er dog **endnu ikke live-testet**: tidligere 5-adresse og 12-adresse batch er selvstændigt verificeret. Én samlet RPC-fejl vil gøre alle syv utilgængelige; den valgfrie felt-degradering kan kun bruges, når hele svaret er vellykket og komplet.
+- Den rigtige `SDKSnapshotAdapter`, `SnapshotState`, `PollingService`, `polling_runtime.py` og HA-klient er fortsat v1-only. Den nye plan bruges hverken i den pakkede HAOS App, i en installeret integration eller i tests med rigtig gateway.
+
+**Næste nødvendige milepæl** er en isoleret, udtrykkeligt godkendt read-only live-test af præcis syv-adresse-batchen, efterfulgt af udvikling af en separat v2-producer, som faktisk kan danne en frisk, atomisk snapshot fra en valideret SDK-respons. Der er ikke foretaget live-kald i denne kodeændring.
