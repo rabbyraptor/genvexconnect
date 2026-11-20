@@ -56,6 +56,13 @@ class OneCandidateProbeSafetyTests(unittest.TestCase):
             "request": {"datapoints": [{"obj": 0, "address": 40}], "trailer": 1}
         })
 
+    def test_invalid_cli_candidate_fails_without_live_access(self):
+        with patch.object(probe, "execute_one_read", side_effect=AssertionError("Live called")), \
+             contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit) as ctx:
+                probe.main(["--key", "unknown"])
+        self.assertEqual(ctx.exception.code, 2)
+
     def test_reject_tampered_candidate_object(self):
         from optima270_source_only import SourceOnlyDatapoint
         forged = SourceOnlyDatapoint("frost_protection_temp", "fake", 999)
