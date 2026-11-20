@@ -263,3 +263,16 @@ bash scripts/run_optima270_all_candidates_batch_from_deck.sh --execute-live
 ```
 
 **Status:** Koden er forberedt og tests er offline-only. **Ingen 12-adresse live-batch er kørt eller remote-verificeret.** De 12 kandidater er ikke tilføjet til det aktive HA-katalog. App-reference: Supply fan **60 %**, Extract fan **58 %**, bypass/reheat/preheat **Off**, T8/T9 **−30 °C** (brugerens screenshot). Appværdier og en senere batch skal vurderes med hensyn til tidsforskydning og mulige sensor-sentinels.
+
+## Steam Deck: enklere prompts og seneste batchfejl (2026-11-20)
+
+**Operatørens seneste live-forsøg:** En samlet, særskilt godkendt 12-adresse RPC45-batch (`24,18,19,35,36,41,42,53,40,114,115,50`) returnerede `RPC status=26`, `event=1000015`, klassificeret som `GATEWAY_NOT_KNOWN_OR_UNAVAILABLE`. Session close og SDK shutdown var begge 0. **Ingen af de 12 målinger blev afkodet i dette forsøg**; den tidligere vellykkede enkeltlæsning af adresse 24 står fortsat ved magt. Fejlen viser ikke, at 12-element-batchen er afvist på grund af batchstørrelse eller en bestemt adresse.
+
+**Efter brugerens ønske** er både [12-kandidat-launcheren](../scripts/run_optima270_all_candidates_batch_from_deck.sh) og [én-kandidat-launcheren](../scripts/run_optima270_one_read_from_deck.sh) ændret således:
+
+- E-mail-identitet og 12-cifret device-ID indtastes **synligt** via Bash `read -r -p`; tidligere fuldt remote-hostnavn bliver **ikke længere spurgt om**.
+- `GENVEX_NABTO_HOST` dannes fra det indtastede validerede device-ID som `<12 digits>.remote.lscontrol.dk`. Den tidligere ekstra uafhængige hostkontrol er fjernet efter udtrykkeligt brugerønske; et forkert indtastet device-ID kan derfor igen give Nabto-event 1000015. Device-ID valideres fortsat mod præcis 12 ASCII-cifre inden SDK-kald.
+- **Kun den krypterede nøgles passphrase** indtastes skjult (`read -r -s -p`) og sendes via stdin, ikke via argv eller miljøvariabel. Programmets egne statuslinjer logger fortsat hverken identitet, device-ID, hostnavn eller nøgle.
+- Default `--preflight` er fortsat offline. Live-tilstand har fortsat højst ét read-only RPC45-kald, 90 sekunders timeout, private midlertidige profiler og ingen automatisk gentagelse.
+
+**Privatliv:** Fordi e-mail og device-ID nu er synlige, kan de fremgå af terminaloptagelser/skærmbilleder. Fjern disse oplysninger inden deling af logs. Ingen installerede HAOS Apps eller LAN-integration er ændret.
