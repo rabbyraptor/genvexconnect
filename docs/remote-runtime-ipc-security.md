@@ -26,6 +26,12 @@
 - The actual x86_64 SDK has not accepted a *new* CA-issued key from our automated Python code, only the pre-existing profile.
 - The legacy SDK redistributability is not established.
 
+## Disposable bridge networking validation — ready, NOT YET EXECUTED
+
+[`scripts/run_haos_bridge_remote_rpc_test.sh`](../scripts/run_haos_bridge_remote_rpc_test.sh) is a host-side development test. It starts a **temporary container from the exact already installed Nabto runtime image** using `--network bridge`, `--read-only`, a volatile `/tmp` tmpfs, no mounts or exposed ports, capabilities dropped and `no-new-privileges`. It first checks DNS from inside that isolated network. It then copies only the existing encrypted certificate + key from the protected host profile into the temporary tmpfs and prompts locally for the pre-existing unlock passphrase without echoing it. The same tested QEMU Python probe performs **one five-address read-only RPC45**. Shell cleanup deletes the disposable container (and its tmpfs). The original running App and host profile are left unchanged.
+
+**Interpretation:** a successful *authenticated* RPC in bridge mode provides evidence that the remote Nabto path does not depend on Docker host networking on this specific HAOS setup. DNS success alone is **not sufficient**. A failure can be due to blocked outbound UDP/relay, Docker DNS/firewall, an incorrect profile input or external connectivity; avoid broad architecture conclusions from an unclassified failure. The script is a development-only diagnostic and not a production credential-delivery solution. It has not yet run on HAOS.
+
 ## Next offline acceptance gate
 
 The next [combined HAOS development test](../scripts/run_haos_remote_dev_tests.sh) also discovers `test_ipc_auth.py`. It should verify random token generation, exact matching, missing/wrong-token rejection and non-disclosure of secrets in error strings. **A token alone is not sufficient authorization for account enrollment**: rotation, storage, authenticated provisioning, request-level permissions, transport encryption and replay handling remain unresolved. Do not expose a runtime API in the existing `host_network: true` App.
