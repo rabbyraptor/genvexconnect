@@ -38,4 +38,4 @@ jobs:
       - name: Run HA scaffold parser tests (no HA Core required)
         run: python -m unittest discover -s experimental/home_assistant/tests -p "test_*.py" -v
       - name: Compile HA scaffold source
-        run: python -m compileall -q experimental/home_assistant/custom_components/genvex_remote
+        run: python -m compileall -q experimental/home_assistant/custom_components/genvex_remote experimental/genvex_remote
