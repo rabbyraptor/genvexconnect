@@ -15,7 +15,6 @@ import stat
 import tempfile
 
 from ipc_auth import authorize_read
-from polling_runtime import run
 from sensor_model import remote_hostname
 
 DATA = Path("/data")
@@ -31,6 +30,28 @@ def read_options(path: Path = OPTIONS) -> dict:
     data = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(data, dict):
         raise ValueError("Invalid App options")
+    allowed = {
+        "device_id", "identity", "unlock_secret", "ipc_token",
+        "poll_seconds", "diagnostic_only",
+    }
+    if set(data) - allowed:
+        raise ValueError("Unknown App option")
+    diagnostic = data.get("diagnostic_only", False)
+    if type(diagnostic) is not bool:
+        raise ValueError("Diagnostic option must be a boolean")
+    poll = data.get("poll_seconds", 60)
+    if type(poll) is not int or not 60 <= poll <= 3600:
+        raise ValueError("Invalid poll interval")
+
+    if diagnostic is True:
+        # Explicit opt-in only. Do not run a diagnostic process if the
+        # configuration contains credentials that may belong to a live App.
+        if any(data.get(key, "") != "" for key in (
+            "device_id", "identity", "unlock_secret", "ipc_token"
+        )):
+            raise ValueError("Diagnostic mode requires empty credential fields")
+        return data
+
     device = data.get("device_id")
     remote_hostname(device)
     for field in ("identity", "unlock_secret"):
@@ -41,9 +62,6 @@ def read_options(path: Path = OPTIONS) -> dict:
             raise ValueError("Invalid App credential option")
     token = data.get("ipc_token")
     authorize_read(token, token)
-    poll = data.get("poll_seconds", 60)
-    if type(poll) is not int or not 60 <= poll <= 3600:
-        raise ValueError("Invalid poll interval")
     return data
 
 
@@ -99,9 +117,29 @@ def write_token(token: str, path: Path = TOKEN) -> None:
             os.unlink(temp_path)
 
 
+def run_diagnostic_only() -> None:
+    """Never consult a profile or launch polling/SDK in diagnostic mode."""
+    from diagnostic_http_server import DiagnosticHTTPServer
+
+    server = DiagnosticHTTPServer(bind_host="0.0.0.0", port=18275)
+    print("Genvex Remote App: DIAGNOSTIC ONLY; synthetic data, no Nabto", flush=True)
+    server.serve_forever()
+
+
 def main() -> None:
     try:
         options = read_options()
+        if options.get("diagnostic_only") is True:
+            # Detect even dangling symlinks; fail closed if private material
+            # from another mode is already present in this App's /data.
+            if any(os.path.lexists(path) for path in (PROFILE, TOKEN)):
+                raise ValueError("Diagnostic requires no private profile or token")
+            run_diagnostic_only()
+            return
+
+        # Live-only imports and profile access happen strictly after the
+        # diagnostic branch. No SDK code is imported by diagnostic startup.
+        from polling_runtime import run
         validate_private_profile()
         write_token(options["ipc_token"])
         config = {
