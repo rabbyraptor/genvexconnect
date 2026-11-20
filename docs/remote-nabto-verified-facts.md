@@ -17,6 +17,10 @@ This file is the **single source of truth for the current project state**. The o
 
 **VERIFIED:** The user's running isolated HAOS v0.5.0 App (ARM64, Python cryptography 47.0.0) ran the full `experimental/genvex_remote` fake-provider suite: **51 tests in 6.308 seconds, all OK**. Tested encrypted candidate key and CSR handling, fake legacy CA trust, fake HTTP registration, atomic private profile store, sensor model and stale/wrong-device snapshot rejection. Test artifacts lived in a temporary location. **No real CA registration, new authenticated Nabto session or live integration is proven by this run.**
 
+### HAOS developer validation — 2026-11-20 (66/66 PASS)
+
+**VERIFIED from user-supplied terminal output** running [`scripts/run_haos_remote_dev_tests.sh`](../scripts/run_haos_remote_dev_tests.sh) in the isolated HAOS v0.5.0 test App: **57/57** certificate/profile/fake-HTTP/sensor/snapshot/serialized-polling tests passed in **7.754 seconds**; **9/9** isolated Home Assistant snapshot/parser/fail-closed-reader tests passed in **0.132 seconds**; additionally, `python3 -m compileall` passed for the new Home Assistant integration scaffold. Total **66/66** offline tests. The polling tests include no-overlap behavior, timeout/recovery, five known addresses and error redaction. The scaffold still **has not been imported/executed under real Home Assistant Core**, and the tests use synthetic readings/fake CA, not remote telemetry or actual enrollment. The existing LAN component and HAOS profile were not modified.
+
 ## Evidence labels
 
 - **VERIFIED:** observed successfully in our controlled tests, with SDK return values or independent certificate checks.
