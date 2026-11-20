@@ -29,3 +29,20 @@ These tests **do not establish remote connectivity or validate a live RPC45 call
 5. Test restart persistence, failure/recovery and Home Assistant integration lifecycle before recommending installation.
 
 The working LAN integration remains untouched. The ARM64 image is a development artifact, not a production-ready HAOS App.
+
+## Security hardening staged after ARM64 validation
+
+On the development branch, the separate App bootstrap was changed to **reject**
+missing or insecure private profile material rather than importing private
+keys from globally shared `/share`. `config.yaml` no longer grants the App
+`share:ro`. The App requires pre-provisioned `/data/profile/client.crt` and
+`/data/profile/client-encrypted.key`, a mode-0700 directory, and private
+regular PEM files with no group/other permissions. Symbolic-link inputs are
+rejected. The offline test suite now checks this behavior with fake data,
+including symlinks and insecure permissions.
+
+**Status: source changes committed, CI results not yet independently
+verified.** The already-loaded `genvex-nabto-remote:ci` image on HAOS is
+from the earlier build; none of these changes are present in that image.
+Do not install or start the App with real secrets yet. No secure App-private
+profile provisioning or enrollment UX has been implemented.
