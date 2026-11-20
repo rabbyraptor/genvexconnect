@@ -46,6 +46,12 @@
 
 The separate HA integration's [`AuthenticatedSnapshotReader`](../experimental/home_assistant/custom_components/genvex_remote/runtime_client.py) now has a bounded, fail-closed HTTP consumer with injected session/endpoint/token, but `UnconfiguredReader` remains the active default. Its [mock tests](../experimental/home_assistant/tests/test_runtime_client.py) do not run inside real HA Core. Cleartext HTTP with a bearer token is **not an approved production design** without a documented, appropriate isolation or encryption boundary.
 
+## Verified isolated IPC test — 2026-11-20
+
+The user executed [`run_haos_ipc_two_container_test_v2.sh`](../scripts/run_haos_ipc_two_container_test_v2.sh) successfully on HAOS. The results show scripts staged into writable tmpfs on **both** read-only containers, no-internet private Docker bridge, correct rejection of absent/incorrect bearer token, and correct parsing of a five-value authorized **synthetic** response. The script printed `PASS: ISOLATED TWO-CONTAINER TOKEN IPC`. This confirms that the disposable test topology works. **It does not establish production security, real SDK-to-HTTP output, automatic token sharing, or HA Core connectivity.**
+
+[`test_worker_api_contract.py`](../experimental/genvex_remote/test_worker_api_contract.py) now provides an offline unit-level contract across the fake read-only RPC callback, serial poller, atomic state, authenticated snapshot handler and strict parser. It explicitly rejects cached old data after a failed RPC. The new tests are **not yet verified on the Pi**.
+
 ## Next offline acceptance gate
 
 The next [combined HAOS development test](../scripts/run_haos_remote_dev_tests.sh) also discovers `test_ipc_auth.py`. It should verify random token generation, exact matching, missing/wrong-token rejection and non-disclosure of secrets in error strings. **A token alone is not sufficient authorization for account enrollment**: rotation, storage, authenticated provisioning, request-level permissions, transport encryption and replay handling remain unresolved. Do not expose a runtime API in the existing `host_network: true` App.
