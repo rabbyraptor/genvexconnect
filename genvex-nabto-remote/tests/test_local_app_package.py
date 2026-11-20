@@ -24,7 +24,7 @@ class LocalAppPackageTests(unittest.TestCase):
         content = script.read_text()
         self.assertIn('MODE=$1', content)
         self.assertIn('if [ "$MODE" = "--preflight" ]; then', content)
-        self.assertIn('"--stage"', content)
+        self.assertIn('case "$MODE" in --preflight|--stage)', content)
         self.assertIn("genvex-nabto-remote-local-app-source.tar.gz", content)
         self.assertIn("sha256sum --check", content)
         self.assertIn("test ! -e", content)
