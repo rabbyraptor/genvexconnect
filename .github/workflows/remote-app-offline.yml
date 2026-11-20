@@ -9,6 +9,7 @@ on:
       - "experimental/genvex_remote/**"
       - "experimental/home_assistant/**"
       - ".github/workflows/remote-app-offline.yml"
+      - "scripts/package_remote_diagnostic_app.py"
   pull_request:
     paths:
       - "genvex-nabto-remote/**"
@@ -65,6 +66,19 @@ jobs:
           assert config["options"]["diagnostic_only"] is False
           assert config["schema"]["diagnostic_only"] == "bool"
           PY
+      - name: Package audited local Supervisor App source (no secrets)
+        run: |
+          python scripts/package_remote_diagnostic_app.py
+          cd dist
+          sha256sum -c APP_SOURCE_SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: genvex-remote-local-app-source
+          path: |
+            dist/genvex-nabto-remote-local-app-source.tar.gz
+            dist/APP_SOURCE_SHA256SUMS
+          if-no-files-found: error
+          retention-days: 14
       - name: Package experimental HA integration (not a production release)
         run: |
           python - <<'PY'
