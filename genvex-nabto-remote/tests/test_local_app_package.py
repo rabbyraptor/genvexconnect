@@ -31,6 +31,8 @@ class LocalAppPackageTests(unittest.TestCase):
         self.assertIn("test ! -e", content)
         self.assertIn("test ! -L", content)
         self.assertIn("Supervisor not reloaded", content)
+        self.assertIn("trap cleanup EXIT", content)
+        self.assertIn("cleanup() { rm -rf --", content)
         self.assertNotIn("ha apps install", content)
         self.assertNotIn("ha apps start", content)
         self.assertNotIn("docker run", content)
