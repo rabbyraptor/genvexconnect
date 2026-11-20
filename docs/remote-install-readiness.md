@@ -2,6 +2,29 @@
 
 ## Current state
 
+**Latest HAOS milestone (20 November 2026):** Local source for
+`local_genvex_nabto_remote` was staged and discovered by Supervisor after
+`ha store reload` (not `ha apps reload`). Supervisor validated its config and
+found both local App configurations. `ha apps info` reports
+`available: true`, `build: true`, `installed: false`,
+`version_latest: 0.1.0-dev1`, `stage: experimental`, `arch: [aarch64]`,
+`host_network: false`, and `state: unknown`. The existing
+`local_genvex_nabto_runtime_test` remains `started` at version `0.5.0`.
+The 126/126 source-only tests passed previously; Supervisor installation and
+synthetic-only App runtime acceptance have **not** been performed. Historical
+"not yet staged/discoverable" statements below describe earlier milestones.
+
+**Current next gate:** read-only disk/RAM/build-prerequisite preflight, then
+separate explicit authorization for Supervisor build/install **without startup**.
+Benefits: exercise real HAOS App lifecycle, ARM64/QEMU build and dependencies.
+Risks: high CPU/RAM/disk use on Raspberry Pi 4, possible failed build and
+leftover Docker cache, and no proof of reliable remote Nabto connectivity.
+No App credentials, certificates, private-key migration, live gateway session,
+HA integration replacement, or changes to the existing test App are authorized.
+Even after installation, a synthetic-only start requires a separate approval.
+See [controlled diagnostic installation plan](remote-local-haos-diagnostic-install-plan.md).
+
+
 **Not a supported one-click HAOS installation yet.** The existing working LAN
 integration and the existing test App must not be replaced or modified.
 
