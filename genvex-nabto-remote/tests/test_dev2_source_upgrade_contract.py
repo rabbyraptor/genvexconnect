@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 import os
 from pathlib import Path
 import subprocess
@@ -102,6 +103,85 @@ class Dev2UpgradeContractTests(unittest.TestCase):
             "/apps/data", "client-encrypted.key", "ipc-token",
         ):
             self.assertNotIn(forbidden, remote)
+
+    def isolated_transaction(self, *, fail_promotion=False):
+        # Execute the actual generated remote shell transaction against a
+        # temporary source tree; never SSH or touch the host's HAOS paths.
+        base = self.root / "isolated-local-app-source"
+        base.mkdir()
+        old = base / "genvex_nabto_remote"
+        old.mkdir()
+        (old / "config.yaml").write_text('version: "0.1.0-dev1"\\n')
+        prior_hash = hashlib.sha256((old / "config.yaml").read_bytes()).hexdigest()
+        data = self.root / "private-app-data"
+        data.mkdir()
+        (data / "sentinel").write_text("DO NOT MODIFY")
+        source = SCRIPT.read_text().replace(
+            "/mnt/data/supervisor/apps/local", str(base)
+        ).replace(
+            "5c15ac644063f1a0fbcbcc3fd2050a56715922bf7f7f5640032b6f49bcdbfaac",
+            prior_hash,
+        )
+        local_script = self.root / "isolated-transaction.sh"
+        local_script.write_text(source)
+        (self.bin / "ssh").write_text(
+            "#!/bin/bash\\n"
+            "last=${!#}\\n"
+            "case \"$last\" in\\n"
+            "  'sh -s -- --execute-readonly') cat >/dev/null; exit 0 ;;\\n"
+            "  'sh -c '* ) exec sh -c \"$last\" ;;\\n"
+            "  *) exit 8 ;;\\n"
+            "esac\\n"
+        )
+        (self.bin / "ssh").chmod(0o700)
+        (self.bin / "ha").write_text(
+            "#!/bin/sh\\n"
+            "printf '%s\\\\n' 'state: stopped' 'boot: manual' 'version: 0.1.0-dev1'\\n"
+        )
+        (self.bin / "ha").chmod(0o700)
+        (self.bin / "docker").write_text("#!/bin/sh\\nexit 1\\n")
+        (self.bin / "docker").chmod(0o700)
+        if fail_promotion:
+            (self.bin / "mv").write_text(
+                "#!/bin/sh\\n"
+                "case \"$1\" in *dev2-source-stage/genvex_nabto_remote)"
+                " echo 'SIMULATED PROMOTION FAILURE' >&2; exit 3 ;; esac\\n"
+                "exec /bin/mv \"$@\"\\n"
+            )
+            (self.bin / "mv").chmod(0o700)
+        run = subprocess.run(
+            ["bash", str(local_script), "--apply", str(self.archive),
+             str(self.artifacts / "APP_SOURCE_SHA256SUMS")],
+            capture_output=True, text=True, env=self.env, timeout=20,
+        )
+        return run, old, base, data
+
+    def test_isolated_source_swap_retains_old_backup(self):
+        run, source, base, data = self.isolated_transaction()
+        self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
+        backup = base / ".genvex-remote-dev1-source-backup"
+        self.assertTrue(backup.is_dir())
+        self.assertEqual((backup / "config.yaml").read_text(),
+                         'version: "0.1.0-dev1"\\n')
+        self.assertIn('version: "0.1.0-dev2"',
+                      (source / "config.yaml").read_text())
+        self.assertFalse((base / ".genvex-remote-dev2-source-stage").exists())
+        self.assertEqual((data / "sentinel").read_text(), "DO NOT MODIFY")
+
+    def test_isolated_rename_failure_restores_original_source(self):
+        run, source, base, data = self.isolated_transaction(
+            fail_promotion=True
+        )
+        self.assertNotEqual(run.returncode, 0)
+        self.assertEqual((source / "config.yaml").read_text(),
+                         'version: "0.1.0-dev1"\\n')
+        self.assertFalse(
+            (base / ".genvex-remote-dev1-source-backup").exists()
+        )
+        self.assertFalse(
+            (base / ".genvex-remote-dev2-source-stage").exists()
+        )
+        self.assertEqual((data / "sentinel").read_text(), "DO NOT MODIFY")
 
     def test_refuse_invalid_archive_before_ssh(self):
         with self.archive.open("ab") as stream:
