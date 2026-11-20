@@ -107,6 +107,10 @@ echo "===== DEV2 SOURCE-ONLY BACKUP / SWAP ====="
     [ \"\$(docker inspect --type container app_local_genvex_nabto_remote --format \"{{.State.Running}}\")\" = false ] || exit 1
   fi
   [ \"\$(sha256sum \$SRC/config.yaml | cut -d \" \" -f 1)\" = 5c15ac644063f1a0fbcbcc3fd2050a56715922bf7f7f5640032b6f49bcdbfaac ] || exit 1
+  [ \"\$(sha256sum \$SRC/Dockerfile | cut -d \" \" -f 1)\" = 5c7edfb109ccad4b09a19ff28c3173e405bcb33eb26034174ee10de83d2f4cdd ] || exit 1
+  [ \"\$(sha256sum \$SRC/run.sh | cut -d \" \" -f 1)\" = 50c68a9defb3c47621ab6d3b901b3e645ac19f539616457f469a1cb76a91f398 ] || exit 1
+  [ \"\$(sha256sum \$SRC/runtime/app_bootstrap.py | cut -d \" \" -f 1)\" = 9e8862450d6204d21136baae25ce37aa24aa591f1008842c5914911517db7db1 ] || exit 1
+  [ \"\$(sha256sum \$SRC/runtime/profile_provision.py | cut -d \" \" -f 1)\" = 3d35505bfc12b24cc0f68e0a437c6fce047ffe2613ab13ccb10fe2959ec1fe82 ] || exit 1
   mkdir -m 0700 \$STAGE
   swapped=0
   cleanup() {
@@ -127,6 +131,10 @@ echo "===== DEV2 SOURCE-ONLY BACKUP / SWAP ====="
   [ -f \$STAGE/genvex_nabto_remote/runtime/profile_provision.py ] || exit 1
   # Recheck source baseline immediately before the swap.
   [ \"\$(sha256sum \$SRC/config.yaml | cut -d \" \" -f 1)\" = 5c15ac644063f1a0fbcbcc3fd2050a56715922bf7f7f5640032b6f49bcdbfaac ] || exit 1
+  [ \"\$(sha256sum \$SRC/Dockerfile | cut -d \" \" -f 1)\" = 5c7edfb109ccad4b09a19ff28c3173e405bcb33eb26034174ee10de83d2f4cdd ] || exit 1
+  [ \"\$(sha256sum \$SRC/run.sh | cut -d \" \" -f 1)\" = 50c68a9defb3c47621ab6d3b901b3e645ac19f539616457f469a1cb76a91f398 ] || exit 1
+  [ \"\$(sha256sum \$SRC/runtime/app_bootstrap.py | cut -d \" \" -f 1)\" = 9e8862450d6204d21136baae25ce37aa24aa591f1008842c5914911517db7db1 ] || exit 1
+  [ \"\$(sha256sum \$SRC/runtime/profile_provision.py | cut -d \" \" -f 1)\" = 3d35505bfc12b24cc0f68e0a437c6fce047ffe2613ab13ccb10fe2959ec1fe82 ] || exit 1
   mv \$SRC \$BACKUP
   swapped=1
   mv \$STAGE/genvex_nabto_remote \$SRC || exit 1
