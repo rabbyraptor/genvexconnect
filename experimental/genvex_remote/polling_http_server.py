@@ -10,7 +10,6 @@ from threading import Thread
 from typing import Callable
 
 from snapshot_api import handle_read_request
-from snapshot_api_v2 import V2_PATH, handle_v2_read_request
 
 
 class _BoundedHTTPServer(ThreadingHTTPServer):
@@ -23,8 +22,7 @@ class SnapshotHTTPServer:
     """Start/stop a minimal authenticated snapshot endpoint."""
 
     def __init__(self, *, bind_host: str, port: int, token: str,
-                 device_id: str, snapshot_provider: Callable[[], dict | None],
-                 v2_snapshot_provider: Callable[[], dict | None] | None = None):
+                 device_id: str, snapshot_provider: Callable[[], dict | None]):
         if bind_host not in ("127.0.0.1", "0.0.0.0"):
             raise ValueError("Invalid private bridge binding")
         if bind_host == "0.0.0.0" and port != 18275:
@@ -62,22 +60,16 @@ class SnapshotHTTPServer:
                     expected_token=token,
                     device_id=device_id,
                 )
-                if self.path == V2_PATH and v2_snapshot_provider is not None:
-                    handler = handle_v2_read_request
-                    provider = v2_snapshot_provider
-                else:
-                    handler = handle_read_request
-                    provider = snapshot_provider
-                status, payload = handler(**request, snapshot=None)
+                status, payload = handle_read_request(**request, snapshot=None)
                 if status != 503:
                     self._json_reply(status, payload)
                     return
                 try:
-                    snapshot = provider()
+                    snapshot = snapshot_provider()
                 except Exception:
                     self._json_reply(503, b'{"error":"unavailable"}')
                     return
-                status, payload = handler(**request, snapshot=snapshot)
+                status, payload = handle_read_request(**request, snapshot=snapshot)
                 self._json_reply(status, payload)
 
             def do_GET(self): self._handle()
