@@ -7,11 +7,13 @@ on:
     paths:
       - "genvex-nabto-remote/**"
       - "experimental/genvex_remote/**"
+      - "experimental/home_assistant/**"
       - ".github/workflows/remote-app-offline.yml"
   pull_request:
     paths:
       - "genvex-nabto-remote/**"
       - "experimental/genvex_remote/**"
+      - "experimental/home_assistant/**"
       - ".github/workflows/remote-app-offline.yml"
   workflow_dispatch:
 
@@ -39,6 +41,10 @@ jobs:
         run: python -m compileall -q genvex-nabto-remote/runtime
       - name: Run fake-credential bootstrap tests (no real profile)
         run: python -m unittest discover -s genvex-nabto-remote/tests -p "test_*.py" -v
+      - name: Run Home Assistant transport and snapshot tests (without HA Core)
+        run: |
+          cd experimental/home_assistant/tests
+          python -m unittest discover -s . -p "test_*.py" -v
       - name: Validate isolated App configuration
         run: |
           python -m pip install PyYAML
