@@ -98,3 +98,13 @@ The App candidate is now at repository root [`genvex-nabto-remote/`](../genvex-n
 The Home Assistant config flow now masks the IPC bearer token with a password selector. A matching token must be provisioned to the App separately; never publish the token or Nabto unlock secret in logs or GitHub issues.
 
 **v7** is the latest pinned offline HAOS preflight (backend + HA + App bootstrap, source parity and compilation). Its result has not yet been reported. The previously reported v5 result of **119/119 PASS** remains the last verified source-only baseline.
+
+## 126/126 verified and first isolated App image build prepared
+
+**Verified by the user on HAOS (v7):** 104 backend tests + 15 HA tests + 7 App bootstrap tests, all passed; runtime source parity, Python compilation and HA JSON checks also passed. This is the current **126/126 source-only baseline**.
+
+The next step is the pinned [`run_haos_remote_app_image_build_v1.sh`](../scripts/run_haos_remote_app_image_build_v1.sh). It downloads a fixed source commit, builds **only** a separate `genvex-nabto-remote:dev-...` Docker image for ARM64, performs the existing Nabto CLI/QEMU and x86 Python build smoke tests, and runs an offline import test without networking or secrets. It requires at least 3 GiB free on the HAOS data partition, may download/build several gigabytes, and does **not** install or start any App. The image build has **not yet been executed on the user's HAOS host**. A Docker build failure must be investigated before installing anything.
+
+**Important security note:** the proposed `/share/genvex-remote-profile` import path is shared across HAOS Apps that have share access, even if the files are mode 0600. It is not an acceptable final private-key enrollment design. Before live installation, replace this import path with a secure, App-private enrollment/migration workflow that leaves the existing encrypted host profile untouched. Do not ask the user to copy the encrypted private key into globally shared storage as a routine installation step.
+
+**Repository distribution note:** the App candidate currently exists on the `remote-nabto-connection` development branch; adding the default-branch GitHub repository to Supervisor will not automatically install the development-branch candidate. A suitable release branch/repository or package publication path must be prepared and verified before presenting GUI installation instructions.
