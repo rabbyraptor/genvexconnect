@@ -7,7 +7,9 @@ on:
   pull_request:
     paths:
       - 'genvex-nabto-remote/runtime/**'
+      - 'genvex-nabto-remote/scripts/haos_live_once_operator.py'
       - 'genvex-nabto-remote/tests/test_live_once.py'
+      - 'genvex-nabto-remote/tests/test_haos_live_once_operator.py'
       - '.github/workflows/dev3-live-once.yml'
   workflow_dispatch:
 
@@ -29,6 +31,6 @@ jobs:
         with:
           python-version: '3.12'
       - name: Syntax check
-        run: python -m compileall -q runtime tests/test_live_once.py
-      - name: Test single-shot contract (no network credentials)
-        run: python -m unittest discover -s tests -p test_live_once.py -v
+        run: python -m compileall -q runtime scripts/haos_live_once_operator.py tests/test_live_once.py tests/test_haos_live_once_operator.py
+      - name: Test single-shot contract and operator launcher (no network credentials)
+        run: python -m unittest discover -s tests -p 'test_*live_once*.py' -v
