@@ -35,7 +35,7 @@ runs the HA snapshot/transport tests, and compiles the HA integration without in
   runner=$(mktemp /tmp/genvex-preflight.XXXXXX)
   trap 'rm -f "$runner"' EXIT
   curl -fsSL \
-    'https://raw.githubusercontent.com/rabbyraptor/genvexconnect/remote-nabto-connection/scripts/run_haos_remote_install_preflight_v5.sh' \
+    'https://raw.githubusercontent.com/rabbyraptor/genvexconnect/remote-nabto-connection/scripts/run_haos_remote_install_preflight_v6.sh' \
     -o "$runner"
   sh "$runner"
 )
@@ -78,3 +78,15 @@ It uses its own SDK-backed Nabto client in a separate runtime.
 ## Preflight failure fixed 2026-11-20
 
 The first HAOS runtime preflight executed **102 backend tests, 101 passing and one error**. The single error was `test_post_and_other_path_not_exposed`: a POST with `Content-Length: 0` correctly hit the body-rejection path, but `BaseHTTPRequestHandler.send_error()` emitted HTML while the client test required JSON. The HTTP server now responds with a fixed JSON `400 {"error":"bad_request"}`, adds a `nosniff` header, and rejects binding to arbitrary interfaces. Regression tests cover the rejected POST and listener binding. The HA transport test doubles were also updated to the new bounded `response.content.read(4097)` API and `allow_redirects=False` behavior. The **v5 preflight is prepared but not yet confirmed passing on HAOS**. It runs both backend and HA tests (unlike v2), and checks source syntax and manifest JSON. No real SDK session or credentials are accessed.
+
+## HAOS App candidate staged after 119/119 source checks (2026-11-20)
+
+**Verified by the user on HAOS:** 104 backend tests and 15 HA fake-transport/snapshot tests passed, followed by Python compilation and HA JSON manifest checks. This is a **119/119 source-only PASS**, not a live HA Core or installed-App acceptance test.
+
+**New separate Supervisor-discoverable App source:** [`genvex-nabto-remote/`](../genvex-nabto-remote/). It has a Dockerfile based on the proven QEMU/x86_64 test-runtime approach, a manual-boot App manifest, a native Python bootstrap, a bundled copy of the 11 validated runtime modules, and fake-credential bootstrap tests. The App has `host_network: false`, no published host ports, `share:ro`, and does not touch the working Genvex LAN integration or the earlier test App.
+
+The bootstrap expects `client.crt` and `client-encrypted.key` under `/share/genvex-remote-profile/` (separate from the existing private host profile), copies them to private App `/data/profile/` with 0600 permissions, validates a 12-digit device ID, and reads the encrypted-key passphrase and a 43+ character IPC token from App `password` options. The private token is written with mode 0600. It starts only the read-only polling runtime. The HA integration uses `http://app_local_genvex_nabto_remote:18275/v1/snapshot` and the same token. **No automatic certificate enrollment or profile migration exists.** Supervisor options are not a dedicated secret vault; manual secret entry is development-only.
+
+**Next source acceptance test:** [`run_haos_remote_install_preflight_v6.sh`](../scripts/run_haos_remote_install_preflight_v6.sh), pinned to the candidate source and covering the 104 backend tests, 15 HA tests, 7 App bootstrap tests, source-copy parity, and compilation. **Not yet executed on HAOS.**
+
+**Do not install this candidate yet:** the image has not been built or validated on HAOS; the profile import and IPC token UX are not finished; vendor SDK redistribution/licensing and private network isolation require review. The existing App must not be replaced.
