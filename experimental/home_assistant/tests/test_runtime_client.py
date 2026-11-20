@@ -53,7 +53,7 @@ class _Session:
 class AuthenticatedReaderTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.token = "z" * 43
-        self.endpoint = "http://local_genvex_remote_runtime:18275/v1/snapshot"
+        self.endpoint = "http://app_local_genvex_remote_runtime:18275/v1/snapshot"
 
     def reader(self, response):
         session = _Session(response)
