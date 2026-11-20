@@ -1,0 +1,51 @@
+name: Genvex Remote ARM64 App image build (no secrets)
+
+on:
+  push:
+    branches:
+      - remote-nabto-connection
+    paths:
+      - "genvex-nabto-remote/Dockerfile"
+      - "genvex-nabto-remote/run.sh"
+      - "genvex-nabto-remote/runtime/**"
+      - ".github/workflows/remote-app-image-build.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  image:
+    # Native ARM64 avoids emulating ARM64 and then emulating x86_64 again.
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check no private profile files are packaged
+        run: |
+          set -eu
+          test ! -e genvex-nabto-remote/client-encrypted.key
+          test ! -e genvex-nabto-remote/client.crt
+          test ! -e genvex-nabto-remote/options.json
+          test ! -e genvex-nabto-remote/runtime/client-encrypted.key
+          test ! -e genvex-nabto-remote/runtime/client.crt
+      - name: Build isolated read-only App image for native ARM64
+        env:
+          DOCKER_BUILDKIT: "1"
+        run: |
+          docker build --platform linux/arm64 \
+            --build-arg BUILD_ARCH=aarch64 \
+            --build-arg BUILD_VERSION=0.1.0-dev1 \
+            --tag genvex-nabto-remote:ci \
+            genvex-nabto-remote
+      - name: Inspect image and import runtime with networking disabled
+        run: |
+          set -eu
+          test "$(docker image inspect genvex-nabto-remote:ci --format '{{.Architecture}}')" = arm64
+          test "$(docker image inspect genvex-nabto-remote:ci --format '{{.Config.Labels.io.hass.type}}')" = app
+          PORTS=$(docker image inspect genvex-nabto-remote:ci --format '{{json .Config.ExposedPorts}}')
+          test "$PORTS" = null || test "$PORTS" = '{}'
+          docker run --rm --network none --read-only --tmpfs /tmp \
+            --entrypoint python3 genvex-nabto-remote:ci \
+            -c 'import sys; sys.path.insert(0, "/opt/genvex-remote/runtime"); import app_bootstrap, polling_runtime, sdk_snapshot_adapter, polling_http_server; print("PASS: ARM64 runtime import")'
+          echo "PASS: separate ARM64 App image built and inspected without real credentials"
