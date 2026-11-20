@@ -88,6 +88,47 @@ class ProvisioningTests(unittest.TestCase):
         self.assertEqual(list(outside.iterdir()), [])
         self.assertFalse(list(self.data.glob(".profile-stage-*")))
 
+    def test_swapped_parent_path_does_not_publish_into_replacement(self):
+        original = provisioner._rename_noreplace
+        moved = self.data.parent / "original-data"
+        impostor = self.data
+        observed = {}
+
+        def rename_under_swapped_parent(parent_fd, staged, target):
+            # Simulate replacement of the visible /data directory after
+            # staging; publication must stay on the originally checked inode.
+            self.data.rename(moved)
+            impostor.mkdir(mode=0o700)
+            observed["old_inode"] = moved.stat().st_ino
+            observed["fd_inode"] = provisioner.os.fstat(parent_fd).st_ino
+            observed["replacement_inode"] = impostor.stat().st_ino
+            original(parent_fd, staged, target)
+
+        with patch.object(provisioner, "_rename_noreplace",
+                          rename_under_swapped_parent):
+            provisioner.provision(io.BytesIO(bundle()), data_dir=self.data)
+        self.assertEqual(observed["fd_inode"], observed["old_inode"])
+        self.assertNotEqual(observed["fd_inode"], observed["replacement_inode"])
+        self.assertFalse((impostor / "profile").exists())
+        self.assertTrue((moved / "profile/client-encrypted.key").is_file())
+        self.assertFalse(list(moved.glob(".profile-stage-*")))
+
+    def test_failure_cleanup_after_parent_path_swap(self):
+        moved = self.data.parent / "original-data"
+        original = provisioner._rename_noreplace
+
+        def swapped_then_fail(parent_fd, staged, target):
+            self.data.rename(moved)
+            self.data.mkdir(mode=0o700)
+            raise ValueError("Synthetic promotion failure")
+
+        with patch.object(provisioner, "_rename_noreplace", swapped_then_fail):
+            with self.assertRaisesRegex(ValueError, "Synthetic"):
+                provisioner.provision(io.BytesIO(bundle()), data_dir=self.data)
+        self.assertFalse((moved / "profile").exists())
+        self.assertFalse(list(moved.glob(".profile-stage-*")))
+        self.assertFalse((self.data / "profile").exists())
+
     def test_fail_closed_if_atomic_rename_unavailable(self):
         with patch.object(provisioner, "_rename_noreplace",
                           side_effect=ValueError("Atomic no-replace unsupported")):
