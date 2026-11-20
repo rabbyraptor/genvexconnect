@@ -15,6 +15,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
 
 from sdk_compat import encrypt_legacy_pkcs8
+from certificate_trust import verify_leaf_with_pinned_ca
 
 _CERT_PATTERN = re.compile(
     rb"-----BEGIN CERTIFICATE-----\s+.+?\s+-----END CERTIFICATE-----", re.DOTALL
@@ -89,3 +90,16 @@ def verify_registration_reply(response: bytes, candidate: EnrollmentMaterial) ->
         return cert
     except (ValueError, TypeError):
         raise EnrollmentError("Invalid enrollment certificate response") from None
+
+
+def verify_trusted_registration_reply(
+    response: bytes, candidate: EnrollmentMaterial, pinned_legacy_ca_pem: bytes,
+) -> x509.Certificate:
+    """Require both matching candidate key and independently trusted CA signature.
+
+    The pinned CA certificate MUST be obtained from a verified source, never
+    taken from the enrollment server reply itself. No system CA fallback.
+    """
+    leaf = verify_registration_reply(response, candidate)
+    verify_leaf_with_pinned_ca(leaf.public_bytes(serialization.Encoding.PEM), pinned_legacy_ca_pem)
+    return leaf
