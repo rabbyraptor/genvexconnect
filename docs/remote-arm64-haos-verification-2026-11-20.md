@@ -288,3 +288,27 @@ and do not treat fake-mode success as a remote Nabto RPC proof.
 Actual installation onto HAOS remains a separate user-authorized test
 gate. The existing LAN integration and earlier host-network test App
 remain unchanged.
+
+## Prepared read-only HAOS Core-to-App diagnostic acceptance
+
+`scripts/verify_haos_remote_diagnostic_readonly.sh` is a **future**
+operator-side check that runs only after the experimental App has been
+installed and intentionally started in diagnostic-only mode with empty
+credentials. It is **not** an installer or command to execute now.
+
+It first inspects only the fixed expected Docker App container:
+`app_local_genvex_nabto_remote`. It requires the App to be running,
+not using `host` networking, have no published ports, and be attached
+to the `hassio` network. It then invokes the existing Home Assistant
+Core Python environment with `docker exec -i ... python3 -B -` to send
+two bounded, no-token HTTP GET requests via the expected DNS alias
+`local-genvex-nabto-remote`: `/v1/diagnostic` must return the exact
+known synthetic-only payload; `/v1/snapshot` must return 404.
+It does not fetch or print any actual readings, credentials, Docker
+environment, App logs, or network addresses. There are no Docker
+creation, restart or modification commands and no redirected HTTP
+requests. A static CI test checks the script syntax and command scope.
+
+An independent real-HAOS Supervisor startup and Core-to-App HTTP
+observation is still required. The production App and HA integration
+should not be enabled to consume diagnostic data.
