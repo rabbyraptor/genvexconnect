@@ -4,9 +4,7 @@ import json
 import unittest
 
 # Reuse the independent package loader in test_snapshot.py.
-from test_snapshot import (
-    RuntimeUnavailable, SnapshotTest,
-)
+from test_snapshot import RuntimeUnavailable
 from dev_remote.runtime_client import AuthenticatedSnapshotReader
 
 
