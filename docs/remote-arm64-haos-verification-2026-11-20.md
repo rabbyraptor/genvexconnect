@@ -371,3 +371,30 @@ No local App install command is supplied until the observed host layout
 is known and the operator explicitly authorizes installing a new,
 manual-only diagnostic App. The real remote Nabto connection remains
 unverified and will not be attempted in this phase.
+
+## Correction: 2026 Supervisor local App source path
+
+The operator's read-only HAOS preflight showed ARM64, roughly 9.2 GiB
+free on `/mnt/data`, roughly 2.3 GiB available memory, imported
+ARM64 development image, absent new App, and the earlier running Nabto
+test App still present. All **four** paths in the first script were
+absent. This does **not** mean the currently supported 2026 local
+App source directory is missing: that audit omitted the newly renamed
+`/mnt/data/supervisor/apps/local` path.
+
+Official 2026 documentation calls the container-visible shared directory
+`/local_apps`, and the Supervisor source code calls the local source
+`apps/local`; older versions used `addons/local`.
+References:
+https://contributors.home-assistant.io/apps/first-app/
+https://github.com/home-assistant/supervisor/blob/main/supervisor/const.py
+
+The audited script now checks **both** old and current directory names
+and prints only the mount source of Supervisor's own `/data` mount,
+not any secrets or container configuration. The exact host-specific
+source folder is **still unverified** until this amended read-only
+audit is run on HAOS. No source files or Docker state have been changed.
+
+Prefer Supervisor-managed installation from reviewed source over treating
+an imported development Docker image as a managed App. Do not attempt
+an App installation automatically.
