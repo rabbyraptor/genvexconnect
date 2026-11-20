@@ -76,3 +76,78 @@ The current **strict five-reading snapshot v1** remains unchanged. Before adding
 ## Outcome and decision
 
 **2B offline research: initial classification complete; sensor inventory capability remains unknown.** Continue 2A with an explicit typed model catalog using the five already verified Optima 270 values. The actual capability-discovery branch stays an open evidence-gated research item.
+
+
+## 2B follow-up — catalog lookup, all known values and HA disabled entities (2026-11-20)
+
+**User proposal:** Identify the device model from the gateway, look up the known capabilities in a catalog, read all safely supported values, and optionally expose advanced sensors as disabled Home Assistant entities (similar to Shelly).
+
+### What the code can already tell us
+
+**Upstream Optima 270 declares 17 datapoints** in its `_datapoints` table, and all 17 appear in `getDefaultDatapointRequest()`. **Only the five listed below are verified by this project's authenticated remote RPC45 runs.** The other **12** are legitimate *source-defined read-only candidates*, **not remotely validated**. Sources: [upstream Optima 270 model](https://github.com/superrob/genvexnabto/blob/main/src/genvexnabto/models/optima270.py); [project Phase 1 remote evidence](remote-phase1-sensor-validation-2026-11-19.md).
+
+| Upstream key | obj | Address | Source scaling | Remote RPC45 |
+| --- | ---: | ---: | --- | --- |
+| TEMP_SUPPLY | 0 | 20 | (raw - 300)/10 °C | **Verified** |
+| TEMP_OUTSIDE | 0 | 21 | (raw - 300)/10 °C | **Verified** |
+| TEMP_EXHAUST | 0 | 22 | (raw - 300)/10 °C | **Verified** |
+| TEMP_EXTRACT | 0 | 23 | (raw - 300)/10 °C | **Verified** |
+| HUMIDITY | 0 | 26 | raw % | **Verified** |
+| TEMP_FROSTPROTECTION | 0 | 24 | (raw - 300)/10 °C | **Candidate only** |
+| DUTYCYCLE_SUPPLY | 0 | 18 | raw/100 (display unit requires checking) | **Candidate only** |
+| DUTYCYCLE_EXTRACT | 0 | 19 | raw/100 (display unit requires checking) | **Candidate only** |
+| RPM_SUPPLY | 0 | 35 | raw rpm | **Candidate only** |
+| RPM_EXTRACT | 0 | 36 | raw rpm | **Candidate only** |
+| PREHEAT_PWM | 0 | 41 | raw/100 (display unit requires checking) | **Candidate only** |
+| REHEAT_PWM | 0 | 42 | raw/100 (display unit requires checking) | **Candidate only** |
+| BYPASS_ACTIVE | 0 | 53 | raw; boolean semantics not yet independently verified | **Candidate only** |
+| BYPASS_ANALOG | 0 | 40 | raw; units/scaling need review | **Candidate only** |
+| ALARM_OPTIMA270_1 | 0 | 114 | raw alarm word; bit meanings need model-specific decoding | **Candidate only** |
+| ALARM_OPTIMA270_2 | 0 | 115 | raw alarm word; bit meanings need model-specific decoding | **Candidate only** |
+| ROTOR_SPEED | 0 | 50 | raw rpm | **Candidate only** |
+
+Note: `obj=0` is the default assigned by [upstream base model](https://github.com/superrob/genvexnabto/blob/main/src/genvexnabto/models/basemodel.py). **Do not confuse** datapoint address 42 (reheat PWM) with command/RPC **ID 42**, which is a different read-only *setpoint list* operation, still unverified remotely. The upstream Optima270 model also lists **11 default setpoint read entries**, but their remote operation and safe semantics have not yet been established. Do not enable them in the first remote expansion.
+
+A hypothetical 17-item RPC45 request is **not** proven to work just because the five-item request worked: gateway response size, list limits, partial failures, ordering and polling cost must be validated in a separately authorized, bounded read-only test. Until then, retain the stable five-item batch.
+
+### Device model lookup from metadata
+
+1. Use the already source-defined/read-only **RPC 17 `ping.json`**, with an explicit metadata field allowlist (`Model`, `Devicenumber`, `SlaveDevicenumber`, `SlaveModel`, `Version`). Do not log the sensitive optional `UserNames:` field or full raw response.
+2. Look up the numeric tuple in an audited model selector (source example: [GenvexNabtoModelAdapter.translateToModel](https://github.com/superrob/genvexnabto/blob/main/src/genvexnabto/genvexnabto_modeladapter.py), which maps `Model=2010` and `Devicenumber=79265` to Optima270, plus other model-specific combinations).
+3. Match model + applicable firmware/hardware quirks against a **reviewed** capability profile. The upstream model definitions are an excellent seed, but are not a device-reported list of remote-supported parameters.
+4. If the identity tuple is unknown or cannot be independently validated, **do not choose a fallback Optima 270 profile** or query guessed addresses. Mark unsupported/unknown and request a separately reviewed model profile.
+
+The ping metadata lookup is grounded in official [LS Control Cordova XML](https://github.com/nabto/cordova-lsc-test/blob/main/www/js/index.js), not evidence of a device-wide sensor inventory.
+
+### Is a "largest common set of entities" a good idea?
+
+Strictly, a catalog containing every sensor supported by **any** model is a **union** of capabilities, not a common intersection. The union is useful **internally** to share semantic names, device classes, translations and decode rules. It is **not** the set of entities to instantiate for every installation.
+
+In the official [Home Assistant Shelly integration](https://github.com/home-assistant/core/blob/dev/homeassistant/components/shelly/entity.py), `async_setup_rpc_attribute_entities` filters declarations by actual device status keys, model, role, supported subfields and optional `removal_condition`. It registers less useful but **supported** measurements as disabled by default using entity descriptions (e.g. [Shelly sensor declarations](https://github.com/home-assistant/core/blob/dev/homeassistant/components/shelly/sensor.py)). Shelly can introspect many real reported status keys; the equivalent Nabto Micro sensor inventory is **not known**.
+
+[HA entity registry documentation](https://contributors.home-assistant.io/core/entities/registry/) explicitly says a disabled entity remains registered but is **not active**, and an enabled entity whose live device connection fails may instead report **unavailable**. These conditions are not interchangeable. The default-enabled flag applies only when first registered; subsequent user choices must be respected. [HA's quality rules](https://contributors.home-assistant.io/core/quality-scale/entity-disabled-by-default/) recommend disabling noisy/rare diagnostic sensors at first registration, not pretending unsupported hardware exists.
+
+**Recommended three-tier model:**
+
+| Actual evidence | Action in HA | Rationale |
+| --- | --- | --- |
+| Model profile and read-only remote value **verified**, useful to most users | Create and enable by default | E.g. current five Optima 270 measurements |
+| Model profile and read-only remote value **verified**, but advanced/diagnostic/noisy | Create in registry **disabled by default** | User may enable without unsupported-value surprises |
+| Sensor **not supported** by the selected model/firmware, or remote capability **not verified** | **Do not create** a live entity | An inert ghost entity invites confusion; unknown is not the same as disabled |
+| Supported enabled sensor fails temporarily | Keep its entity and report **unavailable** with freshness checks | Do not disable or delete transient failures |
+
+An optional **sensor-capability catalogue in a documentation/UI preview** can show all *known potential* sensors and whether verified/supported, without creating false Home Assistant entities.
+
+### Read all *supported* values vs enable all HA entities
+
+**Registry disablement is not a wire-level RPC filter.** If the runtime always requests a batch of all catalog entries, it may continue contacting the device for values whose Home Assistant entities are disabled. A future scheduler needs a deliberate choice:
+
+- Small verified group: one bounded batch may be simpler even if a few advanced HA entities are disabled; record the actual device/CPU costs.
+- Larger catalog: group by verified RPC payload types, device constraints and update interval; avoid reading optional high-cost data unnecessarily; ensure HA enable/disable events do not cause unsafe adaptive range scans.
+- Each individual group must have independent error/unavailable semantics so an unsupported optional measurement never invalidates the five foundational temperatures/humidity. This belongs in **3A** and a **versioned contract v2**, not a silent change to v1.
+
+### Decision / status
+
+**Decision proposed for the maintenance roadmap:** retain a **global semantic union catalog**, filter by **validated model capabilities**, then choose enabled/disabled **only among supported, remotely verified sensors**. A generic Micro "return all supported readings and their metadata" query remains undiscovered. This route can still produce dynamic HA entity inventories, with careful model selection and user-respecting registry defaults.
+
+**Next evidence-gated step:** build an **offline** synthetic model-selection and planned-read manifest test, preserving all five existing keys/addresses, and prepare a separately approved read-only verification matrix for the other 12 source-defined Optima270 datapoints. Do not run a 17-item live batch, change installed Apps, query opcode 42, or send write opcode 43 without separate authorization.
