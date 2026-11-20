@@ -84,6 +84,19 @@ Proposed App sequence:
 
 **Tests:** 13 new offline tests passed in the local environment using OpenSSL 3.5.5 / cryptography 46.0.4, covering matching/wrong/expired fake CAs, signature checks, exact PBES2 parameters, malformed inputs and generated candidate integration. The six earlier `test_enrollment_core.py` checks have not been included in this new 13-test run. **Nothing is installed on HAOS or wired to a real account yet.**
 
+### HAOS native key/CSR readiness — VERIFIED by user (2026-11-20)
+
+Installed isolated App `genvex_nabto_runtime_test` **v0.5.0** on Raspberry Pi HAOS `aarch64`: startup log confirmed native ARM64 OpenSSL and Python `cryptography` import, x86_64 Python/QEMU and Nabto SDK 4.9.11. The user ran a temporary, fully offline **native ARM64 OpenSSL** smoke test using a fictional `example.invalid` identity. Results:
+
+- `openssl req -new -newkey rsa:1024 -sha256`: PASS, new private key and CSR generated.
+- `openssl req -verify`: PASS, CSR signature valid.
+- `openssl pkcs8 -topk8 -v2 des3 -v2prf hmacWithSHA256 -iter 2048`: PASS, encrypted legacy profile candidate generated.
+- `openssl pkey -pubout` versus CSR public key: PASS, exact public key match.
+- `openssl asn1parse`: PASS, PBES2 found.
+- Test files were confined to a temporary directory and scheduled for deletion by shell `EXIT` trap. No CA registration and no authenticated Nabto session occurred.
+
+**Boundary:** this verifies native OpenSSL functionality and the intended output structure, **not** Python `sdk_compat.py` compatibility against the Alpine Python/cryptography versions, independent trust of a pinned real legacy CA, or successful Nabto SDK session with a newly issued certificate. The existing live profile was not accessed/modified.
+
 ### Additional implementation staged (2026-11-20)
 
 The following development components have been added **outside the installed App and Home Assistant integration**:
