@@ -80,3 +80,22 @@ Det globale katalog er en **union** af alle kendte målinger på tværs af model
 [Dansk fuld oversigt](optima270-nabto-read-command-reference-da.md) · [2B research](remote-device-discovery-2b.md) · [2A katalog](remote-sensor-catalog-2a.md) · [Projektets verificerede facts](remote-nabto-verified-facts.md).
 
 **Ingen live-kald, credentials, Apps eller LAN-konfigurationer er ændret som led i denne forberedelse.**
+
+
+## Forberedt, men endnu ikke kørt: engangstest af én ekstra sensor
+
+Det isolerede [`scripts/probe_optima270_single_source_candidate.py`](../scripts/probe_optima270_single_source_candidate.py) kan **offline** vise adressen og skalaen for præcis én af de 12 kildebaserede kandidater. Det kan **ikke** læse en vilkårlig brugerindtastet adresse, scanne en adresseblok eller sende skrivende RPC-kommandoer. Skriptet forventer den eksisterende autoriserede Steam Deck-testprofil ved en eventuel særskilt godkendt live-test; det har **ikke** adgang til installerede HAOS Apps.
+
+**Sikker offline-preview på et checkout af branch `remote-nabto-connection`:**
+
+```sh
+python3 scripts/probe_optima270_single_source_candidate.py --key frost_protection_temp
+```
+
+Dette gør **intet på netværket**, importerer ikke Nabto SDK og læser ikke credentials. `--key` skal matche én af de 12 præcist navngivne kildebaserede kandidater. En live-test kræver **to ekstra eksplicitte CLI-flag og en særskilt operatørgodkendelse**; et live-kald sendes ikke automatisk.
+
+Ved godkendt live-test: Højst **én** `nabtoRpcInvoke` for den valgte adresse via **RPC45**. Scriptet anvender den hidtil fungerende `candidate_read_datapoints.json`-XML med **én adresse**, sætter midlertidige testkopier af eksisterende certifikat/nøgle under privat tmp, frigiver SDK-svar og udskriver kun en begrænset status, eventuelle numeriske fejl-/eventkoder samt én rå og én kilde-skaleret måling. Kildeskaleret værdi betyder **ikke** automatisk, at korrekt fysisk enhed/tilgængelig hardware er verificeret.
+
+**Driftsbegrænsning:** Den proprietære SDK's kald er ikke nødvendigvis afbrydelige fra Python. En senere operatørgodkendt kørsel skal derfor have en ekstern, hård tidsgrænse og efterkontrol af testprofil-oprydning. Tvangsafbrydelse eller SDK-nedbrud kan efterlade en midlertidig credential-kopi, som kræver kontrolleret oprydning. Denne risiko er en yderligere grund til ikke at aktivere live-kørslen før separat aftale.
+
+[Offline CLI-/response-regressionstests](../experimental/genvex_remote/test_single_candidate_cli.py) kontrollerer standard-preview, særskilt autorisation, ét kendt objekt, fravær af skrive-RPC og fail-closed JSON-afkodning. Ingen af disse tests opretter en Nabto-session.
