@@ -20,7 +20,11 @@ echo "===== GENVEX REMOTE SUPERVISOR STATE v2 (READ ONLY) ====="
 if command -v ha >/dev/null 2>&1; then
   # The raw result may include App configuration: never store or display it.
   # Extract only allowlisted metadata in a pipeline.
-  # IMPORTANT: this audit runs via SSH 'sh -s' where stdin is script source.\n  # Never let ha consume the rest of script; it must read /dev/null.\n  # Core has Python even if the HAOS host lacks a Python command.\n  if ha apps info local_genvex_nabto_remote --raw </dev/null 2>/dev/null |\n     docker exec -i homeassistant python3 -B -c '
+  # IMPORTANT: this audit runs via SSH 'sh -s' where stdin is script source.
+  # Never let ha consume the rest of script; it must read /dev/null.
+  # Core has Python even if the HAOS host lacks a Python command.
+  if ha apps info local_genvex_nabto_remote --raw </dev/null 2>/dev/null |
+     docker exec -i homeassistant python3 -B -c '
 import json, sys
 try:
     d = json.load(sys.stdin)
