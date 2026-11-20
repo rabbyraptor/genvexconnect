@@ -5,7 +5,7 @@ import json
 import sys
 import unittest
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, patch, Mock
 
 RUNTIME = Path(__file__).resolve().parents[1] / "runtime"
 sys.path.insert(0, str(RUNTIME))
@@ -67,7 +67,7 @@ class SettingsTests(unittest.TestCase):
                    "unlock_secret": "sensitive"}
         with patch.object(live_once, "read_settings", return_value=payload), \
              patch.object(live_once, "validate_private_profile"), \
-             patch.object(live_once.PROBE, "is_file", return_value=True), \
+             patch.object(live_once, "PROBE", Mock(is_file=lambda: True)), \
              patch.object(live_once, "read_once", new_callable=AsyncMock,
                           side_effect=SDKSnapshotError("SDK_SESSION_FAILED")), \
              patch("sys.stdout", new_callable=io.StringIO) as output:
