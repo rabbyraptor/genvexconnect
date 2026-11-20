@@ -239,3 +239,27 @@ PASS: exactly one read-only candidate RPC45 probe completed
 **Sammenligning med live-RPC:** Den særskilt verificerede RPC45-adresse 24 gav `raw=0`, kildeskaleret til `−30.0 °C`, som numerisk matcher **begge** T8/T9-appværdier. Der er ingen basis for at identificere adressen entydigt som den ene føler. `−30.0 °C` kan være en sentinel/ikke-tilsluttet føler, men det er **ikke bevist**. Målinger fra tidligere fem-adresse RPC45-tests og dette appskærmbillede er ikke dokumenteret som samtidige, så de er kun semantiske/omtrentlige referencepunkter, ikke præcise punkt-for-punkt-krydstjek.
 
 **Plan:** Behold fem aktive verificerede datapunkter. Adresse 24 er remote-læsbar, men semantisk uafklaret. Kandidaterne 18/19 og øvrige status-/temperaturadresser er fortsat source-only, indtil særskilt godkendte live-aflæsninger og uafhængig sammenligning foreligger. Ingen installerede HAOS Apps eller LAN-integrationen ændres.
+
+## Forberedt: samlet RPC45-batch af alle 12 kildebaserede kandidater (2026-11-20)
+
+Brugeren har udtrykkeligt bedt om at spare tid ved at læse alle resterende kandidatadresser **i ét kald**. Derfor er der lavet et nyt, isoleret værktøj, uden ændringer af installerede HAOS Apps eller eksisterende LAN-integration:
+
+- [`probe_optima270_all_source_candidates_batch.py`](../scripts/probe_optima270_all_source_candidates_batch.py): Default **offline**, fast liste af præcis 12 adresser fra `optima270_source_only.py`, `obj=0`, `trailer=1`, **én** `nabtoRpcInvoke` af read-only `RPC45`. Ingen vilkårlige adresser, scanning, write RPC, retries eller parallelle forespørgsler.
+- [`run_optima270_all_candidates_batch_from_deck.sh`](../scripts/run_optima270_all_candidates_batch_from_deck.sh): Steam Deck-launcher med offline preflight, skjult indtastning af e-mail, device-ID, det **tidligere fungerende** fulde Nabto-hostnavn og krypteret nøgles passphrase. Lokalt ID/host-match før SDK/netværk. Hard timeout 90 sekunder; privat midlertidig profil og best-effort oprydning.
+- [`test_twelve_candidate_batch.py`](../experimental/genvex_remote/test_twelve_candidate_batch.py): offline-regressioner for præcis 12 elementer, ingen vilkårlig adresse, godkendelseskrav, fail-closed svarvalidering, read-only XML og Bash preflight.
+
+**Fastsat rækkefølge:** `24,18,19,35,36,41,42,53,40,114,115,50` (rækkefølgen i kildekataloget). Der kræves præcis **12** `int16`-svar, alle type-/intervalvaliderede, før nogen værdi udskrives. Svarene knyttes kun til adresser efter position, da responsformatet ikke medsender adresser. Hvis gatewayen afviser en kandidat eller hele batchen, stopper testen uden at udpege en bestemt adresse eller forsøge fallback. Svarværdier er kun **source-scaled**, ikke fysisk validerede.
+
+**Kørsel (først offline):**
+
+```sh
+bash scripts/run_optima270_all_candidates_batch_from_deck.sh --preflight
+```
+
+**Kun efter operatørens særskilte accept af præcis ét live read-only 12-item batchkald:**
+
+```sh
+bash scripts/run_optima270_all_candidates_batch_from_deck.sh --execute-live
+```
+
+**Status:** Koden er forberedt og tests er offline-only. **Ingen 12-adresse live-batch er kørt eller remote-verificeret.** De 12 kandidater er ikke tilføjet til det aktive HA-katalog. App-reference: Supply fan **60 %**, Extract fan **58 %**, bypass/reheat/preheat **Off**, T8/T9 **−30 °C** (brugerens screenshot). Appværdier og en senere batch skal vurderes med hensyn til tidsforskydning og mulige sensor-sentinels.
