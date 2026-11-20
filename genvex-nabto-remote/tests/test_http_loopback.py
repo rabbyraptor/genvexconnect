@@ -125,6 +125,35 @@ class LoopbackHTTPTests(unittest.TestCase):
         self.assertEqual(status, 400)
         self.assertEqual(json.loads(payload), {"error": "bad_request"})
 
+    def test_unauthorized_and_unknown_route_never_call_provider(self):
+        calls = []
+        def provider():
+            calls.append("called")
+            raise RuntimeError("SENSITIVE PROVIDER ERROR")
+        # Swap the provider by starting a separate ephemeral server.
+        server = SnapshotHTTPServer(
+            bind_host="127.0.0.1", port=0, token=self.token,
+            device_id=self.device, snapshot_provider=provider,
+        )
+        server.start()
+        self.addCleanup(server.stop)
+        old_port = self.port
+        self.port = server._server.server_address[1]
+        self.addCleanup(setattr, self, "port", old_port)
+        for token, path, expected in (
+            (None, "/v1/snapshot", 401),
+            ("w" * 43, "/v1/snapshot", 401),
+            (self.token, "/unknown", 404),
+        ):
+            status, _, payload = self.request(token=token, path=path)
+            self.assertEqual(status, expected)
+            self.assertNotIn(b"SENSITIVE", payload)
+        self.assertEqual(calls, [])
+        status, _, payload = self.request(token=self.token)
+        self.assertEqual(status, 503)
+        self.assertEqual(json.loads(payload), {"error": "unavailable"})
+        self.assertEqual(calls, ["called"])
+
     def test_arbitrary_interface_not_allowed(self):
         with self.assertRaises(ValueError):
             SnapshotHTTPServer(
