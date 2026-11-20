@@ -1,50 +1,60 @@
-# Genvex Remote — development HAOS App candidate
+# Genvex Remote — experimental HAOS App (Nabto Micro 4)
 
-**NOT YET APPROVED FOR INSTALLATION.** This source-only App candidate is
-separate from the existing Genvex LAN integration and from the working Nabto
-test App. Do not replace either.
+**Status (operator-verified 21 November 2026):** The separately managed App
+`local_genvex_nabto_remote` was updated to `0.1.0-dev2` on HAOS with
+`ha apps update local_genvex_nabto_remote --backup`. The installed App
+remained **stopped**, with **manual boot**, and no dedicated running container.
+Supervisor backup `07337fa3` is listed as `partial` and its metadata
+contains the previous `0.1.0-dev1` App entry. A restore and the archive's
+integrity have **not** been tested. The existing working LAN integration and
+separate runtime-test App must remain untouched.
 
-## Purpose
+## Purpose and separation
 
-Native ARM64 Python starts read-only, serial RPC45 polls through a legacy
-x86_64 Nabto 4 SDK under QEMU. It publishes a five-sensor snapshot only on
-the internal App Docker network, at port 18275. There is no host port mapping
-and no device-control RPC. The App is configured to start manually.
+Native ARM64 Python coordinates read-only, serial RPC45 polling through the
+legacy x86_64 Nabto SDK under QEMU. In live mode, the App publishes snapshots
+on its dedicated private App network, at port `18275`; its HTTP endpoint is
+`/v1/snapshot` and it requires a private IPC bearer token. The App exposes
+no host-published port, uses `host_network: false`, and does not implement
+control RPC. **The live polling path has not been activated in this App.**
 
-## Configuration design (subject to security review)
+## Startup modes (not interchangeable)
 
-App options: 12-digit device ID, Nabto profile identity, existing encrypted
-private-key unlock passphrase, a random 43-character-or-longer IPC bearer
-token, and a polling interval of at least 60 seconds. The passphrase and
-token are marked as `password` fields in Supervisor options. This is not a
-dedicated secret vault. Do not put secrets in logs, shell history, or Git.
+- **Diagnostic-only:** Must be explicitly enabled by setting
+  `diagnostic_only: true`, with `device_id`, `identity`, `unlock_secret`
+  and `ipc_token` all empty. The bootstrap also refuses diagnostic startup
+  if a private `/data/profile` or `/data/ipc-token` path exists. It then
+  imports `diagnostic_http_server` rather than the SDK or polling runtime.
+  The only successful diagnostic path is `GET /v1/diagnostic`, which returns
+  a deliberately **synthetic, nonproduction** response. Even a request with
+  an authorization header to `/v1/snapshot` returns 404. This listener binds
+  within the App's Docker networking context; it is **not authenticated** and
+  must not be host-published. Diagnostic-only mode does not prove live Nabto
+  connectivity.
+- **Live:** Requires a valid 12-digit device ID, identity, unlock secret,
+  IPC token (at least 43 characters), and polling interval 60–3600 seconds.
+  Before starting the polling runtime, the bootstrap validates pre-existing
+  App-private `/data/profile/client.crt` and
+  `/data/profile/client-encrypted.key` files. It does **not** import,
+  generate, overwrite, or copy a profile from `/share` or another source.
+  Secure enrollment/migration is a separate unfinished and approval-gated
+  task. Password-marked Supervisor options are not hardware-backed vaults.
 
-The prototype reads **only** these pre-existing profile files from
-`/share/genvex-remote-profile`: `client.crt` and
-`client-encrypted.key`. It copies them to App-private `/data/profile` with
-0600 permissions and does not overwrite the user's existing source profile.
-The original private host profile path used in earlier tests is **not**
-automatically mounted or moved. Profile onboarding and migration without a
-terminal remain to be implemented.
+## Next approval boundary
 
-The matching HA integration endpoint is
-`http://app_local_genvex_nabto_remote:18275/v1/snapshot`. It requires the
-same IPC bearer token. The endpoint must be reachable **only** over the
-Supervisor-private App network; there is no TLS on this development-only
-transport. Never publish port 18275 on a host/router.
+Offline tests for diagnostic bootstrap, IPC isolation and synthetic-only
+responses already exist. The installed `dev2` App must stay stopped while
+static/runtime-readiness checks are performed. An on-HAOS diagnostic start
+requires **separate explicit approval**, a fresh preflight that establishes
+empty credentials and no private profile/token without printing any of their
+values, a tight time/cleanup plan, and verification that the App ends stopped.
+Do not run live Nabto, migrate profiles, modify the working LAN integration,
+or treat synthetic values as real sensor readings.
 
-## Installation blockers
+Known gaps: secure profile onboarding, production distribution of the separate
+HA integration, live SDK/remote runtime validation, private App-to-Core DNS,
+and end-to-end soak tests. A backup inventory entry is not equivalent to a
+verified restore path.
 
-- The build reuses the official Nabto CLI v1.3.0 download and legacy SDK
-  extraction from the existing test App; third-party redistribution/license
-  review is still pending.
-- This new App image has **not been built or started on HAOS**.
-- The private network and App DNS endpoint have **not been verified live**.
-- A 60-second live polling soak test, restart test, and HA Core UI/entity test
-  have not been completed.
-- Secure, terminal-free profile enrollment/migration and safe token generation
-  need a final UX. Manual token entry is development-only.
-- A separate HA integration distribution package is required; the existing
-  root `custom_components/genvexconnect` LAN integration must remain untouched.
-
-Source is staged for code review and offline preflight only.
+See `docs/remote-app-update-safety-plan.md` and
+`docs/remote-phase-f2-private-profile-design.md`.
