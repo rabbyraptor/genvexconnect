@@ -34,6 +34,12 @@
 
 **Interpretation:** a successful *authenticated* RPC in bridge mode provides evidence that the remote Nabto path does not depend on Docker host networking on this specific HAOS setup. DNS success alone is **not sufficient**. A failure can be due to blocked outbound UDP/relay, Docker DNS/firewall, an incorrect profile input or external connectivity; avoid broad architecture conclusions from an unclassified failure. The script is a development-only diagnostic and not a production credential-delivery solution. It has now run successfully on HAOS using the user's existing authorized device and encrypted profile.
 
+## Read-only authenticated snapshot handler — staged 2026-11-20
+
+[`snapshot_api.py`](../experimental/genvex_remote/snapshot_api.py) now includes the **socket-free** handler core for `GET /v1/snapshot`. It requires the existing prototype's bearer token validator, rejects all other paths/methods, accepts only a fresh/complete matching-device snapshot via `snapshot_contract.py`, and returns only the five public sensor fields (no secrets or arbitrary SDK data). Failures use fixed 401/404/503 JSON responses. [Offline tests](../experimental/genvex_remote/test_snapshot_api.py) cover allowed read, missing/wrong token, unauthorized routes, wrong device, stale data and secret-field rejection.
+
+**Not a deployed server.** No listener, exposed port, token provisioning or transport encryption is implemented yet. Do not connect this prototype to the existing host-network test App; the trusted production App network and authenticated secret lifecycle remain gates.
+
 ## Next offline acceptance gate
 
 The next [combined HAOS development test](../scripts/run_haos_remote_dev_tests.sh) also discovers `test_ipc_auth.py`. It should verify random token generation, exact matching, missing/wrong-token rejection and non-disclosure of secrets in error strings. **A token alone is not sufficient authorization for account enrollment**: rotation, storage, authenticated provisioning, request-level permissions, transport encryption and replay handling remain unresolved. Do not expose a runtime API in the existing `host_network: true` App.
