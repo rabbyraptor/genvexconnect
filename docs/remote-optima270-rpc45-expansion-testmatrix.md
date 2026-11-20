@@ -207,3 +207,11 @@ PASS: exactly one read-only candidate RPC45 probe completed
 - **Privatliv:** Intet faktisk device-ID, hostnavn, e-mail, certifikat, privat nøgle, adgangskode eller rå SDK-JSON gemmes her.
 
 **Næste offline skridt:** Undersøg den mulige funktion og rå-nulværdi i den offentlige Optima270-model samt eventuelt producentmateriale. En alternativ live-sensoradresse kræver en ny separat operatørbeslutning; der sendes **ingen automatisk scanning**. Ingen installerede HAOS Apps, fungerende LAN-integration eller legitimationsoplysninger blev ændret.
+
+## App-krydstjek for RPC45 adresse 24 – T8 og T9 (2026-11-20)
+
+**Brugerobserveret:** Den officielle Genvex Connect-app viser **−30,00 °C** for **både T8 og T9**. Vores særskilt godkendte remote RPC45-læsning af `(obj=0,address=24)` gav `raw int16=0`, og den offentlige Optima270-kildeskalering `(raw-300)/10` gav **−30,0 °C**.
+
+**Hvad sammenligningen støtter:** Værdien og den valgte kildeskalering er numerisk **konsistent** med appens viste temperaturer ved denne observation. Der er stadig ikke en verificeret mapping fra **adresse 24 til T8 eller T9**, da **begge** viste samme værdi; det er heller ikke dokumenteret, at målingen er en reel fysisk temperatur frem for en fraværende/ikke aktiv sensor eller en standardværdi.
+
+**Evidensstatus:** `RPC45 address24 read=VERIFIED`; `app numerical agreement=USER_OBSERVED`; `address24 equals T8/T9=OPEN`; `sensor physical validity=OPEN`. Behold adressen uden for det aktive fem-sensor-katalog, standard-read-plan og Home Assistant-entities. Ingen yderligere live-RPC eller sensor-scanning udført.
