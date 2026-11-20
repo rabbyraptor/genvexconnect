@@ -308,3 +308,9 @@ Log ended `Read-only batch decoded: 5/5`, `Result: BATCH_DECODED`, session close
 - Upstream Nabto legacy C API header: https://github.com/nabto/nabto4-python-wrapper/blob/master/extension/linux64/include/nabto_client_api.h
 
 **Revision policy:** append or update VERIFIED rows only after actual reproducible results. Keep failed tests and unresolved hypotheses accurately labeled.
+
+### Seven-address snapshot v2 live success — VERIFIED 2026-11-20
+
+**VERIFIED from user-supplied Steam Deck output:** after the offline preflight, one explicitly authorized read-only remote RPC45 returned status **0** in **396 ms** for exactly ordered addresses `20,21,22,23,26,18,19` (raw `368,308,322,378,67,6000,5800`). The decoder produced **6.8 °C supply air, 0.8 °C outdoor air, 2.2 °C exhaust air, 7.8 °C extract air, 67 % humidity**, plus source-scaled optional fan duty values **60 % supply** and **58 % extract**, in one versioned `GENVEX_READONLY_SNAPSHOT_V2` marker. Session close and SDK shutdown both returned **0**; temporary credential cleanup was attempted, not independently verified.
+
+This confirms one-shot remote seven-item RPC and v2 snapshot generation on Steam Deck, **not** deployed HAOS ARM64/QEMU v2 polling, Home Assistant entity registration or long-running stability. Fan-duty physical meaning is not yet independently checked against the official UI. The existing v1 five-sensor production contract remains unchanged. Details: [seven-address v2 live verification](remote-optima270-seven-snapshot-v2-live-verification.md).
