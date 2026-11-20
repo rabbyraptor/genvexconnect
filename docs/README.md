@@ -10,6 +10,7 @@
 | [Architecture maintenance roadmap](architecture-maintenance-plan.md) | Approved 2A–5C priorities, isolation rules, stage gates and progress |
 | [2B device discovery investigation](remote-device-discovery-2b.md) | Metadata vs known-address RPC45 batch vs unverified capability enumeration |
 | [Optima 270 Nabto-læsekommandoer (dansk)](optima270-nabto-read-command-reference-da.md) | Komplet kildebaseret tabel: RPC17/42/45, 17 datapunkter, 12 setpunkter, oversættelser og verifikationsstatus |
+| [2B: Testmatrix for udvidelse til 17 datapunkter](remote-optima270-rpc45-expansion-testmatrix.md) | Prioriterede 12 kildebaserede kandidater, preview, sikkerhed og live-gates |
 | [2A typed sensor catalog](remote-sensor-catalog-2a.md) | Five-source-verified Optima 270 readings, compatibility tests, future type gates |
 | [UI and certificate architecture](remote-ha-ui-onboarding-architecture.md) | No-terminal setup design |
 | [First five HA entities](remote-ha-entity-plan.md) | Read-only sensors and runtime bridge plan |
@@ -23,6 +24,7 @@
 
 - [Isolated Home Assistant UI/sensor scaffold (not installed)](../experimental/home_assistant/README.md)
 - [Offline typed Optima 270 capability catalog (2A)](../experimental/genvex_remote/capability_catalog.py) and [synthetic/compatibility tests](../experimental/genvex_remote/test_capability_catalog.py)
+- [Verified-only RPC45 request plan](../experimental/genvex_remote/verified_read_plan.py), [12 source-only candidates](../experimental/genvex_remote/optima270_source_only.py), and [inert single-candidate CLI preview](../scripts/probe_optima270_single_source_candidate.py) (no live call by default)
 - [Serial read-only RPC 45 polling worker](../experimental/genvex_remote/polling_worker.py)
 - [Single HAOS offline validation script](../scripts/run_haos_remote_dev_tests.sh)
 - [Two-container disposable IPC test](../scripts/run_haos_ipc_two_container_test.sh) (fake sensor values and private test network only)
