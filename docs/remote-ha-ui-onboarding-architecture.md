@@ -6,7 +6,9 @@
 
 It did **not** permanently move. The existing Home Assistant integration `genvex_connect` runs inside HA Core and uses a local-only Python Micro Nabto library. The vendor's official legacy Nabto 4 Client SDK that we got working is a Linux **x86_64** native binary; the user's HAOS is **aarch64** Raspberry Pi. Loading that binary into Home Assistant's aarch64 Python process is not possible. The test **App** is a Supervisor-managed isolated Docker container where `qemu-x86_64-static` runs the vendor's x86_64 SDK and an x86_64 Python probe. This enabled remote RPC 17 and RPC 45 **without breaking the working local integration**. It was a research/runtime component, not the envisioned final integration or its device/entities.
 
-In the desired final product, **both components coexist**:
+In the desired final product, **both components coexist**. QEMU is **user-mode translation, not a full virtual machine**. It need not technically run inside a separate Docker container, but keeping it in an isolated Supervisor App avoids loading incompatible x86_64 binaries in ARM64 HA Core and permits independent resource/process limits. No CPU/RAM measurements have yet been taken, so any claim of negligible overhead is unverified; runtime design should avoid starting a fresh QEMU interpreter or redundant sessions unnecessarily, use serial bounded polling and capture Pi 4 CPU/RSS metrics during soak tests.
+
+
 
 ```text
 Home Assistant UI
@@ -74,7 +76,7 @@ Proposed App sequence:
 
 ## Work breakdown (incremental, independently testable)
 
-**Phase A — certificate enrollment prototype** (isolated runtime App; not the user's working HA integration). Add a local test module with simulated CA success/failure, PEM matching, encrypted key, safe filesystem rotation and sanitized failure messages. Then test with an authorized real account (only after compatibility checks).
+**Phase A — certificate enrollment prototype**: **STARTED, OFFLINE-ONLY**. The source is now at [enrollment_core.py](../experimental/genvex_remote/enrollment_core.py) with [fake-CA unit tests](../experimental/genvex_remote/test_enrollment_core.py). It generates a candidate RSA-1024 private key and signed CSR, exports encrypted PKCS#8, validates the observed legacy CA response envelope, rejects mismatched/expired certificates and sanitizes failure messages. Six corresponding unit tests passed in the local development runtime (cryptography 46.0.4). **No real registration request was sent; the source has no network calls and does not modify /data or the running HAOS App.** Before live usage, implement and verify authentic legacy CA trust-chain validation, exact SDK-compatible encrypted-key format, safe atomic rotation and private persistent storage, controlled account-owned CA HTTP enrollment and secret handling. A fake test certificate is not a trusted CA response. Then test approved real enrollment through the future UI.
 
 **Phase B — unattended runtime:** read-only polling worker with deterministic JSON snapshot, internal authentication, bounded execution, graceful shutdown and credential lifecycle. Validate standalone on HAOS. No terminal required after initial App install.
 
