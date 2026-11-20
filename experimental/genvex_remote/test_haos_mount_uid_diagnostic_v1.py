@@ -58,7 +58,9 @@ class MountUidDiagnosticTests(unittest.TestCase):
                 "  *) exit 9 ;;\n"
                 "esac\n"
             )
-            for exe in (ha, docker):
+            stat = root / "stat"
+            stat.write_text("#!/bin/sh\\necho 755:0:0\\n")
+            for exe in (ha, docker, stat):
                 exe.chmod(0o700)
             env = os.environ.copy()
             env["PATH"] = str(root) + os.pathsep + env.get("PATH", "")
