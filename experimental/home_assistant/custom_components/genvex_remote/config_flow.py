@@ -1,21 +1,18 @@
-"""Device-ID setup scaffold for future UI onboarding.
-
-Do NOT request the account password until an authenticated App bridge and
-vendor-CA validation are ready. A user cannot mistakenly enroll here.
-"""
+"""Separate read-only App IPC onboarding; never collects Nabto passphrase."""
 from __future__ import annotations
 
 from typing import Any
 
 from homeassistant import config_entries
 import voluptuous as vol
+from homeassistant.helpers.selector import TextSelector, TextSelectorConfig, TextSelectorType
 
 from .const import (CONF_DEVICE_ID, CONF_RUNTIME_ENDPOINT, CONF_RUNTIME_TOKEN, DOMAIN, valid_device_id)
 from .runtime_client import validate_private_endpoint
 
 
 class GenvexRemoteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Capture only non-secret device identity in the early development build."""
+    """Capture device identity and private App IPC credentials only."""
 
     VERSION = 1
 
@@ -47,7 +44,9 @@ class GenvexRemoteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema({
                 vol.Required(CONF_DEVICE_ID): str,
                 vol.Required(CONF_RUNTIME_ENDPOINT): str,
-                vol.Required(CONF_RUNTIME_TOKEN): str,
+                vol.Required(CONF_RUNTIME_TOKEN): TextSelector(
+                    TextSelectorConfig(type=TextSelectorType.PASSWORD)
+                ),
             }),
             errors=errors,
         )
