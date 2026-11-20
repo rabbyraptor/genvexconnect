@@ -50,6 +50,12 @@ The user's next HAOS run again created the disposable internal Docker bridge, th
 
 New [source-only contract tests](../experimental/genvex_remote/test_worker_api_contract.py) now exercise synthetic RPC45 -> serial polling worker -> atomic snapshot state -> bearer-authenticated HTTP response shaping -> strict consumer parser, including no snapshot before first poll and 503 after a failed subsequent poll. **These new tests have been committed but not yet run on HAOS.**
 
+### Real RPC45 → authenticated two-container HTTP: VERIFIED 2026-11-20
+
+**VERIFIED from the user's HAOS run of** [`scripts/run_haos_live_rpc_to_ipc_test_v2.sh`](../scripts/run_haos_live_rpc_to_ipc_test_v2.sh): an isolated test Docker bridge and two disposable read-only runtime-image containers were prepared. With the pre-existing encrypted client profile and a locally entered hidden unlock passphrase, one live authorized Nabto RPC 45 five-address batch produced a validated, fresh structured snapshot; the server container's authenticated HTTP endpoint then served that **actual live snapshot** to the second container. Requests with no bearer token and with an incorrect token were rejected; a correct token returned all **5/5 actual RPC45 readings**, with device ID, timestamp and schema validation. The run concluded `PASS: REAL RPC45 -> AUTHENTICATED TWO-CONTAINER HTTP`. No vendor CA registration, write RPC, persistent API, or installed HAOS App changes. The test did not print actual readings in this result, so this record does not infer numerical values.
+
+**This is an end-to-end one-shot proof between two disposable containers**, not a real HA Core integration, deployed Supervisor App, long-running worker, unattended credential provisioning, production IPC security assessment or restart/reconnect validation.
+
 ## Evidence labels
 
 - **VERIFIED:** observed successfully in our controlled tests, with SDK return values or independent certificate checks.
