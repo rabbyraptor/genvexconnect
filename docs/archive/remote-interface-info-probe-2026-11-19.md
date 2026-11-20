@@ -1,6 +1,6 @@
 # Read-only get_interface_info.json experiment — 2026-11-19
 
-Baseline: [verified facts](remote-nabto-verified-facts.md).
+Baseline: [verified facts](../remote-nabto-verified-facts.md).
 
 ## Evidence reported by user
 
@@ -49,7 +49,7 @@ Source: https://github.com/nabto/nabto-cli/blob/master/src/nabto_cli.cpp
 
 A second test used the same known-good identity, SDK and client XML. All initialization steps and shutdown again returned 0. `nabtoRpcInvoke` again returned `26`, and the classifier printed `OTHER_JSON_ERROR` with `Diagnostic codes: []`. The JSON was discarded after a narrow code/message scan; this **still does not establish whether a remote request reached the gateway**. The upstream Cordova error object uses nested `error.body`, `error.header`, and `error.event` fields that the initial classifier did not inspect.
 
-Prepared a narrow follow-up test: [`scripts/diagnose_remote_interface_info.py`](../scripts/diagnose_remote_interface_info.py) inspects these additional fields, prints only categorical results and numeric codes, uses the pre-existing profile, and does not log raw JSON or identity data. It has **not yet been executed**. This is a diagnostic utility, not a product client.
+Prepared a narrow follow-up test: [`scripts/diagnose_remote_interface_info.py`](../../scripts/diagnose_remote_interface_info.py) inspects these additional fields, prints only categorical results and numeric codes, uses the pre-existing profile, and does not log raw JSON or identity data. It has **not yet been executed**. This is a diagnostic utility, not a product client.
 
 ## Root cause identified — third diagnostic (2026-11-19)
 

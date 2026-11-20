@@ -1,7 +1,7 @@
 # Remote Nabto — next RPC discovery and ARM64 validation
 
 Date: 2026-11-19  
-Baseline: [verified facts manifest](remote-nabto-verified-facts.md)
+Baseline: [verified facts manifest](../remote-nabto-verified-facts.md)
 
 ## 1. Finding the real telemetry RPC schema
 
@@ -64,4 +64,4 @@ The native library reference runs **Linux x86_64**. Raspberry Pi 4 with 64-bit H
 
 ## 2026-11-19 milestone: first remotely read datapoint
 
-Steam Deck authenticated SDK 4.9.11 test: reconstructed XML query 45 registered **0**; single RPC read of `obj=0,address=20` returned **0**; one decoded signed-int16 sensor value **367**; candidate derived air temperature **6.7 °C**. This is an end-to-end remote controller read, not merely ping. Compare against existing local HA sensor before treating it as accurate; then validate additional documented read-only addresses and one HAOS/QEMU RPC 45 test. See [RPC 45 derivation and result](reconstructed-readonly-query45-2026-11-19.md).
+Steam Deck authenticated SDK 4.9.11 test: reconstructed XML query 45 registered **0**; single RPC read of `obj=0,address=20` returned **0**; one decoded signed-int16 sensor value **367**; candidate derived air temperature **6.7 °C**. This is an end-to-end remote controller read, not merely ping. Compare against existing local HA sensor before treating it as accurate; then validate additional documented read-only addresses and one HAOS/QEMU RPC 45 test. See [RPC 45 derivation and result](../reconstructed-readonly-query45-2026-11-19.md).
