@@ -84,6 +84,18 @@ Proposed App sequence:
 
 **Tests:** 13 new offline tests passed in the local environment using OpenSSL 3.5.5 / cryptography 46.0.4, covering matching/wrong/expired fake CAs, signature checks, exact PBES2 parameters, malformed inputs and generated candidate integration. The six earlier `test_enrollment_core.py` checks have not been included in this new 13-test run. **Nothing is installed on HAOS or wired to a real account yet.**
 
+### Additional implementation staged (2026-11-20)
+
+The following development components have been added **outside the installed App and Home Assistant integration**:
+
+- [`registration_http.py`](../experimental/genvex_remote/registration_http.py): fixed HTTPS registration URL, default TLS server validation, no HTTP redirects, bounded response and timeout, sanitized failure messages. Importing the module makes **no requests**. The service does not invoke it automatically.
+- [`enrollment_service.py`](../experimental/genvex_remote/enrollment_service.py): dependency-injected registration transport, candidate key/CSR generation, explicit pinned CA + matching-leaf verification, then private profile-store commit. Returns only generation ID, device hostname and expiration. No real CA endpoint is invoked by default. Runtime authorization/rate limiting still needed.
+- [`profile_store.py`](../experimental/genvex_remote/profile_store.py): private 0700 directory, 0600 credential files, versioned generation and atomic active-pointer replacement. Old generations remain for future reviewed rollback/cleanup. The unlock secret is stored on the same host volume as the encrypted key; this does **not** protect against an attacker with host filesystem access. The root is assumed to be inside trusted, private App `/data`.
+- [`snapshot_contract.py`](../experimental/genvex_remote/snapshot_contract.py): accept exactly five finite measurements from the configured device, with a supported schema, valid timestamp and maximum age; reject stale/wrong/incomplete values so HA entities become unavailable. It is **not** yet transported across containers.
+- Offline fake-provider tests [enrollment service](../experimental/genvex_remote/test_enrollment_service.py), [file store](../experimental/genvex_remote/test_profile_store.py), [HTTP](../experimental/genvex_remote/test_registration_http.py), [snapshot](../experimental/genvex_remote/test_snapshot_contract.py). Also [CI workflow](../.github/workflows/remote-nabto-offline.yml) for unit tests on branch updates. **CI pass/fail has not been verified yet; do not claim these new additions are validated until observed.**
+
+Remaining before UI activation: obtain and independently authenticate the **actual** Nabto legacy CA root (current source is not pinned); test a new SDK-compatible key under SDK 4.9.11; decide an authenticated App↔HA IPC channel; implement runtime startup and serial polling; add the distinct `genvex_remote` Config Flow and sensor platform; verify on HAOS. Account-owned live certificate issuance is deliberately **not** run during this staging work. A developer may need a controlled HAOS test and an explicit opt-in for live registration before completing the integration.
+
 **Phase B — unattended runtime:** read-only polling worker with deterministic JSON snapshot, internal authentication, bounded execution, graceful shutdown and credential lifecycle. Validate standalone on HAOS. No terminal required after initial App install.
 
 **Phase C — real `genvex_remote` integration:** config flow, runtime discovery/setup, enrollment/reauth, DataUpdateCoordinator, five device-linked sensors, no external account password retained following enrollment.
