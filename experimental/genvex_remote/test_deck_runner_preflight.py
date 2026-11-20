@@ -33,6 +33,20 @@ class DeckRunnerTests(unittest.TestCase):
         self.assertIn("PASS: preview complete; no Nabto session was opened", result.stdout)
         self.assertNotIn("SDK startup", result.stdout)
 
+    def test_live_runner_requires_known_host_comparison_before_passphrase(self):
+        source = RUNNER.read_text(encoding="utf-8")
+        self.assertIn('KNOWN_HOST', source)
+        self.assertIn('if [[ "$KNOWN_HOST" != "${DEVICE_ID}.remote.lscontrol.dk" ]]', source)
+        self.assertIn("no RPC will be sent", source)
+        self.assertLess(
+            source.index('if [[ "$KNOWN_HOST" !='),
+            source.index('IFS= read -r -s -p "Nøgleadgangskode'),
+        )
+        self.assertLess(
+            source.index('if [[ "$KNOWN_HOST" !='),
+            source.index('python3 -u "$PROBE"'),
+        )
+
     def test_unknown_option_cannot_enter_live_code(self):
         result = subprocess.run(
             ["bash", str(RUNNER), "--live-please"],
