@@ -1,6 +1,6 @@
 # Architectural decision: a real Home Assistant integration backed by an internal Nabto runtime
 
-**Status: design approved as the target direction; not implemented or installed.** This document records the requested user experience and the engineering/security work remaining. See [resource catalogue](remote-nabto-resources.md), [verified experiments](remote-nabto-verified-facts.md), and [first five entity plan](remote-ha-entity-plan.md).
+**Status: the UI integration and serialized worker exist as isolated development scaffolds, not installed or connected; end-user setup and automatic CA enrollment are not yet operational.** This document records the requested user experience and the engineering/security work remaining. See [resource catalogue](remote-nabto-resources.md), [verified experiments](remote-nabto-verified-facts.md), and [first five entity plan](remote-ha-entity-plan.md).
 
 ## Why did development move from an integration to an App?
 
@@ -112,6 +112,8 @@ The following development components have been added **outside the installed App
 - Offline fake-provider tests [enrollment service](../experimental/genvex_remote/test_enrollment_service.py), [file store](../experimental/genvex_remote/test_profile_store.py), [HTTP](../experimental/genvex_remote/test_registration_http.py), [snapshot](../experimental/genvex_remote/test_snapshot_contract.py). Also [CI workflow](../.github/workflows/remote-nabto-offline.yml) for unit tests on branch updates. **CI pass/fail has not been verified yet; do not claim these new additions are validated until observed.**
 
 Remaining before UI activation: obtain and independently authenticate the **actual** Nabto legacy CA root (current source is not pinned); test a new SDK-compatible key under SDK 4.9.11; decide an authenticated App↔HA IPC channel; implement runtime startup and serial polling; add the distinct `genvex_remote` Config Flow and sensor platform; verify on HAOS. Account-owned live certificate issuance is deliberately **not** run during this staging work. A developer may need a controlled HAOS test and an explicit opt-in for live registration before completing the integration.
+
+**2026-11-20 HA integration foundation:** An isolated [`experimental/home_assistant` package](../experimental/home_assistant/README.md) has been staged with config flow for the device ID, coordinator, five registered sensor definitions, localization, and strict snapshot validation. Its reader is intentionally **unconfigured** until authentication and IPC are implemented. A [serialized, bounded read-only polling worker](../experimental/genvex_remote/polling_worker.py) and offline tests are likewise staged without any actual SDK call. Existing LAN integration remains untouched.
 
 **Phase B — unattended runtime:** read-only polling worker with deterministic JSON snapshot, internal authentication, bounded execution, graceful shutdown and credential lifecycle. Validate standalone on HAOS. No terminal required after initial App install.
 
