@@ -1,5 +1,14 @@
 # Genvex Nabto Runtime Test
 
+## Version 0.5.0 — native ARM64 certificate tooling preparation (NOT YET HAOS-VERIFIED)
+
+Readiness check on the **installed v0.4.0** app demonstrated: `aarch64` HAOS, running test container, **Nabto SDK 4.9.11**, OpenSSL **NOT INSTALLED**, Python `cryptography` **NOT INSTALLED**, previously verified encrypted key/certificate **PRESENT**, idle container CPU **0.00%**, RAM **5.922 MiB** (one idle snapshot; *not* a memory baseline during authenticated polling).
+
+Version **0.5.0** adds only native ARM64 `python3`, `py3-cryptography`, `openssl` and CA certificates via Alpine `apk`. An explicit non-secret build check and app-start smoke test confirm that imports and OpenSSL can start. The pre-existing x86_64 Nabto Python/QEMU runtime, manual RPC45 probe and the five known sensor addresses remain unchanged. Startup **does not create a key, enroll with the vendor, load a profile or run remote RPC**. The offline `experimental/genvex_remote` prototype is **not** packaged into the runtime yet.
+
+**This is a source update, not evidence of an HAOS build:** after installing 0.5.0 from the existing local App repository, verify log lines `Genvex Nabto runtime test v0.5.0 starting` and `PASS: native OpenSSL and Python cryptography import`, plus the existing x86_64/QEMU smoke tests. If the build fails, retain the installed 0.4.0 image until the failure is diagnosed. Do not expose or modify the existing host-only certificate directory. Test only in the isolated App, not in Home Assistant Core.
+
+
 ## SSH-free local HAOS stability probe (after one-time encrypted profile provisioning)
 
 The standalone [`scripts/run_haos_local_remote_stability.sh`](../../scripts/run_haos_local_remote_stability.sh) is invoked **from the existing HAOS host root terminal**. It has **no SSH code or prompts**. Unlike the earlier Steam Deck bridge, it assumes the existing public certificate and **encrypted** key have been provisioned once to the host-only directory `/mnt/data/supervisor/genvex-nabto-remote-profile/` under names `client.crt` and `client-encrypted.key`; mode 0700 on directory, 0600 on files. Credentials are NEVER stored in GitHub or the add-on source directory.
