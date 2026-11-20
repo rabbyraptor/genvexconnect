@@ -86,6 +86,14 @@ The user ran the pinned `run_haos_remote_install_preflight_v2.sh` on HAOS: **102
 
 **User-provided HAOS output:** `run_haos_remote_install_preflight_v7.sh` passed **104 backend tests in 11.770 seconds**, **15 Home Assistant transport/snapshot tests in 0.072 seconds**, and **7 isolated HAOS App bootstrap tests in 0.032 seconds**: **126/126 tests passed**. The same run passed source parity (App runtime copy vs experimental backend), Python compilation and HA integration JSON manifest/UI strings checks. Printed `PASS: REMOTE RUNTIME + APP + HA SOURCE PRE-FLIGHT`. This is **source-only**; no App installed or started, no real Nabto RPC or certificate access. **App Docker image build, live private App-to-HA connection, 60-second polling stability and reboot recovery remain unverified.**
 
+### 2B – First attempted additional Optima 270 sensor, gateway lookup failed (2026-11-20)
+
+**USER-OBSERVED:** The approved Steam Deck live test loaded the existing encrypted SDK test profile, reached its single read-only RPC45 invocation for source-defined `frost_protection_temp` (object 0, address 24), and returned **SDK status 26** plus **event 1000015**. Session close and SDK shutdown both returned **0**; the runner did not retry.
+
+**SOURCE-VERIFIED INTERPRETATION:** Status 26 is `NABTO_FAILED_WITH_JSON_MESSAGE`. Event 1000015 is `MICROSERVER_NOT_KNOWN` in the official Nabto client error constants: a gateway resolution/availability failure, **not** a confirmed unsupported-address/controller rejection. A successful local `nabtoOpenSession` is not proof that the remote gateway was attached. The controller may not have received any RPC45 request. **Address 24 remains source-only/unverified**. This does not invalidate the previously verified five known RPC45 sensors.
+
+The [2B test matrix](remote-optima270-rpc45-expansion-testmatrix.md) records the redacted result and the source links. The isolated one-candidate script and tests now classify this event without copying raw response contents; no installed App or working LAN component was changed. Before any further live probe, separately confirm the operator-entered 12-digit device ID is the previously working remote hostname, and check gateway remote connectivity independently. Never publish the ID, email or key passphrase.
+
 ## Evidence labels
 
 - **VERIFIED:** observed successfully in our controlled tests, with SDK return values or independent certificate checks.
