@@ -53,7 +53,7 @@ class _Session:
 class AuthenticatedReaderTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.token = "z" * 43
-        self.endpoint = "http://app_local_genvex_remote_runtime:18275/v1/snapshot"
+        self.endpoint = "http://app_local_genvex_nabto_remote:18275/v1/snapshot"
 
     def reader(self, response):
         session = _Session(response)
@@ -101,6 +101,12 @@ class AuthenticatedReaderTests(unittest.IsolatedAsyncioTestCase):
             "http://example.com:18275/v1/snapshot?token=sensitive",
             "http://user:password@example.com:18275/v1/snapshot",
             "http://example.com/v1/snapshot",
+            "http://app_local_other_app:18275/v1/snapshot",
+            "http://127.0.0.1:18275/v1/snapshot",
+            "http://10.0.0.5:18275/v1/snapshot",
+            "http://app_local_genvex_nabto_remote.evil.example:18275/v1/snapshot",
+            "http://app_local_genvex_nabto_remote:18275/v1/snapshot#fragment",
+            "http://APP_LOCAL_GENVEX_NABTO_REMOTE:18275/v1/snapshot",
         ):
             with self.subTest(bad=bad):
                 with self.assertRaises(ValueError):
