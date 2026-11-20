@@ -276,3 +276,29 @@ bash scripts/run_optima270_all_candidates_batch_from_deck.sh --execute-live
 - Default `--preflight` er fortsat offline. Live-tilstand har fortsat højst ét read-only RPC45-kald, 90 sekunders timeout, private midlertidige profiler og ingen automatisk gentagelse.
 
 **Privatliv:** Fordi e-mail og device-ID nu er synlige, kan de fremgå af terminaloptagelser/skærmbilleder. Fjern disse oplysninger inden deling af logs. Ingen installerede HAOS Apps eller LAN-integration er ændret.
+
+
+## Live-verifikation: alle 12 kildebaserede kandidater i én batch (2026-11-20)
+
+**VERIFICERET i brugerens Steam Deck-terminaloutput** efter checkout af `52f6b9a`: Præcis én autentificeret, read-only `RPC45`-forespørgsel med tolv datapunkter i kildens faste rækkefølge `24,18,19,35,36,41,42,53,40,114,115,50` gav `RPC status=0` på **358 ms**, præcis **12 signede int16-værdier**, `Result: TWELVE_CANDIDATES_DECODED_SOURCE_ONLY`, og `Session close status=0` / `SDK shutdown status=0`. Testen var én session og én forespørgsel; ingen skrive-RPC, registerscanning eller automatisk retry.
+
+| Adresse | Kildebetegnelse | Rå int16 | Kildeskaleret / tentativ tolkning | Krydstjek og begrænsning |
+| ---: | --- | ---: | --- | --- |
+| 24 | `frost_protection_temp` | 0 | −30,0 °C | Matcher numerisk appens både T8 og T9, men eksakt føleridentitet og faktisk tilslutning ukendt |
+| 18 | `fan_duty_supply` | 6000 | 60,0 % | **Konsistent** med Genvex Connect's tidligere viste Supply fan 60,00 % |
+| 19 | `fan_duty_extract` | 5800 | 58,0 % | **Konsistent** med appens tidligere Extract fan 58,00 % |
+| 35 | `fan_rpm_supply` | 2432 | 2432 rpm (kildeenhed) | Ikke uafhængigt målt/verificeret, plausibelt |
+| 36 | `fan_rpm_extract` | 2268 | 2268 rpm (kildeenhed) | Ikke uafhængigt målt/verificeret, plausibelt |
+| 41 | `preheat_pwm` | 0 | 0,0 (rå/100) | Konsistent med Preheat Off, men fysisk hardware/fortolkning uafklaret |
+| 42 | `reheat_pwm` | 0 | 0,0 (rå/100) | Konsistent med Reheat Off, men fysisk hardware/fortolkning uafklaret. Registeradresse 42 er ikke RPC42 |
+| 53 | `bypass_active_raw` | 0 | 0 | Konsistent med Bypass Off, men boolsk status/aktiveringslogik ikke dynamisk verificeret |
+| 40 | `bypass_analog_raw` | 0 | 0 | Analog position/skala ukendt |
+| 114 | `alarm_word_1_raw` | 0 | 0 | Rå bitfelt; ingen alarmstatus/bevis for alarmløs tilstand udledt |
+| 115 | `alarm_word_2_raw` | 0 | 0 | Rå bitfelt; ingen alarmstatus/bevis for alarmløs tilstand udledt |
+| 50 | `rotor_rpm` | 10 | 10 (kildens rpm-enhed) | Rotorhardware/semantik ukendt; må ikke antages at være fysisk 10 rpm |
+
+**Vigtig sondring:** `12/12 RPC-læsbarhed` og `batch-format verificeret` betyder **ikke**, at alle 12 målinger nu har verificeret fysiske enheder, følerspecifik T8/T9-mapping eller er klar som Home Assistant-entities. Især for `raw=0` kan en inaktiv/ikke-tilsluttet funktion ikke skelnes fra en gyldig nulmåling. `fan_duty_supply/extract` er de tydeligste nye HA-kandidater, fordi skala og etiketter matcher officielle appobservationer; appskærmbilledet var **ikke samtidigt** med batchen. RPM, analog bypass, PWM, alarmbitfelter og rotormåling kræver mere afklaring.
+
+**Status efter forsøget:** 5 tidligere aktive, dokumenterede remote RPC45-målinger + 12 nye **remote-læsbare** kildeposter, i alt **17 kildebaserede adresser med påvist fjernlæsbarhed**. `capability_catalog.py`, `verified_read_plan.py`, sensor-snapshot v1 og HA-entities forbliver **uændrede** (fortsat præcis 5). Der er ikke udført installering, polling eller ændring af HAOS Apps eller LAN-integration.
+
+**Privatliv:** Brugerens originale terminaludskrift indeholdt synligt indtastede identitets- og gatewayoplysninger. Dette dokument og eventuelle kodetestdata kopierer **ingen** af disse værdier. Nøglen/passphrase var skjult. Anbefal kun fremtidige anonymiserede terminaludskrifter.
