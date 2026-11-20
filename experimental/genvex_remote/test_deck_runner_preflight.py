@@ -33,17 +33,20 @@ class DeckRunnerTests(unittest.TestCase):
         self.assertIn("PASS: preview complete; no Nabto session was opened", result.stdout)
         self.assertNotIn("SDK startup", result.stdout)
 
-    def test_live_runner_requires_known_host_comparison_before_passphrase(self):
+    def test_visible_identity_and_device_id_derive_host_before_hidden_passphrase(self):
         source = RUNNER.read_text(encoding="utf-8")
-        self.assertIn('KNOWN_HOST', source)
-        self.assertIn('if [[ "$KNOWN_HOST" != "${DEVICE_ID}.remote.lscontrol.dk" ]]', source)
-        self.assertIn("no RPC will be sent", source)
+        self.assertIn('read -r -p "Nabto-identitet (e-mail; synlig): "', source)
+        self.assertIn('read -r -p "Genvex device-ID (12 cifre; synligt): "', source)
+        self.assertIn('export GENVEX_NABTO_HOST="${DEVICE_ID}.remote.lscontrol.dk"', source)
+        self.assertIn('[[ ! "$DEVICE_ID" =~ ^[0-9]{12}$ ]]', source)
+        self.assertNotIn("KNOWN_HOST", source)
+        self.assertIn('read -r -s -p "Nøgleadgangskode (skjult): "', source)
         self.assertLess(
-            source.index('if [[ "$KNOWN_HOST" !='),
+            source.index('export GENVEX_NABTO_HOST='),
             source.index('IFS= read -r -s -p "Nøgleadgangskode'),
         )
         self.assertLess(
-            source.index('if [[ "$KNOWN_HOST" !='),
+            source.index('IFS= read -r -s -p "Nøgleadgangskode'),
             source.index('python3 -u "$PROBE"'),
         )
 
