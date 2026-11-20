@@ -82,3 +82,26 @@ These changes are development-source-only. The earlier successful offline
 workflow run covers the preceding provisioning tests; these **new integration
 tests have not yet been confirmed passed in CI**. The previously imported HAOS
 image has not been rebuilt, and no secret provisioning has been attempted.
+
+## Internal bearer-token endpoint hardening
+
+The Home Assistant read-only client now restricts its bearer-token destination
+to the **exact** expected Supervisor App endpoint
+`http://app_local_genvex_nabto_remote:18275/v1/snapshot`.
+Previously, it accepted arbitrary private IPs and `app_*` hostnames, which
+could route the token to unintended peers if misconfigured. Regression tests
+now reject other App hostnames, private IPs, lookalike domains and URL
+fragments. Redirect following remains disabled and the HTTP response remains
+bounded.
+
+The offline App workflow has been amended to trigger on
+`experimental/home_assistant/**` and run the HA fake-transport/snapshot
+tests, instead of only compiling App sources and testing App bootstrap.
+
+**Remaining network security gates:** Exact URL checks are not sufficient to
+prove that Supervisor DNS and App network boundaries isolate the endpoint.
+Verify the actual private namespace, absence of published host ports,
+reachable peers, and lifecycle in a controlled HAOS test. Plain HTTP bearer
+tokens require a trusted isolated network; no real token should be used before
+that is verified. These latest changes are not yet independently verified in
+GitHub Actions.
