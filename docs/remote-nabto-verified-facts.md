@@ -391,3 +391,16 @@ A distinct [read-only IPC topology gate](../scripts/audit_haos_v2_ipc_network_ga
 **OPERATOR-OBSERVED:** `audit_haos_v2_ipc_supervisor_state_v1.sh` over Steam Deck -> HAOS `ssh -T ... 'sh -s -- --execute-readonly'` printed `Supervisor App metadata: unavailable`, then `sh: syntax error: unterminated quoted string`, without reaching Docker checks. Thus it did **not** determine Supervisor App status. In a streamed shell script, subprocesses such as `ha apps info` can accidentally consume inherited stdin (remaining script source), making parsing fail. Lack of Python on the HAOS host is another possible reason for metadata unavailability.
 
 **SOURCE FIX:** New distinct [v2 Supervisor audit](../scripts/audit_haos_v2_ipc_supervisor_state_v2.sh) explicitly runs `ha apps info ... --raw </dev/null`; the JSON metadata is passed to the known Core container's Python over `docker exec -i`, reducing dependency on HAOS host Python. A new offline regression feeds the entire script through `sh -s` using a fake `ha` that attempts to consume stdin and checks the allowlist does not disclose App credentials. Early initial CI caught a v2 script regression: literal `\\n` text in a constructed comment collapsed a shell command; corrected in source commit `e20cd1c` and guarded by an added regression in `ea08085`. The corrected v2 **has not yet been verified on HAOS**. Neither error implicates the Nabto SDK or working LAN integration. No App has been started or installed by this work.
+
+
+### HAOS isolated App synthetic-only Core-to-App acceptance — 2026-11-20
+
+**OPERATOR-VERIFIED PASS:** After explicit approval for diagnostic-only configuration and manual start, `scripts/verify_haos_remote_diagnostic_readonly.sh` reported all checks passed on the user's actual HAOS host:
+
+- Dedicated `app_local_genvex_nabto_remote` container running, **not** in host network mode and with **no published host ports**.
+- Dedicated App attached to Supervisor `hassio` network.
+- Home Assistant Core resolved `local-genvex-nabto-remote` and retrieved the strictly marked synthetic-only `GET /v1/diagnostic` payload.
+- Production `GET /v1/snapshot` returned HTTP 404 in diagnostic mode.
+- No Nabto RPC, device credentials, IPC bearer token, or real sensor data were used.
+
+The operator reported `===== ACCEPTANCE COMPLETE =====`. **App stop after the acceptance run has not yet been confirmed**; operator should manually stop the dedicated remote App, leaving `diagnostic_only: true`. Do not infer that live polling, private credential enrollment, restart persistence, or HA entities are validated. Existing LAN integration and host-networked QEMU test App were not modified by this acceptance script.
