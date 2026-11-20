@@ -1,6 +1,7 @@
 # HAOS local App: controlled diagnostic-only installation plan
 
-Status: **prepared, NOT executed on HAOS**. This plan is intentionally
+Status: **source staged and Supervisor discovery verified; build/install NOT executed**.
+This plan is intentionally
 separate from any existing Genvex LAN integration or the earlier
 `genvex_nabto_runtime_test` App.
 
@@ -90,16 +91,35 @@ connection or credential provisioning has been authorized.
   was created. No existing directories are modified.
 - No Supervisor store reload or App installation in this phase.
 
-**Phase C: Supervisor discovery/build/install (separate user approval).**
+**Phase C: Supervisor build/install (separate user approval; discovery complete).**
 
-- Via Settings > Apps > Install app, use Check for updates, select
-  Local apps and inspect `Genvex Remote (experimental)`.
+- Discovery is already verified with `ha store reload` and
+  `ha apps info local_genvex_nabto_remote`. Do not repeat staging.
+- Before installing, recheck free disk space, RAM, image-build prerequisites,
+  and confirm the existing runtime-test App is still started.
+- Select only `local_genvex_nabto_remote` for installation.
 - Supervisor builds the image from this App's Dockerfile since no
   `image:` is configured. It may need network access and extra
   free disk space. The imported development image is not reused by
   this automatically.
-- Install **without** starting. Startup on boot is forbidden by
-  `boot: manual_only`.
+- Install **without** starting. `boot: manual_only` prevents automatic boot
+  startup, but verify the App remains stopped after installation; do not assume
+  an install command cannot trigger a start.
+- After installation, inspect the new App's `installed`, `state`, and version;
+  confirm the existing `local_genvex_nabto_runtime_test` is still running
+  version `0.5.0`. Do not enter credentials or copy certificate/key files.
+- If the build fails, stop and inspect the new App's logs and disk usage before
+  any cleanup. Never prune unrelated Docker resources or modify the old App.
+
+**Phase C decision record (20 November 2026):** User requested a pros/cons
+assessment, **not authorization to install**. Benefits: tests Supervisor's
+actual ARM64/QEMU build, dependency resolution and App lifecycle, exposing
+HAOS-only failures that source-only tests cannot detect. Costs/risks: several
+GB of disk, CPU/RAM pressure on Raspberry Pi 4, possible failed build and
+residual cache, and no evidence of stable real Nabto connectivity from an
+installed App. Recommendation: proceed only after read-only resource/security
+preflight and explicit user approval; installation must remain separate from
+Phase D synthetic startup and any later live RPC45 testing.
 
 **Phase D: explicit synthetic-only start (separate user approval).**
 
