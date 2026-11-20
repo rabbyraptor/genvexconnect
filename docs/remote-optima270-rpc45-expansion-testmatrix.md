@@ -315,3 +315,16 @@ På baggrund af den succesfulde 12/12-batch er der oprettet en **offline-only** 
 - **Afventer:** Separat autoriseret runtime-plan, HA entity-design, tilgængelighedspolitik og vurdering af de øvrige 10 nye læsbare adresser. Ingen ekstra adresse eller live-aflæsning aktiveret.
 
 Dette er kun kode- og kontraktforberedelse, ingen ændring af brugerens eksisterende Home Assistant.
+
+
+## Offline HA-visning af snapshot v2 (2026-11-20)
+
+Efter den verificerede batchtest og det isolerede v2-kontraktudkast er der tilføjet en **ren Python-projektion** af kommende sensor-entities: [`ha_v2_projection.py`](../experimental/genvex_remote/ha_v2_projection.py) med [`test_ha_v2_projection.py`](../experimental/genvex_remote/test_ha_v2_projection.py).
+
+- Projektionen modtager kun en allerede valideret v2-snapshot (ingen Nabto SDK, HTTP, HA Core eller device-kontrol). `parse_v2` kræver friskhed, korrekt device-ID, fuldt v1-sæt og validerer den valgfrie fan-parring.
+- Returnerer stabil rækkefølge på **7 sensorkandidater**: de fem allerede eksisterende med **samme semantiske keys og unique-ID mønster** (`<device_id>_<key>`) plus `fan_duty_supply` og `fan_duty_extract`. Sidstnævnte har `%` som enhed og `measurement` som state class; ingen antagelse om særlig Home Assistant device class.
+- Hvis begge ventilatoraflæsninger er gyldige, vises numerisk procent (inklusive **gyldig 0 %**). Hvis de valgfrie data mangler eller afvises, er begge **unavailable med `value=None`**, mens de fem basale sensorer er tilgængelige. Der skabes aldrig falske 0 %-målinger ved fejl.
+- Der produceres **ingen** RPM-, rotor-, bypass-, PWM-, temperaturføler-T8/T9- eller alarm-entities fra endnu uafklarede kandidatmålinger.
+- **Ikke installerbart:** Den faktiske `experimental/home_assistant/custom_components/genvex_remote`-integration og dens v1-snapshot-parser, den eksisterende runtime `/v1/snapshot` og installerede HAOS Apps er uændrede. Den nye projektion er et kontraktbevis, ikke live-dataindsamling eller deployment.
+
+**Afventer før brug i HA:** Afklaring af hvordan runtime læser og tidsstempler både de fem basismålinger og de to valgfrie ventilatorer, versioneret separat v2-API, autentificeret IPC-transport, entity-tilgængelighed og test i isoleret HAOS-miljø. Ingen nye live-kald blev udført i dette udviklingstrin.
