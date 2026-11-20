@@ -8,13 +8,21 @@ from test_snapshot import RuntimeUnavailable
 from dev_remote.runtime_client import AuthenticatedSnapshotReader
 
 
-class _Response:
-    def __init__(self, status=200, body=b"{}"):
-        self.status = status
+class _BodyStream:
+    def __init__(self, body):
         self.body = body
+        self.read_limits = []
 
-    async def read(self):
-        return self.body
+    async def read(self, limit):
+        self.read_limits.append(limit)
+        return self.body[:limit]
+
+
+class _Response:
+    def __init__(self, status=200, body=b"{}", content_length=None):
+        self.status = status
+        self.content = _BodyStream(body)
+        self.content_length = content_length
 
 
 class _Context:
@@ -33,10 +41,12 @@ class _Session:
         self.response = response
         self.headers = None
         self.url = None
+        self.allow_redirects = None
 
-    def get(self, url, *, headers):
+    def get(self, url, *, headers, allow_redirects=True):
         self.url = url
         self.headers = headers
+        self.allow_redirects = allow_redirects
         return _Context(self.response)
 
 
@@ -58,6 +68,8 @@ class AuthenticatedReaderTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result, {"schema_version": 1})
         self.assertEqual(session.headers["Authorization"], "Bearer " + self.token)
         self.assertEqual(session.url, self.endpoint)
+        self.assertIs(session.allow_redirects, False)
+        self.assertEqual(session.response.content.read_limits, [4097])
 
     async def test_error_status_is_redacted(self):
         reader, _ = self.reader(_Response(status=401, body=b"SECRET"))
@@ -75,6 +87,12 @@ class AuthenticatedReaderTests(unittest.IsolatedAsyncioTestCase):
         reader, _ = self.reader(_Response(body=b"[]"))
         with self.assertRaises(RuntimeUnavailable):
             await reader.async_fetch_snapshot("123456789012")
+
+    async def test_large_declared_content_length_rejected_before_read(self):
+        reader, session = self.reader(_Response(body=b"{}", content_length=5000))
+        with self.assertRaises(RuntimeUnavailable):
+            await reader.async_fetch_snapshot("123456789012")
+        self.assertEqual(session.response.content.read_limits, [])
 
     async def test_bad_endpoint_rejected(self):
         for bad in (
