@@ -50,7 +50,7 @@ jobs:
           assert config["boot"] == "manual"
           assert config["host_network"] is False
           assert config["arch"] == ["aarch64"]
-          assert config["map"] == ["share:ro"]
+          assert not config.get("map")
           assert not config.get("ports")
           assert config["schema"]["unlock_secret"] == "password"
           assert config["schema"]["ipc_token"] == "password"
