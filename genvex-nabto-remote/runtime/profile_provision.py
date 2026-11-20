@@ -12,11 +12,11 @@ from __future__ import annotations
 import ctypes
 import errno
 import os
+import secrets
 from pathlib import Path
 import stat
 import struct
 import sys
-import tempfile
 
 MAX_PEM = 131072
 CERT_NAME = "client.crt"
@@ -92,16 +92,15 @@ def _rename_noreplace(parent_fd: int, staged: str, target: str) -> None:
     raise OSError(code, "Atomic private profile promotion failed")
 
 
-def _write_private(path: Path, content: bytes) -> None:
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL |
-                 getattr(os, "O_NOFOLLOW", 0), 0o600)
-    try:
-        with os.fdopen(fd, "wb") as stream:
-            stream.write(content)
-            stream.flush()
-            os.fsync(stream.fileno())
-    except Exception:
-        raise
+def _write_private(stage_fd: int, name: str, content: bytes) -> None:
+    fd = os.open(
+        name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+        0o600, dir_fd=stage_fd,
+    )
+    with os.fdopen(fd, "wb") as stream:
+        stream.write(content)
+        stream.flush()
+        os.fsync(stream.fileno())
 
 
 def provision(stream, *, data_dir: Path = Path("/data")) -> None:
@@ -142,31 +141,36 @@ def _provision_in_open_data_dir(
         pass
     else:
         raise FileExistsError("Private profile already provisioned")
-    stage = Path(tempfile.mkdtemp(prefix=".profile-stage-", dir=data_dir))
+    # Every staging operation is anchored to the same checked parent FD,
+    # not re-resolved through a pathname that can be renamed or swapped.
+    stage_name = ".profile-stage-" + secrets.token_hex(16)
+    os.mkdir(stage_name, mode=0o700, dir_fd=parent_fd)
+    stage_fd = None
+    promoted = False
     try:
-        stage.chmod(0o700)
-        _write_private(stage / CERT_NAME, cert)
-        _write_private(stage / KEY_NAME, key)
-        # Sync both files and staging directory before atomic no-clobber
-        # publication. A raced target can never be overwritten.
-        stage_fd = os.open(stage, os.O_RDONLY | os.O_DIRECTORY |
-                           getattr(os, "O_NOFOLLOW", 0))
-        try:
-            os.fsync(stage_fd)
-        finally:
-            os.close(stage_fd)
-        # The publication descriptor is the same inode that passed the
-        # owner/permission check; never reopen the parent path here.
-        _rename_noreplace(parent_fd, stage.name, "profile")
+        stage_fd = os.open(
+            stage_name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+            dir_fd=parent_fd,
+        )
+        os.fchmod(stage_fd, 0o700)
+        _write_private(stage_fd, CERT_NAME, cert)
+        _write_private(stage_fd, KEY_NAME, key)
+        os.fsync(stage_fd)
+        # Linux RENAME_NOREPLACE cannot overwrite a raced directory/link.
+        _rename_noreplace(parent_fd, stage_name, "profile")
+        promoted = True
         os.fsync(parent_fd)
     finally:
-        if stage.exists():
-            for name in (CERT_NAME, KEY_NAME):
-                try:
-                    (stage / name).unlink()
-                except FileNotFoundError:
-                    pass
-            stage.rmdir()
+        if not promoted:
+            if stage_fd is not None:
+                for name in (CERT_NAME, KEY_NAME):
+                    try:
+                        os.unlink(name, dir_fd=stage_fd)
+                    except FileNotFoundError:
+                        pass
+            os.rmdir(stage_name, dir_fd=parent_fd)
+        if stage_fd is not None:
+            os.close(stage_fd)
 
 
 def main() -> None:
