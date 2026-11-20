@@ -23,8 +23,10 @@ class SnapshotHTTPServer:
 
     def __init__(self, *, bind_host: str, port: int, token: str,
                  device_id: str, snapshot_provider: Callable[[], dict | None]):
-        if not bind_host or bind_host == "0.0.0.0" and port != 18275:
+        if bind_host not in ("127.0.0.1", "0.0.0.0"):
             raise ValueError("Invalid private bridge binding")
+        if bind_host == "0.0.0.0" and port != 18275:
+            raise ValueError("Only the fixed internal port may bind on container interfaces")
         if not isinstance(port, int) or not (1024 <= port <= 65535 or (port == 0 and bind_host == "127.0.0.1")):
             raise ValueError("Invalid bridge port")
         self._thread = None
