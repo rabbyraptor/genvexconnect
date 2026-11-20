@@ -7,6 +7,8 @@
 | Document | Role |
 | --- | --- |
 | [Verified facts](remote-nabto-verified-facts.md) | Authoritative observed results and remaining limitations |
+| [Architecture maintenance roadmap](architecture-maintenance-plan.md) | Approved 2A–5C priorities, isolation rules, stage gates and progress |
+| [2B device discovery investigation](remote-device-discovery-2b.md) | Metadata vs known-address RPC45 batch vs unverified capability enumeration |
 | [UI and certificate architecture](remote-ha-ui-onboarding-architecture.md) | No-terminal setup design |
 | [First five HA entities](remote-ha-entity-plan.md) | Read-only sensors and runtime bridge plan |
 | [Resource catalogue](remote-nabto-resources.md) | Vendor documentation, protocol references and relevant GitHub repositories |
@@ -18,6 +20,7 @@
 ## Development code
 
 - [Isolated Home Assistant UI/sensor scaffold (not installed)](../experimental/home_assistant/README.md)
+- [Offline typed Optima 270 capability catalog (2A)](../experimental/genvex_remote/capability_catalog.py) and [synthetic/compatibility tests](../experimental/genvex_remote/test_capability_catalog.py)
 - [Serial read-only RPC 45 polling worker](../experimental/genvex_remote/polling_worker.py)
 - [Single HAOS offline validation script](../scripts/run_haos_remote_dev_tests.sh)
 - [Two-container disposable IPC test](../scripts/run_haos_ipc_two_container_test.sh) (fake sensor values and private test network only)
