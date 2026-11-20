@@ -49,9 +49,10 @@ scripts. If these prerequisites fail, it makes **no** Nabto connection.
 
 The launcher prompts for device ID, identity and key unlock secret via an SSH
 TTY (getpass), constructs a single JSON input line in memory, and supplies it
-to the container via stdin only. The image ID comes from the existing stopped
-`app_local_genvex_nabto_remote` Docker container. If that container was
-removed, the launcher **fails closed**, rather than guessing an image ID.
+to the container via stdin only. The image ID is obtained from the uniquely matching, locally installed Docker
+image tagged `0.1.0-dev2` and revalidated against the ARM64 App/version labels.
+A stopped Supervisor container is optional. If no matching image or multiple
+matching images exist, the launcher **fails closed**.
 
 The disposable container runs `live_once.py` as its entrypoint, with:
 - Read-only root filesystem and read-only profile and script bind mounts.
