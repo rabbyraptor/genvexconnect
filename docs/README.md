@@ -9,6 +9,7 @@
 | [Verified facts](remote-nabto-verified-facts.md) | Authoritative observed results and remaining limitations |
 | [Architecture maintenance roadmap](architecture-maintenance-plan.md) | Approved 2A–5C priorities, isolation rules, stage gates and progress |
 | [2B device discovery investigation](remote-device-discovery-2b.md) | Metadata vs known-address RPC45 batch vs unverified capability enumeration |
+| [Optima 270 Nabto-læsekommandoer (dansk)](optima270-nabto-read-command-reference-da.md) | Komplet kildebaseret tabel: RPC17/42/45, 17 datapunkter, 12 setpunkter, oversættelser og verifikationsstatus |
 | [2A typed sensor catalog](remote-sensor-catalog-2a.md) | Five-source-verified Optima 270 readings, compatibility tests, future type gates |
 | [UI and certificate architecture](remote-ha-ui-onboarding-architecture.md) | No-terminal setup design |
 | [First five HA entities](remote-ha-entity-plan.md) | Read-only sensors and runtime bridge plan |
