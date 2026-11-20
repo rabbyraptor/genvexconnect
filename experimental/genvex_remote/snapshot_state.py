@@ -37,6 +37,10 @@ class SnapshotState:
             self._snapshot = result
             return True
 
+    def invalidate(self) -> None:
+        """Immediately remove any last snapshot (shutdown / offline state)."""
+        self._snapshot = None
+
     def current(self) -> dict[str, Any] | None:
         """Return a detached copy only if it remains complete and fresh."""
         result = self._snapshot
