@@ -62,6 +62,10 @@ New [source-only contract tests](../experimental/genvex_remote/test_worker_api_c
 
 A new standalone [`sdk_snapshot_adapter.py`](../experimental/genvex_remote/sdk_snapshot_adapter.py) has since been staged as a QEMU subprocess adapter to the previously verified one-shot snapshot probe. Its [new tests](../experimental/genvex_remote/test_sdk_snapshot_adapter.py) use mock subprocesses to exercise timeouts, cancellation, strict output validation and compatibility with the existing polling lifecycle. **Those additional tests are not included in the above 84/84 result and are not yet verified on HAOS**. No running App or user profile has been changed.
 
+### HAOS SDK subprocess adapter regression — 2026-11-20
+
+The user ran the first [SDK adapter offline test runner](../scripts/run_haos_sdk_adapter_offline_v1.sh): **92 tests were executed, 90 passed and 2 errored**, specifically `test_real_subprocess_mock_success` and `test_adapter_is_compatible_with_snapshot_state_and_poller`. The adapter had lost its `import json` while `parse_probe_output()` still invoked `json.loads()`; the blanket subprocess error handling masked that missing import as `SDKSnapshotError`. The missing import was restored in [`sdk_snapshot_adapter.py`](../experimental/genvex_remote/sdk_snapshot_adapter.py), a [direct parser regression test](../experimental/genvex_remote/test_sdk_snapshot_adapter.py) was added, and a separate [immutable-source v2 HAOS test runner](../scripts/run_haos_sdk_adapter_offline_v2.sh) was prepared. **This fix has not yet been verified on HAOS.** No real device RPC, profile or enrolled identity was accessed in the failing test.
+
 ## Evidence labels
 
 - **VERIFIED:** observed successfully in our controlled tests, with SDK return values or independent certificate checks.
