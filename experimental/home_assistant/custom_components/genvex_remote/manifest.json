@@ -1,0 +1,11 @@
+{
+  "domain": "genvex_remote",
+  "name": "Genvex Remote (development scaffold)",
+  "version": "0.1.0-dev0",
+  "documentation": "https://github.com/rabbyraptor/genvexconnect/blob/remote-nabto-connection/docs/remote-ha-entity-plan.md",
+  "issue_tracker": "https://github.com/rabbyraptor/genvexconnect/issues",
+  "codeowners": [],
+  "config_flow": true,
+  "iot_class": "cloud_polling",
+  "requirements": []
+}
