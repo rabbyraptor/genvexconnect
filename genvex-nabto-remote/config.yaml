@@ -9,8 +9,6 @@ init: false
 host_network: false
 arch:
   - aarch64
-map:
-  - share:ro
 options:
   device_id: ""
   identity: ""
