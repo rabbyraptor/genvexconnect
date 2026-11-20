@@ -10,6 +10,7 @@
 | [UI and certificate architecture](remote-ha-ui-onboarding-architecture.md) | No-terminal setup design |
 | [First five HA entities](remote-ha-entity-plan.md) | Read-only sensors and runtime bridge plan |
 | [Resource catalogue](remote-nabto-resources.md) | Vendor documentation, protocol references and relevant GitHub repositories |
+| [Runtime IPC security](remote-runtime-ipc-security.md) | Internal App-to-HA authentication, host-network exposure and production bridge design |
 | [Reconstructed read-only RPC 45](reconstructed-readonly-query45-2026-11-19.md) | Proven query structure and tested addresses |
 | [Sensor phase-one validation](remote-phase1-sensor-validation-2026-11-19.md) | Remote single and batched read evidence |
 | [Archived research](archive/README.md) | 17 historical documents, traces, hypotheses and prior investigations |
@@ -18,6 +19,7 @@
 
 - [Isolated Home Assistant UI/sensor scaffold (not installed)](../experimental/home_assistant/README.md)
 - [Serial read-only RPC 45 polling worker](../experimental/genvex_remote/polling_worker.py)
+- [Single HAOS offline validation script](../scripts/run_haos_remote_dev_tests.sh)
 - [Offline Python certificate/enrollment and sensor code](../experimental/genvex_remote/enrollment_service.py)
 - [Automated native HAOS offline test runner](../scripts/run_haos_offline_enrollment_tests.sh)
 - [Isolated HAOS runtime App](../haos-apps/genvex-nabto-runtime-test/DOCS.md)
