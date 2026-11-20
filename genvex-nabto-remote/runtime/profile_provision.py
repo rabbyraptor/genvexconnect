@@ -9,6 +9,8 @@ reviewed method to access the App-private /data volume.
 """
 from __future__ import annotations
 
+import ctypes
+import errno
 import os
 from pathlib import Path
 import stat
@@ -58,6 +60,38 @@ def read_profile(stream) -> tuple[bytes, bytes]:
     return certificate, key
 
 
+_RENAME_NOREPLACE = 1
+
+
+def _rename_noreplace(parent_fd: int, staged: str, target: str) -> None:
+    """Linux-only atomic promotion; never replace even an empty directory.
+
+    Check-before-rename alone is vulnerable to a concurrent target creator.
+    Fail closed if renameat2 is not available, rather than using os.rename.
+    """
+    libc = ctypes.CDLL(None, use_errno=True)
+    try:
+        operation = libc.renameat2
+    except AttributeError as exc:
+        raise ValueError("Atomic no-replace unsupported") from exc
+    operation.argtypes = [
+        ctypes.c_int, ctypes.c_char_p, ctypes.c_int,
+        ctypes.c_char_p, ctypes.c_uint,
+    ]
+    operation.restype = ctypes.c_int
+    if operation(
+        parent_fd, os.fsencode(staged),
+        parent_fd, os.fsencode(target), _RENAME_NOREPLACE,
+    ) == 0:
+        return
+    code = ctypes.get_errno()
+    if code == errno.EEXIST:
+        raise FileExistsError("Private profile already provisioned")
+    if code in (errno.ENOSYS, errno.EINVAL, errno.EOPNOTSUPP):
+        raise ValueError("Atomic no-replace unsupported")
+    raise OSError(code, "Atomic private profile promotion failed")
+
+
 def _write_private(path: Path, content: bytes) -> None:
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL |
                  getattr(os, "O_NOFOLLOW", 0), 0o600)
@@ -85,8 +119,21 @@ def provision(stream, *, data_dir: Path = Path("/data")) -> None:
         stage.chmod(0o700)
         _write_private(stage / CERT_NAME, cert)
         _write_private(stage / KEY_NAME, key)
-        # On the same filesystem, rename stages the pair together.
-        stage.rename(target)
+        # Sync both files and staging directory before atomic no-clobber
+        # publication. A raced target can never be overwritten.
+        stage_fd = os.open(stage, os.O_RDONLY | os.O_DIRECTORY |
+                           getattr(os, "O_NOFOLLOW", 0))
+        try:
+            os.fsync(stage_fd)
+        finally:
+            os.close(stage_fd)
+        parent_fd = os.open(data_dir, os.O_RDONLY | os.O_DIRECTORY |
+                            getattr(os, "O_NOFOLLOW", 0))
+        try:
+            _rename_noreplace(parent_fd, stage.name, "profile")
+            os.fsync(parent_fd)
+        finally:
+            os.close(parent_fd)
     finally:
         if stage.exists():
             for name in (CERT_NAME, KEY_NAME):
