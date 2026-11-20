@@ -46,3 +46,26 @@ verified.** The already-loaded `genvex-nabto-remote:ci` image on HAOS is
 from the earlier build; none of these changes are present in that image.
 Do not install or start the App with real secrets yet. No secure App-private
 profile provisioning or enrollment UX has been implemented.
+
+## Staged one-time offline profile provisioner
+
+Added `genvex-nabto-remote/runtime/profile_provision.py` as a **development-only,
+not-yet-integrated** helper. It accepts two bounded length-prefixed PEM values
+from standard input: a certificate and an **encrypted** private key. It never
+places credentials in command-line arguments, environment variables, GitHub
+artifacts or logs. It rejects pre-existing App-private profiles and writes
+new profile files with owner-only permissions inside `/data/profile`,
+using a temporary staging directory. The working LAN profile is neither read
+nor modified. New source tests use only fake PEM strings and cover length
+limits, invalid envelopes, truncation, trailing data, symlinks, permissions,
+and no-overwrite behavior.
+
+This helper **does not solve enrollment, identity verification, secure delivery
+of the stdin stream to the App-private volume, or Supervisor lifecycle
+integration**. It is deliberately not invoked by the App's default entrypoint.
+Never forward actual keys through GitHub, chat, shell history or `/share`.
+A separate reviewed operator-side procedure and security acceptance tests
+are required before any live provisioning.
+
+The new GitHub Actions offline checks are **not yet confirmed** for these
+latest commits; do not treat their existence as proof of a pass.
