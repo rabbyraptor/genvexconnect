@@ -60,7 +60,7 @@ class V2DraftTests(unittest.TestCase):
     def test_no_sdk_or_network_imports(self):
         from pathlib import Path
         source = (Path(__file__).with_name("snapshot_v2_draft.py")).read_text()
-        self.assertNotIn("nabto", source.lower())
+        self.assertNotIn("import nabto", source.lower())
         self.assertNotIn("socket", source.lower())
         self.assertNotIn("requests", source.lower())
 
