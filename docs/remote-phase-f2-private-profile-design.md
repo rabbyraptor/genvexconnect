@@ -34,9 +34,17 @@ The App bootstrap currently validates `/data/profile/client.crt` and `client-enc
 ## Stop conditions
 Any ambiguous host path, permission mismatch, unexpected App state, existing target, symlink, or potentially exposed secret means stop with no modifications.
 
-## F2.2 synthetic atomic-promotion prototype (pending execution)
+## F2.2 synthetic atomic-promotion prototype (7/7 passed on Steam Deck)
 - `scripts/remote_profile_atomic_prototype.py` generates **only built-in fake PEM fixtures** under an empty, private test directory; it cannot accept a real profile source and has no command-line interface.
 - It stages two files with private permissions, fsyncs them, and promotes the directory; on injected failure it removes staging files.
-- `tests/test_remote_profile_atomic_prototype.py` adds seven synthetic tests for promotion, permissions, injected rollback, nonempty-root refusal, symlink refusal and repeated invocation. **Tests not yet executed.**
+- `tests/test_remote_profile_atomic_prototype.py` adds seven synthetic tests for promotion, permissions, injected rollback, nonempty-root refusal, symlink refusal and repeated invocation. **7/7 tests passed on Steam Deck** (0.002 s).
 - Run on Steam Deck in the existing repository: `git pull --ff-only && python3 -m unittest discover -s tests -p 'test_remote_profile_atomic_prototype.py' -v`.
-- **Not a production importer:** `os.rename` is not a race-proof no-replace operation, source-file race prevention and Supervisor mount verification are still absent, and the prototype does not exercise concurrent processes. Do not use with real credentials or App paths.
+- The original `os.rename` limitation was addressed in F2.3 below. The prototype remains synthetic-only and unfit for real credential migration.
+
+## F2.3 atomic no-clobber and concurrency (2026-11-20)
+- Replaced `os.rename` with Linux `renameat2(RENAME_NOREPLACE)` through ctypes, **without a fallback** that could overwrite an empty destination directory.
+- Staged fake files are private (`0600`), staging directory `0700`, and fsynced before promotion. Injected failures remove staging; success retains a private lock marker to prevent re-use of the same disposable test root.
+- Added tests for destination creation during staging (including empty directory and symlink), two concurrent importer simulations, and rejection when atomic no-replace is unavailable.
+- **12/12 tests passed in an isolated local Linux environment** (0.076 s); **Steam Deck rerun pending**. The 7/7 F2.2 tests were separately reported passed by the user.
+- Run: `python3 -m unittest discover -s tests -p 'test_remote_profile_atomic_prototype.py' -v`.
+- **Not a production importer:** code creates only built-in fake PEM data. No real-profile reading, source-race protection, approved Supervisor mount mapping, or real credential migration is implemented. Path race hardening, crash/power-loss testing and long-running concurrency stress remain outstanding.
