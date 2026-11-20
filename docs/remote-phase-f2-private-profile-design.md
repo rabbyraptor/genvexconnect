@@ -1,6 +1,6 @@
 # Phase F2 — private Nabto Micro profile provisioning design
 
-Status: design only; **not implemented, not tested on HAOS, no live enrollment authorized**.
+Status: **read-only source preflight implemented with offline unit tests; tests not yet executed on HAOS.** No importer, credential migration or live enrollment authorized.
 
 ## Verified baseline (2026-11-20)
 - `local_genvex_nabto_remote` v0.1.0-dev1 installed, manual boot, stopped.
@@ -28,7 +28,7 @@ Safely provision an **already authorized** Nabto Micro client certificate and en
 - CI/offline tests must pass before proposing an operator command. Operator review and separate approval are mandatory before touching any real profile.
 - Only after that gate: design private IPC token provisioning and bounded read-only live RPC45 diagnostics as distinct approvals.
 
-## Known blocker
+## Implementation milestone\n- `scripts/remote_profile_preflight.py` checks a source directory and PEM envelopes without creating or copying files. It rejects symlinks, unsafe modes, oversized/missing/malformed PEM, and existing destinations. It intentionally does not certify the destination mount mapping.\n- `tests/test_remote_profile_preflight.py` contains 13 synthetic-fixture test cases. Test execution and outcomes are **pending**. The atomic importer, race-resistant source pinning and concurrent-import protection are **not implemented**.\n- Run offline from the repository root: `python3 -m unittest discover -s tests -p test_remote_profile_preflight.py -v`. Do not point the preflight at any real profile without separate approval.\n\n## Known blocker
 The App bootstrap currently validates `/data/profile/client.crt` and `client-encrypted.key` but does **not** provide a secure enrollment method. A design document alone does not solve this blocker.
 
 ## Stop conditions
