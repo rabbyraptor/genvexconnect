@@ -87,16 +87,36 @@ class LoopbackHTTPTests(unittest.TestCase):
         self.assertEqual(status, 503)
 
     def test_unknown_routes_and_methods(self):
-        for method, path in (
-            ("GET", "/debug"), ("GET", "/v1/snapshot?token=secret"),
-            ("POST", "/v1/snapshot"), ("PUT", "/v1/snapshot")
+        # http.client automatically adds Content-Length: 0 for POST/PUT,
+        # so the server intentionally returns 400 before route dispatch.
+        for method, path, expected_status in (
+            ("GET", "/debug", 404),
+            ("GET", "/v1/snapshot?token=secret", 404),
+            ("POST", "/v1/snapshot", 400),
+            ("PUT", "/v1/snapshot", 400),
         ):
             with self.subTest(method=method, path=path):
                 status, _, payload = self.request(
                     method=method, path=path, token=self.token
                 )
-                self.assertEqual(status, 404)
+                self.assertEqual(status, expected_status)
                 self.assertNotIn(b"secret", payload)
+
+    def test_unsupported_methods_without_body_headers_return_404(self):
+        for method in ("POST", "PUT"):
+            with self.subTest(method=method):
+                client = HTTPConnection("127.0.0.1", self.port, timeout=3)
+                try:
+                    client.putrequest(method, "/v1/snapshot")
+                    client.putheader("Authorization", "Bearer " + self.token)
+                    client.endheaders()
+                    response = client.getresponse()
+                    self.assertEqual(response.status, 404)
+                    self.assertEqual(
+                        json.loads(response.read(4097)), {"error": "not_found"}
+                    )
+                finally:
+                    client.close()
 
     def test_rejects_request_body_even_if_empty(self):
         status, _, payload = self.request(
