@@ -93,5 +93,37 @@ class ProvisioningTests(unittest.TestCase):
         self.assertEqual(list(self.data.iterdir()), [])
 
 
+    def test_provisioned_profile_passes_app_bootstrap_validation(self):
+        # Exercise the exact handoff between the provisioner and the App.
+        import sys
+        sys.path.insert(0, str(MODULE.parent))
+        import app_bootstrap
+        provisioner.provision(io.BytesIO(bundle()), data_dir=self.data)
+        app_bootstrap.validate_private_profile(self.data / "profile")
+
+    def test_app_rejects_swapped_certificate_and_key(self):
+        import sys
+        sys.path.insert(0, str(MODULE.parent))
+        import app_bootstrap
+        provisioner.provision(io.BytesIO(bundle()), data_dir=self.data)
+        cert = self.data / "profile/client.crt"
+        key = self.data / "profile/client-encrypted.key"
+        cert_bytes, key_bytes = cert.read_bytes(), key.read_bytes()
+        cert.write_bytes(key_bytes)
+        key.write_bytes(cert_bytes)
+        with self.assertRaises(ValueError):
+            app_bootstrap.validate_private_profile(self.data / "profile")
+
+    def test_app_rejects_unencrypted_private_key(self):
+        import sys
+        sys.path.insert(0, str(MODULE.parent))
+        import app_bootstrap
+        provisioner.provision(io.BytesIO(bundle()), data_dir=self.data)
+        key = self.data / "profile/client-encrypted.key"
+        key.write_bytes(b"-----BEGIN PRIVATE KEY-----\\nFAKE\\n-----END PRIVATE KEY-----\\n")
+        with self.assertRaises(ValueError):
+            app_bootstrap.validate_private_profile(self.data / "profile")
+
+
 if __name__ == "__main__":
     unittest.main()
