@@ -379,3 +379,9 @@ bash scripts/run_optima270_seven_snapshot_v2_from_deck.sh --execute-live
 ```
 
 Den ikke-installerede Home Assistant-prototype har desuden fået [`snapshot_v2_draft.py`](../experimental/home_assistant/custom_components/genvex_remote/snapshot_v2_draft.py) og [tilhørende offline-tests](../experimental/home_assistant/tests/test_snapshot_v2_draft.py). V2-parseren tjekker korrekt device-ID, friske komplette fem basismålinger og et enten tomt eller komplet procentpar; installerede Home Assistant-entities, coordinator, runtime-klient og v1-parser er uændrede. **End-to-end live kommunikation og deployment af v2 er ikke dokumenteret.**
+
+## Home Assistant-side v2 HTTP transport prototype (2026-11-20)
+
+Der er nu også en **ikke-installeret** HA-klientprototype [`runtime_client_v2_draft.py`](../experimental/home_assistant/custom_components/genvex_remote/runtime_client_v2_draft.py) med [syntetiske transporttests](../experimental/home_assistant/tests/test_runtime_client_v2_draft.py). Klienten accepterer kun den fastlåste Supervisor-interne URL `http://local-genvex-nabto-remote:18275/v2/snapshot`, kræver gyldigt privat IPC bearer-token, afviser redirects, sætter 8-sekunders timeout, læser højest 4096 bytes og validerer mod den [separate strenge v2-parser](../experimental/home_assistant/custom_components/genvex_remote/snapshot_v2_draft.py). Forkerte enheder, ufriske timestamps, manglende obligatoriske målinger, ugyldigt fanpar eller uventede felter afvises uden at udskrive svarets råindhold eller token.
+
+Denne kode er **ikke** aktiv i `__init__.py`, `coordinator.py`, `sensor.py`, HAOS App eller nogen faktisk installeret integration. Den rigtige App leverer kun v1, og testserverens v2-provider er syntetisk. En succesfuld offline-test bekræfter **ikke** en fungerende live v2 integration. Alle ekstra funktioner er indtil videre bevidst isolerede.
