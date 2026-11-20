@@ -59,6 +59,12 @@ Recommended architecture:
 3. A *separate* `genvex_remote` HA integration, with config flow for the 12-digit device ID, async DataUpdateCoordinator reading the worker snapshot, five sensor entities with stable unique IDs, temperature/humidity device classes, measurement state classes and units. On stale/failed reads, mark all five **unavailable** instead of retaining misleading 'live' values.
 4. Isolation: do **not** modify `custom_components/genvex_connect` or its `genvexnabto==1.5.4` dependency, and do not expose climate/switch/number/write controls in v1.
 
+## Authenticated runtime IPC decision
+
+Review [`remote-runtime-ipc-security.md`](remote-runtime-ipc-security.md) before selecting the transport. The existing v0.5.0 App uses `host_network: true` for legacy LAN discovery; **do not** add an unauthenticated HTTP or enrollment endpoint to it. A separate runtime App on the internal Supervisor network may be preferable, but the remote Nabto path must be verified there. No shared secret/authorization mechanism is implemented yet. See [Home Assistant's App communication guidance](https://contributors.home-assistant.io/apps/guides/communication/) and [2026 host-network security advisory](https://github.com/home-assistant/core/security/advisories/GHSA-gh5m-4m97-c95h).
+
+The [combined native HAOS offline test runner](../scripts/run_haos_remote_dev_tests.sh) exercises the original enrollment/sensor tests, new serialized worker, isolated HA parser and compiles the entire HA scaffold. **Its result has not yet been reported from HAOS.**
+
 ## Engineering gates before installation
 
 - Verify transport bridge in isolation: permissions, schema, heartbeat, malformed payload, stale timestamp, worker crash/restart, QEMU hard timeout and credential cleanup.
