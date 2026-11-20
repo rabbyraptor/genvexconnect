@@ -22,14 +22,16 @@ if ! command -v ha >/dev/null 2>&1; then
   echo "BLOCKED: Supervisor CLI unavailable"
   exit 1
 fi
-INFO=$(ha apps info local_genvex_nabto_remote </dev/null 2>/dev/null) || {
+# Filter in a pipeline: retain only three allowlisted top-level fields.
+# Do not capture the full Supervisor response in a shell variable.
+META=$(ha apps info local_genvex_nabto_remote </dev/null 2>/dev/null |
+  sed -n '/^state: /p; /^boot: /p; /^version: /p') || {
   echo "BLOCKED: Supervisor App info unavailable"
   exit 1
 }
-# Exact top-level scalar fields only; nested 'name:' under options is ignored.
-STATE=$(printf '%s\n' "$INFO" | sed -n 's/^state: *//p' | head -n 1)
-BOOT=$(printf '%s\n' "$INFO" | sed -n 's/^boot: *//p' | head -n 1)
-VERSION=$(printf '%s\n' "$INFO" | sed -n 's/^version: *//p' | head -n 1)
+STATE=$(printf '%s\n' "$META" | sed -n 's/^state: *//p' | head -n 1)
+BOOT=$(printf '%s\n' "$META" | sed -n 's/^boot: *//p' | head -n 1)
+VERSION=$(printf '%s\n' "$META" | sed -n 's/^version: *//p' | head -n 1)
 case "$STATE" in
   stopped) echo "PASS: Supervisor App stopped" ;;
   started) echo "BLOCKED: remote App is still running; stop it manually before proceeding"; exit 1 ;;
