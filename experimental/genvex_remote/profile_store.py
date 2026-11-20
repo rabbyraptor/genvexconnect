@@ -88,7 +88,9 @@ class PrivateProfileStore:
         """
         if (not isinstance(identity, str) or not identity.isascii()
                 or not re.fullmatch(r"[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9.-]+", identity)
-                or ".." in identity or "/" in identity or len(identity) > 254):
+                or ".." in identity or "/" in identity or len(identity) > 254
+                or any(not part or part.startswith("-") or part.endswith("-")
+                       for part in identity.rsplit("@", 1)[1].split("."))):
             raise StoreError("Invalid identity")
         self._prepare_root()
         versions = self.root / "versions"
