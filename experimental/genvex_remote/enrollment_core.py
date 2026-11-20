@@ -1,7 +1,8 @@
 """Offline-only legacy certificate enrollment primitives. No HTTP or filesystem writes.
 
-Legacy RSA-1024 is obsolete. The generated encrypted PKCS8 format has NOT been
-verified with Nabto SDK 4.9.11: never install into a live profile automatically.
+Legacy RSA-1024 is obsolete. Candidate key uses the exact OpenSSL PKCS8/PBES2
+parameters proven for an older working test profile; the newly generated key
+has NOT yet been exercised against Nabto SDK 4.9.11: do not auto-install.
 """
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -12,6 +13,8 @@ from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
+
+from sdk_compat import encrypt_legacy_pkcs8
 
 _CERT_PATTERN = re.compile(
     rb"-----BEGIN CERTIFICATE-----\s+.+?\s+-----END CERTIFICATE-----", re.DOTALL
@@ -44,7 +47,7 @@ def normalize_email(email: str) -> str:
 
 
 def generate_candidate(email: str, key_passphrase: bytes) -> EnrollmentMaterial:
-    """Generate candidate RSA-1024 identity and encrypted PKCS8, offline only."""
+    """Generate RSA-1024 CSR and legacy-compatible encrypted PKCS8 candidate."""
     email = normalize_email(email)
     if not isinstance(key_passphrase, bytes) or len(key_passphrase) < 16:
         raise EnrollmentError("A sufficiently long unlock secret is required")
@@ -56,11 +59,7 @@ def generate_candidate(email: str, key_passphrase: bytes) -> EnrollmentMaterial:
     )
     return EnrollmentMaterial(
         csr_pem=csr.public_bytes(serialization.Encoding.PEM),
-        key_pem_encrypted=key.private_bytes(
-            serialization.Encoding.PEM,
-            serialization.PrivateFormat.PKCS8,
-            serialization.BestAvailableEncryption(key_passphrase),
-        ),
+        key_pem_encrypted=encrypt_legacy_pkcs8(key, key_passphrase),
         private_key=key,
     )
 
