@@ -68,5 +68,26 @@ class ReadOnlyAuditTests(unittest.TestCase):
         self.assertNotIn("urllib.request", contents)
 
 
+    def test_future_core_to_app_diagnostic_acceptance_is_read_only(self):
+        script = ROOT / "scripts/verify_haos_remote_diagnostic_readonly.sh"
+        result = subprocess.run(["sh", "-n", str(script)], capture_output=True)
+        self.assertEqual(result.returncode, 0, result.stderr.decode())
+        contents = script.read_text()
+        self.assertIn("local-genvex-nabto-remote", contents)
+        self.assertIn("app_local_genvex_nabto_remote", contents)
+        self.assertIn("docker exec -i homeassistant python3 -B -", contents)
+        self.assertIn('check("/v1/diagnostic", 200)', contents)
+        self.assertIn('check("/v1/snapshot", 404)', contents)
+        self.assertIn("NOT_REAL_SENSOR_DATA", contents)
+        self.assertIn('"synthetic"', contents)
+        self.assertNotRegex(
+            contents,
+            r"\\bdocker\\s+(?:run|start|stop|rm|load|build|create|cp|pull|push|network\\s+create)\\b"
+        )
+        self.assertNotIn("Bearer ", contents)
+        self.assertNotIn("urllib.request", contents)
+
+
+
 if __name__ == "__main__":
     unittest.main()
