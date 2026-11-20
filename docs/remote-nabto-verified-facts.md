@@ -94,6 +94,14 @@ The user ran the pinned `run_haos_remote_install_preflight_v2.sh` on HAOS: **102
 
 The [2B test matrix](remote-optima270-rpc45-expansion-testmatrix.md) records the redacted result and the source links. The isolated one-candidate script and tests now classify this event without copying raw response contents; no installed App or working LAN component was changed. Before any further live probe, separately confirm the operator-entered 12-digit device ID is the previously working remote hostname, and check gateway remote connectivity independently. Never publish the ID, email or key passphrase.
 
+### 2B – Remote RPC45 read of Optima 270 address 24 succeeded (2026-11-20)
+
+**VERIFIED from user-provided Steam Deck output:** After an independent manual comparison of the 12-digit device ID with the previously working full Nabto hostname, exactly one authorized read-only **RPC45** request `(obj=0,address=24,trailer=1)` succeeded: `RPC status=0`, **raw signed int16 value 0**, **312 ms** observed RPC duration; session close and SDK shutdown both returned **0**. The candidate is source-named `frost_protection_temp`.
+
+**CRITICAL LIMITATION:** Public Optima270 source scaling `(raw-300)/10` produces **−30.0 °C**, but the measured raw zero has no independently verified physical meaning. Do not interpret it as a true temperature or promote it into the verified active five-sensor HA catalog, planning or snapshot contract. Treat **transport/readability as verified**, **sensor semantics, hardware presence and physical validity as OPEN**. Possible zero-as-missing or a variant-specific value are hypotheses, not proven facts. No actual device ID, full hostname, account identity, private key or passphrase is recorded.
+
+The previous failure `status=26,event=1000015` remains an observed gateway lookup failure. The successful host-matching run resolves the immediate blocker but does not prove the earlier root cause; an earlier mistyped ID or transient gateway availability could both be consistent with the outputs. See the [full 2B matrix](remote-optima270-rpc45-expansion-testmatrix.md).
+
 ## Evidence labels
 
 - **VERIFIED:** observed successfully in our controlled tests, with SDK return values or independent certificate checks.
