@@ -2,7 +2,7 @@
 
 **Purpose:** single index of relevant official documentation, upstream repositories, independent implementations, verified entry points, runtime/deployment documentation and our own project evidence. **Last consolidated: 2026-11-20.**
 
-Read [verified facts](remote-nabto-verified-facts.md) for what we actually proved, [investigation journal](remote-nabto-investigation.md) for chronological research, and [architecture/UI decision](remote-ha-ui-onboarding-architecture.md) for the planned product. Links below identify resources referenced and investigated in project notes; they **do not** imply current maintenance, compatibility, permission to redistribute binaries or that every code path was executed by us.
+Read [verified facts](remote-nabto-verified-facts.md) for what we actually proved, [investigation journal](archive/remote-nabto-investigation.md) for chronological research, and [architecture/UI decision](remote-ha-ui-onboarding-architecture.md) for the planned product. Links below identify resources referenced and investigated in project notes; they **do not** imply current maintenance, compatibility, permission to redistribute binaries or that every code path was executed by us.
 
 Legend: **VERIFIED** = behavior demonstrated in our controlled tests; **SOURCE** = relevant upstream source or documented API; **REFERENCE** = context, not necessarily applicable to Optima 270; **OPEN** = compatibility, legal or behavioral question not resolved.
 
@@ -79,14 +79,14 @@ Legend: **VERIFIED** = behavior demonstrated in our controlled tests; **SOURCE**
 - [LS SmartConnect Center](https://lscontrol.dk/products/ls-smartconnect-center/)
 - [Nabto Edge embedded SDK](https://github.com/nabto/nabto-embedded-sdk)
 
-The newer Smart Connect Center and Nabto Edge resources are **not** evidence that the older Optima 270/Micro gateway supports their interfaces. See [research notes](smartconnect-center-integration-research.md).
+The newer Smart Connect Center and Nabto Edge resources are **not** evidence that the older Optima 270/Micro gateway supports their interfaces. See [research notes](archive/smartconnect-center-integration-research.md).
 
 ## 6. Project-owned implementation / evidence
 
 | Resource | Status |
 | --- | --- |
 | [Working facts](remote-nabto-verified-facts.md) | Canonical verified evidence, now including HAOS remote RPC 45 |
-| [Research journal](remote-nabto-investigation.md) | Historical investigation with more links and discarded hypotheses |
+| [Research journal](archive/remote-nabto-investigation.md) | Historical investigation with more links and discarded hypotheses |
 | [RPC 45 reconstruction](reconstructed-readonly-query45-2026-11-19.md) | Source-grounded candidate interface and safe read-only investigation |
 | [Five-sensor validation](remote-phase1-sensor-validation-2026-11-19.md) | Remote singles and one-shot batch evidence |
 | [HAOS test runtime](../haos-apps/genvex-nabto-runtime-test/DOCS.md) | Verified container, QEMU, x86_64 Python and SDK behavior |

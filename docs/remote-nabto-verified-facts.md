@@ -13,6 +13,10 @@ This file is the **single source of truth for the current project state**. The o
 
 **ENTITY PREPARATION:** isolated transport-agnostic five-sensor model and offline unit tests staged under [`experimental/genvex_remote/`](../experimental/genvex_remote/), with [separate Home Assistant entity implementation plan](remote-ha-entity-plan.md). No Home Assistant remote integration installed, no worker/bridge available, no production polling credentials provisioned. Existing LAN component untouched.
 
+### Native Python offline validation on HAOS — 2026-11-20
+
+**VERIFIED:** The user's running isolated HAOS v0.5.0 App (ARM64, Python cryptography 47.0.0) ran the full `experimental/genvex_remote` fake-provider suite: **51 tests in 6.308 seconds, all OK**. Tested encrypted candidate key and CSR handling, fake legacy CA trust, fake HTTP registration, atomic private profile store, sensor model and stale/wrong-device snapshot rejection. Test artifacts lived in a temporary location. **No real CA registration, new authenticated Nabto session or live integration is proven by this run.**
+
 ## Evidence labels
 
 - **VERIFIED:** observed successfully in our controlled tests, with SDK return values or independent certificate checks.
@@ -201,10 +205,10 @@ Log ended `Read-only batch decoded: 5/5`, `Result: BATCH_DECODED`, session close
 
 ## Historical evidence and upstream sources
 
-- [Investigation log](remote-nabto-investigation.md) — earlier hypotheses/captures; some old statements are superseded by this manifest.
-- [RPC research](remote-nabto-rpc-findings.md) — historical RPC research, not a verified production Optima 270 query list.
-- [SDK / identity research](nabto4-client-sdk-availability-and-identity-2026-11-19.md) — public distribution and CA model; older statements about portal/profile being unknown have now been resolved experimentally.
-- [LS Control test app source analysis](lsc-nabto-test-app-analysis.md) — source definition of `ping.json` and its **local** demo. Our own later remote test independently proves the remote case.
+- [Investigation log](archive/remote-nabto-investigation.md) — earlier hypotheses/captures; some old statements are superseded by this manifest.
+- [RPC research](archive/remote-nabto-rpc-findings.md) — historical RPC research, not a verified production Optima 270 query list.
+- [SDK / identity research](archive/nabto4-client-sdk-availability-and-identity-2026-11-19.md) — public distribution and CA model; older statements about portal/profile being unknown have now been resolved experimentally.
+- [LS Control test app source analysis](archive/lsc-nabto-test-app-analysis.md) — source definition of `ping.json` and its **local** demo. Our own later remote test independently proves the remote case.
 - [HAOS test app notes](../haos-apps/genvex-nabto-runtime-test/DOCS.md) — isolated QEMU runtime design; not a production remote transport.
 - Upstream LS Control query: https://github.com/nabto/cordova-lsc-test/blob/master/www/js/index.js
 - Upstream Nabto CLI: https://github.com/nabto/nabto-cli/blob/master/src/nabto_cli.cpp
