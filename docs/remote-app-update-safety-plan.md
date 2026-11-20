@@ -303,3 +303,13 @@ changes to the working LAN integration are involved.
 Official reference: https://contributors.home-assistant.io/apps/supervisor-api/store/
 documents POST `/store/reload` for refreshing local App source changes.
 **App installation/update/backup remains a separate, unapproved operation.**
+
+## Operator-verified Supervisor dev2 update offer and CLI capability gate
+
+**OPERATOR-VERIFIED (2026-11-20):** The approved, single Supervisor App store reload completed successfully and independently verified the installed Genvex Remote App remains **stopped/manual/0.1.0-dev1**. The Supervisor catalog now reports `version_latest=0.1.0-dev2` and `update_available=true`. The pinned dev2 source and original dev1 source backup remained unchanged. No App update, image build, start or private profile access took place.
+
+**Next stage (read-only, no upgrade approval):** `scripts/audit_haos_dev2_update_cli_capabilities_v1.sh` checks those exact installed/catalog fields and nonrunning container. It invokes only `ha apps update --help` to identify whether the local HAOS CLI exposes a backup option, reporting flags but never printing untrusted CLI help verbatim. Do not assume `ha apps update` creates a backup by default: official Supervisor API docs say that `POST /store/addons/<app>/update` accepts an explicit `backup: true` field and defaults to `false`. An update must also be reviewed for whether it restarts a previously stopped App; do not assume stopped state persists after update.
+
+Source: https://contributors.home-assistant.io/apps/supervisor-api/store/
+
+No App update or backup has yet been authorized or executed. Confirm CLI capabilities and prepare a fail-closed backup/rollback-aware update procedure for separate operator approval.
