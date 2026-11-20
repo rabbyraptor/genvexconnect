@@ -21,6 +21,19 @@ This file is the **single source of truth for the current project state**. The o
 
 **VERIFIED from user-supplied terminal output** running [`scripts/run_haos_remote_dev_tests.sh`](../scripts/run_haos_remote_dev_tests.sh) in the isolated HAOS v0.5.0 test App: **57/57** certificate/profile/fake-HTTP/sensor/snapshot/serialized-polling tests passed in **7.754 seconds**; **9/9** isolated Home Assistant snapshot/parser/fail-closed-reader tests passed in **0.132 seconds**; additionally, `python3 -m compileall` passed for the new Home Assistant integration scaffold. Total **66/66** offline tests. The polling tests include no-overlap behavior, timeout/recovery, five known addresses and error redaction. The scaffold still **has not been imported/executed under real Home Assistant Core**, and the tests use synthetic readings/fake CA, not remote telemetry or actual enrollment. The existing LAN component and HAOS profile were not modified.
 
+### Authenticated remote RPC45 over Docker bridge — VERIFIED 2026-11-20
+
+**VERIFIED on the user's Raspberry Pi HAOS aarch64** with the existing Nabto runtime image run in a disposable container using `--network bridge`, `--read-only`, tmpfs, capabilities dropped and no published ports. The protected pre-existing encrypted client certificate/key was copied into the **temporary container only**; the user supplied the key-unlock passphrase through hidden terminal input. A remote Nabto 4 SDK 4.9.11/QEMU session opened successfully without Docker `host_network`:
+
+- Bridge DNS lookup: PASS.
+- SDK startup/resources/profile session/candidate XML registration: **all status 0**.
+- One authenticated read-only **RPC 45** five-address batch: **status 0**, RPC **1,212 ms**.
+- Parsed all five signed datapoint values: address 20 **367 → 6.70°C**, 21 **299 → −0.10°C**, 22 **315 → 1.50°C**, 23 **377 → 7.70°C**, 26 **65 → 65%**.
+- Session close and SDK shutdown: **0**; the temporary container was removed.
+- No new certificate was issued, no write RPC was sent, existing HAOS runtime App and LAN integration unchanged.
+
+**Conclusion:** authenticated remote RPC 45 **does not require host networking** in this tested Docker bridge configuration. This is not proof that the future Supervisor-managed App-to-Core internal HTTP connection, authorization, startup persistence, resilience or long-running polling work; those remain implementation/test gates.
+
 ## Evidence labels
 
 - **VERIFIED:** observed successfully in our controlled tests, with SDK return values or independent certificate checks.
