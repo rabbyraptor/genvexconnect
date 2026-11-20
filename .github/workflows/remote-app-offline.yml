@@ -53,7 +53,9 @@ jobs:
           import yaml
           config = yaml.safe_load(Path("genvex-nabto-remote/config.yaml").read_text())
           assert config["slug"] == "genvex_nabto_remote"
-          assert config["boot"] == "manual"
+          assert config["boot"] == "manual_only"
+          assert config["stage"] == "experimental"
+          assert config["tmpfs"] is True
           assert config["host_network"] is False
           assert config["arch"] == ["aarch64"]
           assert not config.get("map")
