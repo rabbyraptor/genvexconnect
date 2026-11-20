@@ -134,3 +134,32 @@ bash scripts/run_optima270_one_read_from_deck.sh --execute-live
 ```
 
 Behold kun redigeret terminaloutput uden e-mail, device-ID eller nøgleadgangskode i eventuelle supporttråde. De nye [Python CLI-sikkerhedstests](../experimental/genvex_remote/test_single_candidate_cli.py) og [Bash-wrapper-tests](../experimental/genvex_remote/test_deck_runner_preflight.py) udføres offline i projektets eksisterende GitHub-testworkflow.
+
+
+## Første live-forsøg: Nabto gateway-opslag fejlede (2026-11-20)
+
+Brugerens Steam Deck-output fra den særskilt godkendte **ene read-only RPC45-forespørgsel** viser:
+
+```text
+PASS: existing test profile and SDK files are present
+PASS: encrypted-key input received; preparing SDK
+===== ONE SOURCE-DEFINED RPC45 READ ONLY =====
+Candidate key: frost_protection_temp address: 24
+RPC status: 26 events: (1000015,)
+Session close status: 0
+SDK shutdown status: 0
+FAIL: single-candidate probe returned status 1; no automatic retry.
+```
+
+**Kildedokumenteret fejltolkning:**
+- `26` betyder `NABTO_FAILED_WITH_JSON_MESSAGE`, altså et SDK-statusresultat med detaljer i JSON. [Officielt C API header](https://github.com/nabto/nabto4-python-wrapper/blob/master/extension/linux64/include/nabto_client_api.h).
+- `1000015` betyder `MICROSERVER_NOT_KNOWN`. [Officielle Nabto Micro eventkonstanter](https://github.com/nabto/cordova-plugin-nabto/blob/master/www/nabto-constants.js), [Nabto legacy klientmanual TEN025, appendix 7](https://downloads.nabto.com/assets/docs/TEN025%20Writing%20a%20Nabto%20API%20client%20application.pdf). Det er en **gateway-opslags-/tilgængelighedsfejl**, ikke en verificeret afvisning af **adresse 24**.
+- `nabtoOpenSession` lykkedes implicit (ellers havde scriptet afsluttet med `SDK authenticated session failed`), men beviser ikke, at den eksterne gateway var fundet/online. `nabtoRpcInvoke` returnerede fejl, uden brugbar rå sensorværdi; det vides **ikke**, om RPC45 nåede controlleren.
+- Nabto-session og SDK lukkede begge med status `0`. Ingen indstillinger blev ændret. Ingen automatisk gentagelse blev sendt.
+- **Adresse 24 forbliver `source_only_unverified`.** De fem tidligere verificerede sensorværdier forbliver verificerede fra tidligere særskilte vellykkede runs. Dette er ikke en generel tilbagekaldelse af RPC45's virkemåde.
+
+**Næste sikre diagnose (ingen nye RPC'er):** Operatøren bør lokalt kontrollere, at de indtastede 12 cifre svarer til det **tidligere fungerende remote Nabto-hostnavn/device-id** fra de vellykkede Steam Deck/HAOS-tests, og om Genvex Connect-appen kan nå gatewayen via en **ekstern forbindelse**. Indtastede ID'er, konto/e-mail, fuld fejl-JSON og nøgleadgangskoder må ikke kopieres til GitHub/logs/chat.
+
+Hvis gatewayen fortsat ikke findes, stop uden flere adresseforsøg og undersøg autoriseret enhedsidentitet, online-status, remote-registrering og netværk. En **eventuel** ny enkeltstående RPC17/45-kontrol mod det korrekte kendte hostnavn skal være særskilt valgt/godkendt; ingen automatisk retry, registerscan eller batch på 17 adresser.
+
+**Efterfølgende kodeforbedring:** [Testscriptet](../scripts/probe_optima270_single_source_candidate.py) klassificerer nu `(status=26,event=1000015)` som `GATEWAY_NOT_KNOWN_OR_UNAVAILABLE` uden at udskrive rå JSON. [Regressionstests](../experimental/genvex_remote/test_single_candidate_cli.py) dækker forskellen på gatewayfejl og manglende klient-XML-query. Kodeændringen foretager ingen netværkskald.
