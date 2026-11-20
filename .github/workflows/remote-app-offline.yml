@@ -33,7 +33,7 @@ jobs:
         run: |
           for src in genvex-nabto-remote/runtime/*.py; do
             file=$(basename "$src")
-            if [ "$file" != app_bootstrap.py ] && [ "$file" != profile_provision.py ] && [ "$file" != offline_ipc_network_smoke.py ]; then
+            if [ "$file" != app_bootstrap.py ] && [ "$file" != profile_provision.py ] && [ "$file" != offline_ipc_network_smoke.py ] && [ "$file" != diagnostic_http_server.py ]; then
               cmp "$src" "experimental/genvex_remote/$file"
             fi
           done
@@ -60,6 +60,8 @@ jobs:
           assert not config.get("ports")
           assert config["schema"]["unlock_secret"] == "password"
           assert config["schema"]["ipc_token"] == "password"
+          assert config["options"]["diagnostic_only"] is False
+          assert config["schema"]["diagnostic_only"] == "bool"
           PY
       - name: Package experimental HA integration (not a production release)
         run: |
