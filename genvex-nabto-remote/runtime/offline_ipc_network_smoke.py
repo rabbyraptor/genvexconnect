@@ -47,13 +47,13 @@ def serve(*, available: bool) -> None:
         service.stop()
 
 
-def request(host: str, *, token: str | None):
+def request(host: str, *, token: str | None, path: str = "/v1/snapshot"):
     connection = HTTPConnection(host, PORT, timeout=4)
     try:
         headers = {"Accept": "application/json"}
         if token is not None:
             headers["Authorization"] = "Bearer " + token
-        connection.request("GET", "/v1/snapshot", headers=headers)
+        connection.request("GET", path, headers=headers)
         response = connection.getresponse()
         data = response.read(4097)
         if len(data) > 4096:
@@ -81,8 +81,26 @@ def check(host: str, expected: str) -> None:
     print("PASS: isolated container IPC " + expected, flush=True)
 
 
+def check_diagnostic(host: str) -> None:
+    status, body = request(host, token=None, path="/v1/diagnostic")
+    assert status == 200 and body["mode"] == "DIAGNOSTIC_ONLY"
+    assert body["synthetic"] is True
+    assert body["notice"] == "NOT_REAL_SENSOR_DATA"
+    assert body["values"]["humidity"] == 50.0
+    for forbidden in ("device_id", "timestamp_utc", "schema_version", "health"):
+        assert forbidden not in body
+
+    # A normal HA integration must never see synthetic test measurements.
+    for token in (None, TOKEN):
+        status, body = request(host, token=token, path="/v1/snapshot")
+        assert status == 404 and body == {"error": "not_found"}
+    print("PASS: actual App bootstrap diagnostic-only, no production snapshot", flush=True)
+
+
 if __name__ == "__main__":
-    if len(sys.argv) == 3 and sys.argv[1] == "serve":
+    if len(sys.argv) == 3 and sys.argv[1] == "check-diagnostic":
+        check_diagnostic(sys.argv[2])
+    elif len(sys.argv) == 3 and sys.argv[1] == "serve":
         if sys.argv[2] not in ("available", "unavailable"):
             raise SystemExit(2)
         serve(available=sys.argv[2] == "available")
