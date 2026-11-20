@@ -26,7 +26,7 @@ Staged, but not yet verified on HAOS:
 ## Offline acceptance check
 
 On the HAOS host, the following script runs the complete backend test suite
-and compiles the HA integration without installing or restarting anything:
+runs the HA snapshot/transport tests, and compiles the HA integration without installing or restarting anything:
 
 ```sh
 (
@@ -35,7 +35,7 @@ and compiles the HA integration without installing or restarting anything:
   runner=$(mktemp /tmp/genvex-preflight.XXXXXX)
   trap 'rm -f "$runner"' EXIT
   curl -fsSL \
-    'https://raw.githubusercontent.com/rabbyraptor/genvexconnect/remote-nabto-connection/scripts/run_haos_remote_install_preflight_v2.sh' \
+    'https://raw.githubusercontent.com/rabbyraptor/genvexconnect/remote-nabto-connection/scripts/run_haos_remote_install_preflight_v5.sh' \
     -o "$runner"
   sh "$runner"
 )
@@ -74,3 +74,7 @@ Home Assistant Core: genvex_remote (five read-only sensors)
 
 The HA integration is **not** a translation layer for the iPhone app.
 It uses its own SDK-backed Nabto client in a separate runtime.
+
+## Preflight failure fixed 2026-11-20
+
+The first HAOS runtime preflight executed **102 backend tests, 101 passing and one error**. The single error was `test_post_and_other_path_not_exposed`: a POST with `Content-Length: 0` correctly hit the body-rejection path, but `BaseHTTPRequestHandler.send_error()` emitted HTML while the client test required JSON. The HTTP server now responds with a fixed JSON `400 {"error":"bad_request"}`, adds a `nosniff` header, and rejects binding to arbitrary interfaces. Regression tests cover the rejected POST and listener binding. The HA transport test doubles were also updated to the new bounded `response.content.read(4097)` API and `allow_redirects=False` behavior. The **v5 preflight is prepared but not yet confirmed passing on HAOS**. It runs both backend and HA tests (unlike v2), and checks source syntax and manifest JSON. No real SDK session or credentials are accessed.
