@@ -7,7 +7,7 @@ adapter, and must explicitly call start/stop. No attempt to replace v1 runtime.
 """
 from __future__ import annotations
 
-from ipc_auth import authorize_read
+from ipc_auth import IPCAuthError, authorize_read
 from polling_service import PollingService
 from sensor_model import remote_hostname
 from v2_polling_state import V2SnapshotState
@@ -23,7 +23,10 @@ class ExperimentalV2Runtime:
         if (getattr(adapter, "device_id", None) != device_id
                 or not callable(getattr(adapter, "poll_once", None))):
             raise ValueError("V2 adapter must match device and support polling")
-        authorize_read(token, token)
+        try:
+            authorize_read(token, token)
+        except IPCAuthError:
+            raise ValueError("Invalid internal IPC token") from None
         if type(port) is not int or (port != 0 and not 1024 <= port <= 65535):
             raise ValueError("Invalid loopback test port")
         self.state = V2SnapshotState(adapter)
