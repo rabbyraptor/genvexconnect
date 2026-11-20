@@ -4,7 +4,9 @@ slug: "genvex_nabto_remote"
 description: "Isolated read-only Nabto 4/Micro RPC45 runtime; separate from working LAN integration."
 url: "https://github.com/rabbyraptor/genvexconnect/blob/remote-nabto-connection/docs/remote-install-readiness.md"
 startup: application
-boot: manual
+boot: manual_only
+stage: experimental
+tmpfs: true
 init: false
 host_network: false
 arch:
