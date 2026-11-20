@@ -50,6 +50,30 @@ def parse_probe_output(output: bytes, *, device_id: str) -> dict:
         raise SDKSnapshotError("No valid SDK snapshot") from None
 
 
+_MAX_PROBE_OUTPUT_BYTES = 32768
+
+
+async def _read_probe_output_bounded(proc: asyncio.subprocess.Process, payload: bytes) -> bytes:
+    """Stream stdout with a hard cap, before allocating the complete result."""
+    if proc.stdin is None or proc.stdout is None:
+        raise SDKSnapshotError("SDK pipe unavailable")
+    proc.stdin.write(payload)
+    await proc.stdin.drain()
+    proc.stdin.close()
+    await proc.stdin.wait_closed()
+
+    output = bytearray()
+    while True:
+        part = await proc.stdout.read(min(4096, _MAX_PROBE_OUTPUT_BYTES + 1 - len(output)))
+        if not part:
+            break
+        output.extend(part)
+        if len(output) > _MAX_PROBE_OUTPUT_BYTES:
+            raise SDKSnapshotError("SDK output too large")
+    await proc.wait()
+    return bytes(output)
+
+
 class SDKSnapshotAdapter:
     """Async single-flight subprocess adapter for the *existing* test probe.
 
@@ -104,7 +128,8 @@ class SDKSnapshotAdapter:
                 )
                 # No secret in process argv, shell, environment or returned errors.
                 async with asyncio.timeout(self._timeout):
-                    out, _ = await proc.communicate(
+                    out = await _read_probe_output_bounded(
+                        proc,
                         (self._identity + "\n" + self.hostname + "\n"
                          + self._unlock_secret + "\n").encode("utf-8")
                     )
@@ -118,4 +143,9 @@ class SDKSnapshotAdapter:
             finally:
                 if proc is not None and proc.returncode is None:
                     proc.kill()
+                    # Drain/discard the bounded pipe after killing the child:
+                    # waiting alone may hang if stdout backpressure is active.
+                    if proc.stdout is not None:
+                        while await proc.stdout.read(8192):
+                            pass
                     await proc.wait()
