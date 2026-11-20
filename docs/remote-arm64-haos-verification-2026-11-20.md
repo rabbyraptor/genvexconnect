@@ -161,3 +161,40 @@ the script against a disposable fake Docker executable. This is a
 precautionary source check; it is not proof that the production host's
 networks meet isolation requirements. The operator must review the
 script before executing it on HAOS, and share only the sanitized output.
+
+## Observed HAOS host and next Core DNS gate (user read-only audit)
+
+Actual HAOS Docker audit returned: Docker 29.8.2; `/mnt/data/docker`;
+`homeassistant` is running with `NetworkMode=host` and no
+published port bindings; `hassio_supervisor` is running on `bridge`
+and `hassio`; the earlier `app_local_genvex_nabto_runtime_test`
+is running on `host`, while the new
+`app_local_genvex_nabto_remote` is **not installed**.
+The `hassio` bridge is `Internal=false` and `Attachable=false`.
+The previous `genvex-nabto-remote:ci` ARM64 image remains imported.
+
+The `hassio` network is a shared Supervisor-managed bridge, not the
+disposable `--internal` network used in CI. `Internal=false` does
+**not** itself prove any WAN exposure, and `Attachable=false` does
+**not** prove that connections cannot reach App listeners.
+Home Assistant's own guidance warns not to trust listener placement
+as an authentication mechanism:
+https://contributors.home-assistant.io/security/guides/apps/
+Current app runtime documentation gives App name aliases and shared
+network topology:
+https://contributors.home-assistant.io/apps/reference/environment/#network
+
+Before using a bearer token, verify the exact Supervisor app DNS name
+**from inside Home Assistant Core**, especially because the existing
+Core container is in host network mode and the new App does not exist
+yet. `scripts/audit_haos_core_app_dns_readonly.sh` only invokes
+`socket.getaddrinfo` from the existing Core Python environment to
+test Supervisor aliases and candidate names of the already-running
+test App; the new App's names are expected not to resolve until
+installed. It makes no HTTP request, sends no bearer token, starts
+no Docker container, and does not change HAOS configuration.
+
+The target `app_local_genvex_nabto_remote` hostname pinned in the HA
+transport remains **unverified**. Do not assume correct DNS or private
+reachability until the on-host check and a later fake-only App test
+prove it. Never disable authentication based on Docker network flags.
