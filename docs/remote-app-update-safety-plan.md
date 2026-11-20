@@ -95,3 +95,33 @@ The fingerprint result must be reviewed before any approval to replace an
 existing local Supervisor source tree. This is not itself an upgrade.
 
 **Offline regression:** Source fingerprint gate passed [GitHub Actions 44829263224](https://github.com/rabbyraptor/genvexconnect/actions/runs/44829263224): 277 backend tests and 27 HA tests in each of two environments, including stopped/running/automatic-boot, missing code file and linked source path. No actual HAOS source fingerprints have yet been collected, and no update was performed.
+
+
+## Verified source fingerprint and new dev2 candidate
+
+The operator ran the stopped/manual `0.1.0-dev1` source-only audit on HAOS. The fixed five-file SHA256 inventory was:
+
+| File | Installed SHA256 | Comparison with then-current development source |
+| --- | --- | --- |
+| `config.yaml` | `5c15ac644063f1a0fbcbcc3fd2050a56715922bf7f7f5640032b6f49bcdbfaac` | identical before version bump |
+| `Dockerfile` | `5c7edfb109ccad4b09a19ff28c3173e405bcb33eb26034174ee10de83d2f4cdd` | identical |
+| `run.sh` | `50c68a9defb3c47621ab6d3b901b3e645ac19f539616457f469a1cb76a91f398` | identical |
+| `runtime/app_bootstrap.py` | `9e8862450d6204d21136baae25ce37aa24aa591f1008842c5914911517db7db1` | identical |
+| `runtime/profile_provision.py` | `3d35505bfc12b24cc0f68e0a437c6fce047ffe2613ab13ccb10fe2959ec1fe82` | differs as expected (new hardened importer only in development) |
+
+The hashes above contain no credentials. They establish equality of those
+**five files only**, not a whole-directory proof. The audit did not enumerate
+private data, source runtime modules beyond the allowlist, or Supervisor options.
+The installed App remained stopped, manual, without an App container.
+
+The development manifest now declares **`0.1.0-dev2`** for the new candidate,
+distinct from installed `0.1.0-dev1`. The ARM64 CI image build argument and
+label assertion also target `0.1.0-dev2`, with a regression test enforcing
+consistency. This is **source-only**; the installed App remains `0.1.0-dev1`.
+The new version must pass its build, packaging and offline tests before any
+source update is proposed. The existing first-install staging script cannot
+upgrade an existing local App directory.
+
+**Explicit approval boundary:** No copying source to HAOS, Supervisor reload,
+App update/rebuild, manual start, profile transfer or live polling is authorized
+by the source comparison or by the new dev2 version tag.
