@@ -21,7 +21,7 @@ The skeleton contains:
 5. Test coordinator/flow/entities on real HA Core or HA test framework before moving to `custom_components/genvex_remote`.
 6. SDK redistribution permission and Home Assistant packaging must be resolved.
 
-The separate [certification prototype](../../genvex_remote/enrollment_core.py) and [runtime test App](../../../haos-apps/genvex-nabto-runtime-test/DOCS.md) provide earlier validated building blocks. The 51/51 offline Python test suite was validated on HAOS, **before** this HA scaffold; it is not evidence that the new Home Assistant files themselves have passed HA startup tests.
+The separate [certification prototype](../genvex_remote/enrollment_core.py) and [runtime test App](../../haos-apps/genvex-nabto-runtime-test/DOCS.md) provide earlier validated building blocks. The 51/51 offline Python test suite was validated on HAOS, **before** this HA scaffold; it is not evidence that the new Home Assistant files themselves have passed HA startup tests.
 
 To run parser-only tests without Home Assistant installed:
 
