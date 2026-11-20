@@ -47,8 +47,8 @@ class UpdateSourceReadOnlyTests(unittest.TestCase):
             docker.write_text(
                 "#!/bin/sh\n"
                 "if [ \"$1\" = inspect ]; then\n"
-                "  if [ \"$3\" = app_local_genvex_nabto_remote ]; then\n"
-                "    if [ \"$4\" = --format ]; then echo \"$FAKE_RUNNING\"; fi\n"
+                "  if [ \"$4\" = app_local_genvex_nabto_remote ]; then\n"
+                "    if [ \"$5\" = --format ]; then echo \"$FAKE_RUNNING\"; fi\n"
                 "    exit 0\n"
                 "  fi\n"
                 "fi\n"
