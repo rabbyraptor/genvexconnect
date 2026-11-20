@@ -302,3 +302,16 @@ bash scripts/run_optima270_all_candidates_batch_from_deck.sh --execute-live
 **Status efter forsøget:** 5 tidligere aktive, dokumenterede remote RPC45-målinger + 12 nye **remote-læsbare** kildeposter, i alt **17 kildebaserede adresser med påvist fjernlæsbarhed**. `capability_catalog.py`, `verified_read_plan.py`, sensor-snapshot v1 og HA-entities forbliver **uændrede** (fortsat præcis 5). Der er ikke udført installering, polling eller ændring af HAOS Apps eller LAN-integration.
 
 **Privatliv:** Brugerens originale terminaludskrift indeholdt synligt indtastede identitets- og gatewayoplysninger. Dette dokument og eventuelle kodetestdata kopierer **ingen** af disse værdier. Nøglen/passphrase var skjult. Anbefal kun fremtidige anonymiserede terminaludskrifter.
+
+
+## Næste udviklingstrin: isoleret snapshot v2-udkast (2026-11-20)
+
+På baggrund af den succesfulde 12/12-batch er der oprettet en **offline-only** skitse til et fremtidigt versioneret snapshotformat: [`snapshot_v2_draft.py`](../experimental/genvex_remote/snapshot_v2_draft.py) og [offline-tests](../experimental/genvex_remote/test_snapshot_v2_draft.py).
+
+- **Eksisterende v1 uændret:** Alle fem hidtidige temperatur-/fugtighedsværdier kræves fortsat samlet, friske og fra korrekt enhed. `snapshot_contract.py`, runtime-API, installerede HAOS Apps og LAN-integration ændres ikke.
+- **Fremtidigt v2-envelope:** `schema_version=2` med de fem v1-værdier i `values` og et særskilt `optional.fan_duty`-objekt, der enten er tomt (ikke tilgængeligt) eller indeholder **begge** `fan_duty_supply` og `fan_duty_extract`. Ingen opdigtede 0-værdier ved fejlet valgfri aflæsning.
+- **Kilde- og appunderstøttet skalering:** Rå `6000/5800` til `60.0/58.0 %`; kun præcis to gyldige heltal fra 0 til 10000 accepteres i den valgfrie dekoder. Dette er et designudkast, **ikke** tilladelse til nye live-kald.
+- **Fejlisolering:** Ugyldige valgfrie ventilatorværdier resulterer i tom `fan_duty`-sektion; ugyldig/stale v1-baseline afvises stadig helt. V2 er **ikke** bagudkompatibelt ved at sende v2 direkte til en v1-klient: separat endpoint/versionforhandling kræves før deployment.
+- **Afventer:** Separat autoriseret runtime-plan, HA entity-design, tilgængelighedspolitik og vurdering af de øvrige 10 nye læsbare adresser. Ingen ekstra adresse eller live-aflæsning aktiveret.
+
+Dette er kun kode- og kontraktforberedelse, ingen ændring af brugerens eksisterende Home Assistant.
