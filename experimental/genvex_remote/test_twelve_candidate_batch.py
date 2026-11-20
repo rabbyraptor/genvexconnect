@@ -96,8 +96,13 @@ class TwelveBatchSafetyTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("OFFLINE preview", result.stdout)
         source = RUNNER.read_text()
-        self.assertIn('if [[ "$KNOWN_HOST" != "${DEVICE_ID}.remote.lscontrol.dk" ]]', source)
-        self.assertLess(source.index('if [[ "$KNOWN_HOST" !='),
+        self.assertIn('read -r -p "Nabto-identitet (e-mail; synlig): "', source)
+        self.assertIn('read -r -p "Genvex device-ID (12 cifre; synligt): "', source)
+        self.assertIn('export GENVEX_NABTO_HOST="${DEVICE_ID}.remote.lscontrol.dk"', source)
+        self.assertIn('[[ ! "$DEVICE_ID" =~ ^[0-9]{12}$ ]]', source)
+        self.assertNotIn('KNOWN_HOST', source)
+        self.assertIn('read -r -s -p "Nøgleadgangskode (skjult): "', source)
+        self.assertLess(source.index('export GENVEX_NABTO_HOST='),
                         source.index('IFS= read -r -s -p "Nøgleadgangskode'))
         self.assertEqual(source.count('timeout -k 5s 90s'), 1)
 
