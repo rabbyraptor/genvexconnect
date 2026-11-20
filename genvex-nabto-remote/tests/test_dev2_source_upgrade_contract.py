@@ -129,7 +129,7 @@ class Dev2UpgradeContractTests(unittest.TestCase):
             "last=${!#}\n"
             "case \"$last\" in\n"
             "  'sh -s -- --execute-readonly') cat >/dev/null; exit 0 ;;\n"
-            "  'sh -c '* ) exec sh -c \"$last\" ;;\n"
+            "  'sh -c '* ) exec sh -xc \"$last\" ;;\n"
             "  *) exit 8 ;;\n"
             "esac\n"
         )
@@ -162,7 +162,7 @@ class Dev2UpgradeContractTests(unittest.TestCase):
         backup = base / ".genvex-remote-dev1-source-backup"
         self.assertTrue(backup.is_dir())
         self.assertEqual((backup / "config.yaml").read_text(),
-                         'version: "0.1.0-dev1"\\n')
+                         'version: "0.1.0-dev1"\n')
         self.assertIn('version: "0.1.0-dev2"',
                       (source / "config.yaml").read_text())
         self.assertFalse((base / ".genvex-remote-dev2-source-stage").exists())
@@ -174,7 +174,7 @@ class Dev2UpgradeContractTests(unittest.TestCase):
         )
         self.assertNotEqual(run.returncode, 0)
         self.assertEqual((source / "config.yaml").read_text(),
-                         'version: "0.1.0-dev1"\\n')
+                         'version: "0.1.0-dev1"\n')
         self.assertFalse(
             (base / ".genvex-remote-dev1-source-backup").exists()
         )
