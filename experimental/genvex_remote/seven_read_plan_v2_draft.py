@@ -1,8 +1,9 @@
 """Inert seven-address read-only RPC45 plan for a future atomic v2 poll.
 
 This module does not import or invoke the Nabto SDK, does not open a session
-and is not wired into HAOS. The *combined seven-address batch* has not been
-live-tested even though its five- and two-address subsets were read remotely.
+and is not wired into HAOS. The combined seven-address batch succeeded in one authorized read-only
+RPC45 on Steam Deck (2026-11-20); this offline module itself performs no RPC.
+That one-shot result does not prove HAOS/QEMU deployment or recurring polling.
 """
 from __future__ import annotations
 
