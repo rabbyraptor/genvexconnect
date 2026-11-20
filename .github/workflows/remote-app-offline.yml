@@ -5,12 +5,12 @@ on:
     branches:
       - remote-nabto-connection
     paths:
-      - "haos-apps/genvex-nabto-remote/**"
+      - "genvex-nabto-remote/**"
       - "experimental/genvex_remote/**"
       - ".github/workflows/remote-app-offline.yml"
   pull_request:
     paths:
-      - "haos-apps/genvex-nabto-remote/**"
+      - "genvex-nabto-remote/**"
       - "experimental/genvex_remote/**"
       - ".github/workflows/remote-app-offline.yml"
   workflow_dispatch:
@@ -29,23 +29,23 @@ jobs:
           python-version: "3.12"
       - name: Check bundled runtime matches validated source
         run: |
-          for src in haos-apps/genvex-nabto-remote/runtime/*.py; do
+          for src in genvex-nabto-remote/runtime/*.py; do
             file=$(basename "$src")
             if [ "$file" != app_bootstrap.py ]; then
               cmp "$src" "experimental/genvex_remote/$file"
             fi
           done
       - name: Compile native runtime and App bootstrap
-        run: python -m compileall -q haos-apps/genvex-nabto-remote/runtime
+        run: python -m compileall -q genvex-nabto-remote/runtime
       - name: Run fake-credential bootstrap tests (no real profile)
-        run: python -m unittest discover -s haos-apps/genvex-nabto-remote/tests -p "test_*.py" -v
+        run: python -m unittest discover -s genvex-nabto-remote/tests -p "test_*.py" -v
       - name: Validate isolated App configuration
         run: |
           python -m pip install PyYAML
           python - <<'PY'
           from pathlib import Path
           import yaml
-          config = yaml.safe_load(Path("haos-apps/genvex-nabto-remote/config.yaml").read_text())
+          config = yaml.safe_load(Path("genvex-nabto-remote/config.yaml").read_text())
           assert config["slug"] == "genvex_nabto_remote"
           assert config["boot"] == "manual"
           assert config["host_network"] is False
