@@ -1,6 +1,6 @@
 # Remote Genvex → Home Assistant: first five read-only sensors
 
-**Status: sensor model scaffold committed; NOT YET a working Home Assistant integration and NOT deployed.**
+**Status: isolated development-only Home Assistant integration scaffold and read-only polling worker committed. NOT deployed; authenticated App-to-Core transport and automatic CA enrollment remain incomplete.**
 
 ## Verified on 2026-11-19: two HAOS/QEMU stability checks
 
@@ -39,6 +39,14 @@ The user expects **Settings → Devices & services → Add integration → Genve
 - [Offline CI workflow](../.github/workflows/remote-nabto-offline.yml): exercises fake CA, safe storage, URL transport and snapshot logic; **CI execution outcome not independently confirmed in this update**.
 
 **All of these are isolated development files, not yet imported by the installed HAOS runtime or an integration. No new live cert was issued.**
+
+## Home Assistant UI and read-only poller scaffold — 2026-11-20
+
+[`experimental/home_assistant/`](../experimental/home_assistant/README.md) now contains a separate `genvex_remote` HA integration **development scaffold** (config flow, unique 12-digit device ID, 60-second `DataUpdateCoordinator`, five temperature/humidity sensor entities with stable unique IDs and device registry group, English/Danish labels). Importantly, [`UnconfiguredReader`](../experimental/home_assistant/custom_components/genvex_remote/runtime_client.py) *always fails closed*, so installing this unfinished scaffold **will not generate fictional live readings** and configuration entries remain not-ready. It is not yet intended for installation.
+
+[`experimental/genvex_remote/polling_worker.py`](../experimental/genvex_remote/polling_worker.py) defines an SDK-independent serial, single-flight read-only worker with one five-address RPC45 callback, bounded timeout, strict decode and timestamp generated only after complete success. [Offline tests](../experimental/genvex_remote/test_polling_worker.py) cover addresses, concurrency, timeout/recovery and sanitization. A real SDK reader and authenticated App-to-Core bridge are **still missing**.
+
+The [CI workflow](../.github/workflows/remote-nabto-offline.yml) now includes HA parser tests and source compilation checks. **No CI pass status or live HA Core/hassfest test is claimed yet**; the user's earlier 51/51 successful HAOS suite predates these new files.
 
 ## Remaining bridge (must be implemented before live HA entities)
 
