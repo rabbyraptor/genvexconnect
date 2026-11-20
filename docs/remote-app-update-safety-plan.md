@@ -276,3 +276,30 @@ do not change Supervisor's internal state speculatively.
 and disk readiness audit. A passing read-only result does not authorize
 `ha store reload`, a Supervisor App backup, `ha apps update`, an
 App start or Nabto profile enrollment; those require separate consent.
+
+## Approved one-time Supervisor App catalog reload
+
+**Operator authorization (2026-11-20):** The user explicitly approved
+a single, controlled App catalog reload after the post-swap source audit
+verified dev2 source and dev1 backup, and a subsequent read-only Supervisor
+readiness audit confirmed the installed App is stopped/manual/dev1, the
+source and backup remain unchanged, 9,016,640 KiB free, and the stale
+catalog still reports `version_latest=0.1.0-dev1`,
+`update_available=false`.
+
+A dedicated `scripts/reload_haos_dev2_store_once_v1.sh` implements only
+this authorized operation. Its `--preflight` is inert; the explicit
+`--execute-approved` verifies the stopped/manual installed dev1 App,
+non-running dedicated Docker container, the critical dev1 backup/dev2 source
+SHA256s and absence of temporary staging. It then checks sanitized catalog
+metadata and runs `ha store reload` **once**, suppressing raw CLI output.
+A previously visible dev2 update skips the reload. After a successful
+reload it rechecks the installed stopped/manual/dev1 state and prints only
+`version_latest` and `update_available`; if the update is not yet
+visible, it reports review/pending rather than retrying, installing or
+updating. No App data, secrets, SDK connection, remote gateway RPC or
+changes to the working LAN integration are involved.
+
+Official reference: https://contributors.home-assistant.io/apps/supervisor-api/store/
+documents POST `/store/reload` for refreshing local App source changes.
+**App installation/update/backup remains a separate, unapproved operation.**
