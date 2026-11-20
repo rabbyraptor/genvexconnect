@@ -121,7 +121,7 @@ echo "===== DEV2 SOURCE-ONLY BACKUP / SWAP ====="
   }
   trap cleanup EXIT HUP INT TERM
   cat > \$STAGE/archive.tar.gz
-  printf \"%s  %s\\n\" \$EXPECTED \$STAGE/archive.tar.gz | sha256sum -c -s || {
+  printf \"%s  %s\\n\" \$EXPECTED \$STAGE/archive.tar.gz | sha256sum -c >/dev/null || {
     echo BLOCKED-archive-checksum; exit 1;
   }
   tar -xzf \$STAGE/archive.tar.gz -C \$STAGE
