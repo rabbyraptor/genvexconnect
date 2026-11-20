@@ -55,3 +55,28 @@ jobs:
           assert config["schema"]["unlock_secret"] == "password"
           assert config["schema"]["ipc_token"] == "password"
           PY
+      - name: Package experimental HA integration (not a production release)
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile, ZIP_DEFLATED
+          source = Path("experimental/home_assistant/custom_components/genvex_remote")
+          dest = Path("dist/genvex_remote_ha_development.zip")
+          dest.parent.mkdir(exist_ok=True)
+          with ZipFile(dest, "w", ZIP_DEFLATED) as archive:
+              for path in sorted(source.rglob("*")):
+                  if path.is_file() and "__pycache__" not in path.parts:
+                      archive.write(path, "custom_components/genvex_remote/" + path.relative_to(source).as_posix())
+              archive.writestr(
+                  "INSTALL_NOTES.txt",
+                  "EXPERIMENTAL ONLY. Requires separate Genvex Remote HAOS App. "
+                  "Not verified against Home Assistant Core; do not replace the "
+                  "existing Genvex LAN integration.\n",
+              )
+          print("Packaged experimental separate HA integration")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: genvex-remote-ha-integration-development
+          path: dist/genvex_remote_ha_development.zip
+          retention-days: 14
