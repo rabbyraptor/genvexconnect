@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Development HAOS App bootstrap: secrets never appear in argv or logs.
 
-The profile is copied from the explicitly provisioned read-only /share path
-into the App's private /data directory before the native polling service starts.
+The encrypted client profile must already exist in App-private /data/profile.
+No shared /share mount or automatic credential import is permitted.
 The Supervisor App option store is NOT a hardware-backed secret vault.
 """
 from __future__ import annotations
@@ -19,7 +19,6 @@ from polling_runtime import run
 from sensor_model import remote_hostname
 
 DATA = Path("/data")
-SOURCE_PROFILE = Path("/share/genvex-remote-profile")
 PROFILE = DATA / "profile"
 TOKEN = DATA / "ipc-token"
 OPTIONS = DATA / "options.json"
@@ -48,38 +47,31 @@ def read_options(path: Path = OPTIONS) -> dict:
     return data
 
 
-def private_copy(source: Path, destination: Path) -> None:
-    info = source.lstat()
-    if not stat.S_ISREG(info.st_mode) or not 1 <= info.st_size <= 131072:
-        raise ValueError("Invalid profile file")
-    # Do not follow symlinks; reject swapped file types and excessive data.
-    fd = os.open(source, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
-    try:
-        with os.fdopen(fd, "rb") as stream:
-            content = stream.read(131073)
-    except Exception:
-        raise
-    if not 1 <= len(content) <= 131072 or b"-----BEGIN " not in content:
-        raise ValueError("Invalid PEM profile file")
-    tmp_fd, tmp_name = tempfile.mkstemp(dir=destination.parent, prefix=".profile-")
-    try:
-        with os.fdopen(tmp_fd, "wb") as stream:
-            stream.write(content)
-        os.chmod(tmp_name, 0o600)
-        os.replace(tmp_name, destination)
-    finally:
-        if os.path.exists(tmp_name):
-            os.unlink(tmp_name)
+def validate_private_profile(path: Path = PROFILE) -> None:
+    """Fail closed unless both PEM credentials are already App-private.
 
+    This is validation, NOT credential enrollment or migration. Provisioning
+    credentials into /data/profile needs a separate, reviewed secure workflow.
+    """
+    info = path.lstat()
+    if not stat.S_ISDIR(info.st_mode) or info.st_mode & 0o077:
+        raise ValueError("App-private profile directory must have mode 0700")
 
-def prepare_private_profile(source: Path = SOURCE_PROFILE,
-                            target: Path = PROFILE) -> None:
-    if source.is_symlink() or not source.is_dir():
-        raise ValueError("Missing private profile source")
-    target.mkdir(mode=0o700, parents=True, exist_ok=True)
-    target.chmod(0o700)
     for name in ("client.crt", "client-encrypted.key"):
-        private_copy(source / name, target / name)
+        candidate = path / name
+        fd = os.open(candidate, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+        try:
+            info = os.fstat(fd)
+            if (not stat.S_ISREG(info.st_mode)
+                    or info.st_mode & 0o077
+                    or not 1 <= info.st_size <= 131072):
+                raise ValueError("Unsafe App-private profile file")
+            with os.fdopen(fd, "rb", closefd=False) as stream:
+                header = stream.read(96)
+            if not header.startswith(b"-----BEGIN "):
+                raise ValueError("Invalid PEM profile file")
+        finally:
+            os.close(fd)
 
 
 def write_token(token: str, path: Path = TOKEN) -> None:
@@ -98,7 +90,7 @@ def write_token(token: str, path: Path = TOKEN) -> None:
 def main() -> None:
     try:
         options = read_options()
-        prepare_private_profile()
+        validate_private_profile()
         write_token(options["ipc_token"])
         config = {
             "device_id": options["device_id"],
