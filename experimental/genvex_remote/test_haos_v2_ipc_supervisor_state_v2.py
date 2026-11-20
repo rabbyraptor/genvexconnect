@@ -59,6 +59,7 @@ class SupervisorAuditV2Tests(unittest.TestCase):
 
     def test_no_mutations_and_explicit_null_stdin_for_ha(self):
         source = SCRIPT.read_text(encoding="utf-8")
+        self.assertNotIn(r"\\n", source)
         self.assertIn("ha apps info local_genvex_nabto_remote --raw </dev/null", source)
         self.assertIn("docker exec -i homeassistant python3 -B -c", source)
         for forbidden in ("docker start", "docker run", "docker cp",
