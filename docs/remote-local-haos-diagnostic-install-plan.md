@@ -44,6 +44,31 @@ the confirmed local App root, then moves its new App folder to the
 fixed target. It refuses to overwrite an existing folder or symlink.
 It does not reload Supervisor, install, build or start an App.
 
+## Supervisor discovery verified (20 November 2026)
+
+**Phase B source staging and Supervisor catalog discovery completed on HAOS.**
+The source exists at `/mnt/data/supervisor/apps/local/genvex_nabto_remote`.
+Supervisor's own container can read `config.yaml`, and its
+`SCHEMA_APP_CONFIG` validation accepts the slug, version and experimental stage.
+The file scanner finds both the new remote source and the original runtime-test
+source. After the explicit **`ha store reload`** command, the user verified:
+
+- `ha apps info local_genvex_nabto_remote`: `available: true`,
+  `installed: false`, `build: true`, `arch: [aarch64]`,
+  `stage: experimental`, `host_network: false`, `version_latest: 0.1.0-dev1`,
+  `state: unknown`.
+- Existing `local_genvex_nabto_runtime_test`: `state: started`,
+  `version: 0.5.0`, untouched.
+
+**Important:** `ha apps reload` is not a supported CLI subcommand and did not
+refresh the catalog. Use **`ha store reload`** for local source discovery,
+then `ha apps info local_genvex_nabto_remote` to verify.
+There is no need to alter the App manifest or touch timestamps to fix this.
+The new App is **not installed, built by Supervisor, or started**. Phase C
+(build/install without start) still needs separate explicit user approval,
+and Phase D (synthetic-only start) needs yet another approval. No real Nabto
+connection or credential provisioning has been authorized.
+
 ## Acceptance stages and approval boundaries
 
 **Phase A: offline source validation – no HAOS modification.**
