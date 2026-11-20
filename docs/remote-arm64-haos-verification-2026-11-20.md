@@ -120,3 +120,25 @@ or gateway traffic. Loopback socket tests cover the HTTP implementation but
 **do not establish HAOS Supervisor App DNS trust, container-to-Core reachability,
 or production network isolation**. Those still require bounded tests on HAOS.
 The additional test has not yet been confirmed passing in CI.
+
+## Native ARM64 internal Docker-network acceptance gate
+
+The ARM64 image build now exercises an additional disposable **fake-only**
+container-to-container test before exporting the image artifact:
+`scripts/test_remote_app_private_docker_network.sh` launches two isolated
+containers on a freshly created Docker `--internal` bridge network. The
+in-image `offline_ipc_network_smoke.py` launches the real snapshot HTTP
+server with synthetic readings and a conspicuously fake 43-character token.
+The client uses internal Docker DNS and verifies valid read (200), denied
+missing/wrong credentials (401), and no valid data (503). The test checks
+the Docker network's internal flag and asserts that there are no host port
+bindings. All resources are removed on exit.
+
+The test does **not** start Nabto, forward actual keys, expose host ports,
+install a Supervisor App, prove Supervisor DNS routing, or establish live
+remote connectivity. It is not a substitute for on-device HAOS network
+review. An export artifact should only be considered image-validated when
+its associated ARM64 image-build workflow completes successfully.
+
+The offline App/HA source-check workflow also excludes the App-specific
+smoke-test entrypoint from bundled-vs-experimental runtime parity.
