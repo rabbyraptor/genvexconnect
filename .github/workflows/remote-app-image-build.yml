@@ -11,6 +11,7 @@ on:
       - "genvex-nabto-remote/runtime/**"
       - ".github/workflows/remote-app-image-build.yml"
       - "scripts/test_remote_app_private_docker_network.sh"
+      - "scripts/test_remote_app_private_storage_container.sh"
   workflow_dispatch:
 
 permissions:
@@ -73,6 +74,9 @@ jobs:
             --entrypoint python3 genvex-nabto-remote:ci \
             -c 'import sys; sys.path.insert(0, "/opt/genvex-remote/runtime"); import app_bootstrap, polling_runtime, sdk_snapshot_adapter, polling_http_server; print("PASS: ARM64 runtime import")'
           echo "PASS: separate ARM64 image built and inspected without credentials"
+      - name: Test fake-only profile import in native ARM64 App /data tmpfs
+        shell: bash
+        run: sh scripts/test_remote_app_private_storage_container.sh
       - name: Test fake-only IPC and diagnostic App bootstrap on an internal Docker network
         shell: bash
         run: bash scripts/test_remote_app_private_docker_network.sh
