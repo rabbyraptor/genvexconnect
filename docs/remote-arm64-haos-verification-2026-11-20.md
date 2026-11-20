@@ -142,3 +142,22 @@ its associated ARM64 image-build workflow completes successfully.
 
 The offline App/HA source-check workflow also excludes the App-specific
 smoke-test entrypoint from bundled-vs-experimental runtime parity.
+
+## Prepared read-only HAOS Supervisor network inventory
+
+`scripts/audit_haos_remote_network_readonly.sh` performs **only** Docker
+inspection calls (`docker version`, `docker info`, `docker inspect`,
+`docker network inspect`, `docker image inspect`). It checks a fixed
+allowlist of container and network names, whether running, network mode,
+privileged flag, published port bindings, connected network names, and
+the existing image architecture. It intentionally does not inspect App
+options, environment variables, files, logs, profile keys, tokens, or
+IP/route details. It does **not** create or start any containers or
+networks and requires no credentials.
+
+`genvex-nabto-remote/tests/test_haos_network_audit.py` validates shell
+syntax, checks for explicitly forbidden Docker mutating verbs, and runs
+the script against a disposable fake Docker executable. This is a
+precautionary source check; it is not proof that the production host's
+networks meet isolation requirements. The operator must review the
+script before executing it on HAOS, and share only the sanitized output.
