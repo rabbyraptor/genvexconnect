@@ -1,6 +1,6 @@
 # HAOS local App: controlled diagnostic-only installation plan
 
-Status: **source staged and Supervisor discovery verified; build/install NOT executed**.
+Status: **Phase C Supervisor ARM64 build/install completed; App stopped**.
 This plan is intentionally
 separate from any existing Genvex LAN integration or the earlier
 `genvex_nabto_runtime_test` App.
@@ -65,10 +65,41 @@ source. After the explicit **`ha store reload`** command, the user verified:
 refresh the catalog. Use **`ha store reload`** for local source discovery,
 then `ha apps info local_genvex_nabto_remote` to verify.
 There is no need to alter the App manifest or touch timestamps to fix this.
-The new App is **not installed, built by Supervisor, or started**. Phase C
-(build/install without start) still needs separate explicit user approval,
-and Phase D (synthetic-only start) needs yet another approval. No real Nabto
-connection or credential provisioning has been authorized.
+This was the **pre-install discovery state**. Phase C installation was subsequently
+approved and successfully completed; Phase D (synthetic-only start) still needs
+separate explicit approval. No real Nabto connection or credential provisioning
+has been authorized.
+
+## Phase C Supervisor build/install verified (20 November 2026)
+
+**Installed successfully, not started.** After explicit user approval,
+the read-only install precheck showed new App `installed: false` and old App
+`state: started`. The install CLI printed `Error: App Genvex Remote
+(experimental) is already installed`, but inspection of Supervisor logs
+resolved the apparently conflicting outcome:
+
+- 17:29:02: Supervisor created `/data/apps/data/local_genvex_nabto_remote`
+  and started an actual `docker buildx build --platform linux/arm64` for the
+  App image.
+- 17:30:34: Build completed and Supervisor reported
+  `App 'local_genvex_nabto_remote' successfully installed`.
+- Immediately after success, another install invocation was rejected as
+  `already installed` and its background job reported failure. **Do not
+  repeat installation or interpret this second error as a failed build.**
+- `ha apps info local_genvex_nabto_remote` now reports `available: true`,
+  `build: true`, `state: stopped`, `version: 0.1.0-dev1`,
+  `version_latest: 0.1.0-dev1`, and `boot: manual`.
+- Supervisor-built image:
+  `local/aarch64-addon-genvex_nabto_remote:0.1.0-dev1` (reported 375 MB).
+  No matching new App container was listed by `docker ps -a`.
+- Existing `local_genvex_nabto_runtime_test` remains `started` at
+  `0.5.0`; existing LAN integration was not modified.
+
+**Phase C is complete.** No automatic retry, rebuild or Docker cleanup is
+needed. App runtime and real HA Core-to-App connectivity remain untested.
+The next boundary is Phase D: separately approved synthetic-only configuration
+and manual start, with **all** device credentials, keys and IPC tokens empty;
+no actual Nabto session. Do not proceed to Phase D without new approval.
 
 ## Acceptance stages and approval boundaries
 
