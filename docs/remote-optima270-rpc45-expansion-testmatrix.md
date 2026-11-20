@@ -353,3 +353,29 @@ Der er nu en separat, **inert** [`seven_read_plan_v2_draft.py`](../experimental/
 - Den rigtige `SDKSnapshotAdapter`, `SnapshotState`, `PollingService`, `polling_runtime.py` og HA-klient er fortsat v1-only. Den nye plan bruges hverken i den pakkede HAOS App, i en installeret integration eller i tests med rigtig gateway.
 
 **Næste nødvendige milepæl** er en isoleret, udtrykkeligt godkendt read-only live-test af præcis syv-adresse-batchen, efterfulgt af udvikling af en separat v2-producer, som faktisk kan danne en frisk, atomisk snapshot fra en valideret SDK-respons. Der er ikke foretaget live-kald i denne kodeændring.
+
+## Klar til separat operatørtest: syv-adressers RPC45 v2-snapshot (2026-11-20)
+
+Efter de vellykkede offline kontrakt- og HTTP-tests er en **ny, selvstændig** Steam Deck-probe til ét read-only RPC45-kald for **præcis** `20,21,22,23,26,18,19` forberedt:
+
+- [`probe_optima270_seven_snapshot_v2.py`](../scripts/probe_optima270_seven_snapshot_v2.py) benytter samme legacy SDK-værktøj og RPC45-XML som de tidligere fem- og tolv-adresse-prober, men importerer den fastlåste syv-adressers read-only plan. Standardtilstand er offline; live kræver både `--execute-live`, `--approved-read-only` og `--passphrase-stdin`.
+- [`run_optima270_seven_snapshot_v2_from_deck.sh`](../scripts/run_optima270_seven_snapshot_v2_from_deck.sh) genbruger eksisterende Steam Deck-kontrol af profil og SDK, synlig indtastning af **e-mail og 12-cifret device-ID** efter brugerønske, skjult nøglepassphrase, genereret remote-host, 90-sekunders timeout og ingen retries.
+- [`test_seven_snapshot_v2_probe.py`](../experimental/genvex_remote/test_seven_snapshot_v2_probe.py) tester offline: fast adresseorden, én RPC45, streng int16-længdekontrol, godkendelsesflaggene, wrapperens syntaks, skjulte passphrase og offline preflight.
+- SDK-svar accepteres først efter **præcis 7 gyldige int16-værdier**. Alle 7 afkodes i én samlet v2-snapshot, hvor de fem basale data er obligatoriske, og de to ventilatorværdier kun er tilgængelige som et korrekt skaleret par. Maskinlæsbart `GENVEX_READONLY_SNAPSHOT_V2=` udsendes kun efter vellykket SDK-RPC **og** lukning/nedlukning med status 0. Markerens `device_id` er sensitiv og skal anonymiseres inden deling.
+- **Ingen live 7-adresse-RPC er sendt endnu.** Ny opt-in live-test udføres udelukkende af ejeren på Steam Deck efter eksplicit accept; projektet udleder ikke en godkendelse ud fra tidligere tests.
+
+**Offlinetest (ingen SDK-kald):**
+
+```sh
+cd /tmp/genvex-f2-check
+git pull --ff-only
+bash scripts/run_optima270_seven_snapshot_v2_from_deck.sh --preflight
+```
+
+**Valgfrit live-kald (kræver ejers særskilte handling og accept):**
+
+```sh
+bash scripts/run_optima270_seven_snapshot_v2_from_deck.sh --execute-live
+```
+
+Den ikke-installerede Home Assistant-prototype har desuden fået [`snapshot_v2_draft.py`](../experimental/home_assistant/custom_components/genvex_remote/snapshot_v2_draft.py) og [tilhørende offline-tests](../experimental/home_assistant/tests/test_snapshot_v2_draft.py). V2-parseren tjekker korrekt device-ID, friske komplette fem basismålinger og et enten tomt eller komplet procentpar; installerede Home Assistant-entities, coordinator, runtime-klient og v1-parser er uændrede. **End-to-end live kommunikation og deployment af v2 er ikke dokumenteret.**
