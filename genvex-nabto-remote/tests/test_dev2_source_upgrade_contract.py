@@ -72,7 +72,7 @@ class Dev2UpgradeContractTests(unittest.TestCase):
         result = self.run_script("--preflight")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("preflight complete; no HAOS files changed", result.stdout)
-        calls = self.calls.read_text().splitlines()
+        calls = self.calls.read_text().split("CALL:")[1:]
         self.assertEqual(len(calls), 1)
         self.assertIn("sh -s -- --execute-readonly", calls[0])
         self.assertNotIn("sh -c", calls[0])
@@ -81,12 +81,12 @@ class Dev2UpgradeContractTests(unittest.TestCase):
         self.env["FAKE_SSH_EXIT"] = "failure"
         result = self.run_script("--apply")
         self.assertNotEqual(result.returncode, 0)
-        self.assertEqual(len(self.calls.read_text().splitlines()), 1)
+        self.assertEqual(len(self.calls.read_text().split("CALL:")[1:]), 1)
 
     def test_apply_reaches_only_dedicated_source_transaction(self):
         result = self.run_script("--apply")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        calls = self.calls.read_text().splitlines()
+        calls = self.calls.read_text().split("CALL:")[1:]
         self.assertEqual(len(calls), 2)
         self.assertIn("sh -s -- --execute-readonly", calls[0])
         remote = calls[1]
