@@ -81,6 +81,22 @@ class ProvisioningTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             provisioner.provision(io.BytesIO(bundle()), data_dir=self.data)
 
+    def test_rejects_group_accessible_data_dir(self):
+        for mode in (0o750, 0o770, 0o705):
+            with self.subTest(mode=oct(mode)):
+                self.data.chmod(mode)
+                with self.assertRaises(ValueError):
+                    provisioner.provision(io.BytesIO(bundle()), data_dir=self.data)
+                self.assertFalse((self.data / "profile").exists())
+        self.data.chmod(0o700)
+
+    def test_rejects_dangling_profile_symlink(self):
+        (self.data / "profile").symlink_to(self.data / "missing", target_is_directory=True)
+        with self.assertRaises(FileExistsError):
+            provisioner.provision(io.BytesIO(bundle()), data_dir=self.data)
+        self.assertTrue((self.data / "profile").is_symlink())
+        self.assertFalse(list(self.data.glob(".profile-stage-*")))
+
     def test_rejects_symlink_data_dir(self):
         alias = self.data.parent / "alias"
         alias.symlink_to(self.data, target_is_directory=True)
