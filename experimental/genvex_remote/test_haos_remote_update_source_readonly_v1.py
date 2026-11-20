@@ -20,7 +20,7 @@ class UpdateSourceReadOnlyTests(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertIn("PASS: inert preflight", proc.stdout)
 
-    def audit(self, *, state="stopped", running="false", missing=None,
+    def audit(self, *, state="stopped", boot="manual", running="false", missing=None,
               source_symlink=False):
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp)
@@ -79,6 +79,11 @@ class UpdateSourceReadOnlyTests(unittest.TestCase):
 
     def test_supervisor_started_refused(self):
         p = self.audit(state="started")
+        self.assertNotEqual(p.returncode, 0)
+        self.assertIn("BLOCKED:", p.stdout)
+
+    def test_automatic_boot_refused(self):
+        p = self.audit(boot="auto")
         self.assertNotEqual(p.returncode, 0)
         self.assertIn("BLOCKED:", p.stdout)
 
