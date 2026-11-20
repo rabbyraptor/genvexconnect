@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
+import logging
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -19,7 +20,7 @@ class GenvexRemoteCoordinator(DataUpdateCoordinator[dict[str, float]]):
     ) -> None:
         super().__init__(
             hass,
-            logger=__import__("logging").getLogger(__name__),
+            logger=logging.getLogger(__name__),
             name=f"{DOMAIN}_{device_id}",
             update_interval=timedelta(seconds=POLL_SECONDS),
         )
