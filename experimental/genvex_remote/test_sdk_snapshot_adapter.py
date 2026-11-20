@@ -62,8 +62,8 @@ class SDKAdapterTests(unittest.IsolatedAsyncioTestCase):
                 "exhaust_air": 1.5, "extract_air": 7.7, "humidity": 65.0,
             },
         }
-        output = ("diagnostic message\\nGENVEX_READONLY_SNAPSHOT="
-                  + json.dumps(payload) + "\\n").encode()
+        output = ("diagnostic message\nGENVEX_READONLY_SNAPSHOT="
+                  + json.dumps(payload) + "\n").encode()
         self.assertEqual(
             parse_probe_output(output, device_id="123456789012")["values"]["humidity"],
             65.0,
