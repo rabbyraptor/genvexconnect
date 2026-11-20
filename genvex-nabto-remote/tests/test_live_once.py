@@ -11,6 +11,7 @@ RUNTIME = Path(__file__).resolve().parents[1] / "runtime"
 sys.path.insert(0, str(RUNTIME))
 
 import live_once
+from sdk_snapshot_adapter import classify_probe_failure, SDKSnapshotError
 
 
 class FakeStdin:
@@ -60,6 +61,43 @@ class SettingsTests(unittest.TestCase):
             self.assertEqual(live_once.main(), 1)
             self.assertNotIn("sensitive", output.getvalue())
             self.assertNotIn("private@example.com", output.getvalue())
+
+    def test_safe_sdk_failure_code(self):
+        payload = {"device_id": "123456789012", "identity": "private@example.com",
+                   "unlock_secret": "sensitive"}
+        with patch.object(live_once, "read_settings", return_value=payload), \
+             patch.object(live_once, "validate_private_profile"), \
+             patch.object(live_once.PROBE, "is_file", return_value=True), \
+             patch.object(live_once, "read_once", new_callable=AsyncMock,
+                          side_effect=SDKSnapshotError("SDK_SESSION_FAILED")), \
+             patch("sys.stdout", new_callable=io.StringIO) as output:
+            self.assertEqual(live_once.main(), 1)
+            self.assertIn("BLOCKED: SDK_SESSION_FAILED", output.getvalue())
+            self.assertNotIn("sensitive", output.getvalue())
+            self.assertNotIn("private@example.com", output.getvalue())
+
+
+class FailureClassificationTests(unittest.TestCase):
+    def test_sdk_session_error(self):
+        self.assertEqual(classify_probe_failure(
+            b"SDK startup: 0\nResources: 0\nProfile session: 3\n"),
+            "SDK_SESSION_FAILED")
+
+    def test_rpc_error(self):
+        self.assertEqual(classify_probe_failure(
+            b"SDK startup: 0\nProfile session: 0\n"
+            b"Candidate XML registered: 0\nBatch RPC status: 5\n"),
+            "SDK_RPC45_FAILED")
+
+    def test_successful_rpc_but_no_snapshot(self):
+        self.assertEqual(classify_probe_failure(
+            b"Batch RPC status: 0\n"),
+            "SDK_RESPONSE_INVALID")
+
+    def test_never_reflects_untrusted_diagnostics(self):
+        self.assertEqual(
+            classify_probe_failure(b"secret@example.com\nsecret=abc\n"),
+            "SDK_EARLY_EXIT")
 
 
 class SingleReadTests(unittest.IsolatedAsyncioTestCase):
