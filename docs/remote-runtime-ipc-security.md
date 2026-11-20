@@ -1,6 +1,6 @@
 # Security decision: Home Assistant ↔ Nabto Runtime IPC
 
-**Status: design gate, NOT deployed.** As of 2026-11-20, no authenticated IPC exists. The source-only HA scaffold intentionally uses `UnconfiguredReader` and therefore cannot manufacture live data.
+**Status: design gate, NOT deployed.** A standalone [token-checking primitive](../experimental/genvex_remote/ipc_auth.py) and [offline tests](../experimental/genvex_remote/test_ipc_auth.py) have now been staged; there is still no listener, shared-secret delivery, transport, or device enrollment endpoint. As of 2026-11-20, no authenticated IPC exists. The source-only HA scaffold intentionally uses `UnconfiguredReader` and therefore cannot manufacture live data.
 
 ## Evidence about Home Assistant App networking
 
@@ -25,6 +25,10 @@
 - The actual **legacy LS Control Nabto CA trust anchor** is not independently pinned; user password enrollment remains disabled.
 - The actual x86_64 SDK has not accepted a *new* CA-issued key from our automated Python code, only the pre-existing profile.
 - The legacy SDK redistributability is not established.
+
+## Next offline acceptance gate
+
+The next [combined HAOS development test](../scripts/run_haos_remote_dev_tests.sh) also discovers `test_ipc_auth.py`. It should verify random token generation, exact matching, missing/wrong-token rejection and non-disclosure of secrets in error strings. **A token alone is not sufficient authorization for account enrollment**: rotation, storage, authenticated provisioning, request-level permissions, transport encryption and replay handling remain unresolved. Do not expose a runtime API in the existing `host_network: true` App.
 
 ## Next user-visible milestone
 
