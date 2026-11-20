@@ -143,7 +143,7 @@ def execute_one_read(candidate, *, use_passphrase_stdin: bool = False):
     # Never print, log or export the passphrase.
     if not use_passphrase_stdin:
         raise ValueError("Live runs require the approved passphrase-stdin wrapper")
-    password = sys.stdin.readline(1024).rstrip("\\r\\n")
+    password = sys.stdin.readline(1024).rstrip("\r\n")
     if not password or len(password) > 1022:
         raise ValueError("Empty or oversized encrypted-key passphrase")
     print("PASS: encrypted-key input received; preparing SDK", flush=True)
