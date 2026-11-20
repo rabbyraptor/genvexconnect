@@ -35,7 +35,7 @@ runs the HA snapshot/transport tests, and compiles the HA integration without in
   runner=$(mktemp /tmp/genvex-preflight.XXXXXX)
   trap 'rm -f "$runner"' EXIT
   curl -fsSL \
-    'https://raw.githubusercontent.com/rabbyraptor/genvexconnect/remote-nabto-connection/scripts/run_haos_remote_install_preflight_v6.sh' \
+    'https://raw.githubusercontent.com/rabbyraptor/genvexconnect/remote-nabto-connection/scripts/run_haos_remote_install_preflight_v7.sh' \
     -o "$runner"
   sh "$runner"
 )
@@ -87,6 +87,14 @@ The first HAOS runtime preflight executed **102 backend tests, 101 passing and o
 
 The bootstrap expects `client.crt` and `client-encrypted.key` under `/share/genvex-remote-profile/` (separate from the existing private host profile), copies them to private App `/data/profile/` with 0600 permissions, validates a 12-digit device ID, and reads the encrypted-key passphrase and a 43+ character IPC token from App `password` options. The private token is written with mode 0600. It starts only the read-only polling runtime. The HA integration uses `http://app_local_genvex_nabto_remote:18275/v1/snapshot` and the same token. **No automatic certificate enrollment or profile migration exists.** Supervisor options are not a dedicated secret vault; manual secret entry is development-only.
 
-**Next source acceptance test:** [`run_haos_remote_install_preflight_v6.sh`](../scripts/run_haos_remote_install_preflight_v6.sh), pinned to the candidate source and covering the 104 backend tests, 15 HA tests, 7 App bootstrap tests, source-copy parity, and compilation. **Not yet executed on HAOS.**
+**Next source acceptance test:** [`run_haos_remote_install_preflight_v7.sh`](../scripts/run_haos_remote_install_preflight_v7.sh), pinned to the candidate source and covering the 104 backend tests, 15 HA tests, 7 App bootstrap tests, source-copy parity, and compilation. **Not yet executed on HAOS.**
 
 **Do not install this candidate yet:** the image has not been built or validated on HAOS; the profile import and IPC token UX are not finished; vendor SDK redistribution/licensing and private network isolation require review. The existing App must not be replaced.
+
+## Separate development installation artifacts
+
+The App candidate is now at repository root [`genvex-nabto-remote/`](../genvex-nabto-remote/) so Supervisor can discover it as a distinct App when this development repository is configured. It is manual-boot and not built/tested as an installed App yet. The Home Assistant integration stays in [`experimental/home_assistant/custom_components/genvex_remote/`](../experimental/home_assistant/custom_components/genvex_remote/) to avoid modifying the working LAN integration. The [offline App CI workflow](../.github/workflows/remote-app-offline.yml) now checks source parity, fake-credential bootstrap tests and App config, and prepares a downloadable **development-only HA integration ZIP** as a GitHub Actions artifact. The artifact is not a signed or validated production release.
+
+The Home Assistant config flow now masks the IPC bearer token with a password selector. A matching token must be provisioned to the App separately; never publish the token or Nabto unlock secret in logs or GitHub issues.
+
+**v7** is the latest pinned offline HAOS preflight (backend + HA + App bootstrap, source parity and compilation). Its result has not yet been reported. The previously reported v5 result of **119/119 PASS** remains the last verified source-only baseline.
