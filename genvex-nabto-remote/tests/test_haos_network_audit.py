@@ -53,5 +53,20 @@ class ReadOnlyAuditTests(unittest.TestCase):
             self.assertLessEqual(set(calls), {"version", "info", "inspect", "network", "image"})
 
 
+    def test_core_dns_audit_is_read_only(self):
+        script = ROOT / "scripts/audit_haos_core_app_dns_readonly.sh"
+        result = subprocess.run(["sh", "-n", str(script)], capture_output=True)
+        self.assertEqual(result.returncode, 0, result.stderr.decode())
+        contents = script.read_text()
+        self.assertIn("socket.getaddrinfo", contents)
+        self.assertIn("docker exec homeassistant python3", contents)
+        self.assertNotRegex(
+            contents,
+            r"\\bdocker\\s+(?:run|start|stop|rm|load|build|create|cp|pull|push)\\b"
+        )
+        self.assertNotIn("socket.create_connection", contents)
+        self.assertNotIn("urllib.request", contents)
+
+
 if __name__ == "__main__":
     unittest.main()
