@@ -228,3 +228,19 @@ been installed or reloaded, and the actual new App has not been started.
 **Remaining:** Verify the new App's Supervisor-reported hostname and DNS
 resolution when it eventually exists, with fake credentials and no actual
 Nabto session. No real bearer token should be provisioned yet.
+
+## DNS contract regression gate
+
+Added `genvex-nabto-remote/tests/test_app_ipc_dns_contract.py`.
+It derives the expected `local-{slug-with-hyphens}` Supervisor DNS
+hostname directly from `genvex-nabto-remote/config.yaml` and checks
+that the Home Assistant client has the same exact fixed URL. It also
+guards `host_network: false`, no `ports:`, and no `map:`.
+This prevents another mismatch between the App slug and the
+HA client endpoint from passing the offline checks.
+
+**The current App does not yet exist on HAOS.** A successful static
+contract check is not proof of runtime DNS, actual reachability,
+Supervisor network isolation or secure token distribution. A real
+App installation remains blocked on reviewed private credential
+provisioning and safe on-host fake-only acceptance tests.
