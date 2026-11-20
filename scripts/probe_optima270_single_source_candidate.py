@@ -103,6 +103,22 @@ def _status_events(raw_json: str) -> tuple[int, ...]:
     return tuple(sorted(seen)[:8])
 
 
+def classify_rpc_error(status: int, events: tuple[int, ...]) -> str:
+    """Return non-sensitive, source-grounded SDK failure category.
+
+    Nabto 4 client API: 26 is FAILED_WITH_JSON_MESSAGE.
+    Nabto legacy client events: 1000015 is MICROSERVER_NOT_KNOWN.
+    Neither status proves a given RPC45 sensor is unsupported.
+    """
+    if status == 26 and 1000015 in events:
+        return "GATEWAY_NOT_KNOWN_OR_UNAVAILABLE"
+    if status == 26 and 2000027 in events:
+        return "CLIENT_QUERY_MODEL_NO_SUCH_REQUEST"
+    if status == 26:
+        return "SDK_REPORTED_JSON_ERROR"
+    return "SDK_OTHER_ERROR"
+
+
 def _check_existing_profile(root: Path, identity: str) -> tuple[Path, Path, Path, str]:
     """No profile creation, no writes to sources, no symlinks."""
     if (
@@ -219,7 +235,9 @@ def execute_one_read(candidate, *, use_passphrase_stdin: bool = False):
             diagnostic = take(response)
             elapsed = round((time.monotonic() - started_at) * 1000)
             if status:
-                print("RPC status:", status, "events:", _status_events(diagnostic), flush=True)
+                events = _status_events(diagnostic)
+                print("RPC status:", status, "events:", events,
+                      "category:", classify_rpc_error(status, events), flush=True)
                 raise RuntimeError("Read-only request failed")
             raw = decode_single_response(diagnostic)
             print("RPC status: 0", flush=True)
