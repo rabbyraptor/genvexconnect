@@ -20,6 +20,7 @@ import sys
 APP = "local_genvex_nabto_remote"
 PROFILE = Path("/mnt/data/supervisor/apps/data") / APP / "profile"
 RUNNER = Path("/tmp/genvex-dev3-once/live_once.py")
+ADAPTER = Path("/tmp/genvex-dev3-once/sdk_snapshot_adapter.py")
 IMAGE_CONTAINER = "app_" + APP
 LIMIT = 110
 
@@ -113,6 +114,7 @@ def preflight():
         check_file(PROFILE / name, 0o600)
     check_file(RUNNER.parent, 0o700, directory=True)
     check_file(RUNNER, 0o600)
+    check_file(ADAPTER, 0o600)
     return checked_image()
 
 
@@ -149,6 +151,8 @@ def run_once(image, payload):
         "--mount", f"type=bind,src={PROFILE},dst=/data/profile,readonly",
         "--mount",
         f"type=bind,src={RUNNER},dst=/opt/genvex-remote/runtime/live_once.py,readonly",
+        "--mount",
+        f"type=bind,src={ADAPTER},dst=/opt/genvex-remote/runtime/sdk_snapshot_adapter.py,readonly",
         "--entrypoint", "/usr/bin/python3",
         image, "/opt/genvex-remote/runtime/live_once.py",
     ]
