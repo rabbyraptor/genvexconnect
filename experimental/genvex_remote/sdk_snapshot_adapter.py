@@ -7,7 +7,6 @@ enrollment path, persistent credential manager or production App yet.
 from __future__ import annotations
 
 import asyncio
-import json
 import os
 import sys
 from pathlib import Path
@@ -104,11 +103,6 @@ class SDKSnapshotAdapter:
                     stderr=asyncio.subprocess.DEVNULL,
                     env=env,
                 )
-                stdin = json.dumps({
-                    "identity": self._identity,
-                    "host": self.hostname,
-                    "passphrase": self._unlock_secret,
-                })
                 # No secret in process argv, shell, environment or returned errors.
                 async with asyncio.timeout(self._timeout):
                     out, _ = await proc.communicate(
