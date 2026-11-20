@@ -404,3 +404,7 @@ A distinct [read-only IPC topology gate](../scripts/audit_haos_v2_ipc_network_ga
 - No Nabto RPC, device credentials, IPC bearer token, or real sensor data were used.
 
 The operator reported `===== ACCEPTANCE COMPLETE =====`. **App stop after the acceptance run has not yet been confirmed**; operator should manually stop the dedicated remote App, leaving `diagnostic_only: true`. Do not infer that live polling, private credential enrollment, restart persistence, or HA entities are validated. Existing LAN integration and host-networked QEMU test App were not modified by this acceptance script.
+
+### Phase F read-only stop/isolation gate (source-only) — 2026-11-20
+
+Following the successful synthetic HAOS acceptance, added `scripts/audit_haos_remote_phase_f_gate_v1.sh`. The script checks that Supervisor reports the dedicated App **stopped**, boot **manual**, version `0.1.0-dev1`, and that any residual Docker container is stopped, not host-networked and has no published ports. It filters Supervisor output to allowlisted top-level status fields; it does not display or store options, read private files, start/stop Apps or invoke Nabto. `experimental/genvex_remote/test_haos_remote_phase_f_gate_v1.py` includes a streamed `sh -s` regression with a greedy fake `ha`, a fake secret and negative tests for running/mismatched App. **Not yet run on HAOS**. A passing gate would verify stop/isolation only, not live credentials, polling or Home Assistant entities.
