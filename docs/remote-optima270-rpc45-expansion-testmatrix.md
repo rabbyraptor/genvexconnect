@@ -106,3 +106,31 @@ Ved godkendt live-test: Højst **én** `nabtoRpcInvoke` for den valgte adresse v
 Katalog/kandidater, verified-only-requestplanen og engangstestværktøjets CLI-sikkerhedstests blev kørt i [Remote Nabto offline CI](https://github.com/rabbyraptor/genvexconnect/actions/runs/44801745246) og [Remote App offline CI](https://github.com/rabbyraptor/genvexconnect/actions/runs/44801744289), begge **PASS**. Også [formattering](https://github.com/rabbyraptor/genvexconnect/actions/runs/44801744047) og [Hassfest](https://github.com/rabbyraptor/genvexconnect/actions/runs/44801744124) bestod. Ingen live Nabto-test blev kørt.
 
 [HACS-validatering](https://github.com/rabbyraptor/genvexconnect/actions/runs/44801744154) fejler stadig alene på repositorymetadata: **Issues slået fra** og **manglende gyldige topics**. Denne uafhængige releaseopgave findes allerede i vedligeholdelsesplanen; projektets konfiguration ændres ikke her.
+
+
+## 2B Steam Deck live-run timeout, korrekt nøgleprompt (2026-11-20)
+
+Ved den første *forsøgte* live-kørsel indtastede operatøren den skjulte e-mail-identitet og det 12-cifrede device-ID, hvorefter `timeout` returnerede **exit 124** uden `===== ONE SOURCE-DEFINED RPC45 READ ONLY =====` eller andre SDK-statuslinjer. Det tidligere Python-script bad om nøgleadgangskoden med `getpass.getpass()` **før** den første statuslinje; en blokering dér er mest sandsynlig, men den præcise årsag er ikke bevist. **Der er ingen dokumentation for, at et RPC-kald blev sendt**, og sensoren **24** forbliver `source_only_unverified`.
+
+For at undgå blind timeout i en skjult nøgleprompt er der nu tilføjet en **Steam Deck-runner**: [`scripts/run_optima270_one_read_from_deck.sh`](../scripts/run_optima270_one_read_from_deck.sh).
+
+- **Standard `--preflight`** udfører udelukkende syntakskontrol og offline-katalog-preview, uden Nabto-session eller legitimationsoplysninger.
+- **`--execute-live`** kontrollerer tilstedeværelse af eksisterende testprofil og SDK, spørger **synligt** efter de tre *skjulte* input (e-mail, device-ID og eksisterende nøgleadgangskode), og sender kun adgangskoden gennem en lukket stdin-pipe. Ingen nøgleadgangskode placeres i miljøvariabler eller argumenter.
+- Python accepterer nu kun `--passphrase-stdin` ved live-tilstand; direkte live-kørsel med gammel `getpass.getpass`-adfærd er afvist for at undgå en ny skjult 90-sekunders timeout.
+- Wrapperens parentproces ejer et privat `TMPDIR` og forsøger oprydning også ved timeout; bruger `timeout -k 5s 90s`, udfører højst **én** read-only `RPC45` for **adresse 24**, og gentager aldrig automatisk.
+- Python udskriver et ikke-følsomt pre-SDK-stage-mærke efter eksisterende profiltjek og efter modtagelse af pipe-input; dermed kan en fremtidig fejl lokaliseres uden at udskrive person-/account-data.
+- Live-kørsel kræver fortsat særskilt operatørbeslutning; de eksisterende installerede HAOS Apps og LAN-integrationen er urørte.
+
+**Offline først:**
+
+```sh
+bash scripts/run_optima270_one_read_from_deck.sh --preflight
+```
+
+**Kun ved særskilt godkendt én-sensor-test:**
+
+```sh
+bash scripts/run_optima270_one_read_from_deck.sh --execute-live
+```
+
+Behold kun redigeret terminaloutput uden e-mail, device-ID eller nøgleadgangskode i eventuelle supporttråde. De nye [Python CLI-sikkerhedstests](../experimental/genvex_remote/test_single_candidate_cli.py) og [Bash-wrapper-tests](../experimental/genvex_remote/test_deck_runner_preflight.py) udføres offline i projektets eksisterende GitHub-testworkflow.
