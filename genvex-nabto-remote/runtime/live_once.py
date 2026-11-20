@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 
 from app_bootstrap import validate_private_profile
-from sdk_snapshot_adapter import SDKSnapshotAdapter
+from sdk_snapshot_adapter import SDKSnapshotAdapter, SDKSnapshotError
 from sensor_model import remote_hostname
 from snapshot_contract import parse_snapshot
 
@@ -62,13 +62,26 @@ async def read_once(settings: dict) -> None:
 def main() -> int:
     try:
         settings = read_settings()
+    except Exception:
+        print("BLOCKED: INPUT_INVALID", flush=True)
+        return 1
+    try:
         validate_private_profile(PROFILE)
-        if not PROBE.is_file():
-            raise ValueError("Probe missing")
+    except Exception:
+        print("BLOCKED: PROFILE_INVALID", flush=True)
+        return 1
+    if not PROBE.is_file():
+        print("BLOCKED: PROBE_MISSING", flush=True)
+        return 1
+    try:
         asyncio.run(read_once(settings))
         return 0
+    except SDKSnapshotError as exc:
+        # Strictly allowlisted code, not an exception message from SDK/QEMU.
+        print("BLOCKED: " + exc.code, flush=True)
+        return 1
     except Exception:
-        print("BLOCKED: single-shot RPC45 failed (details suppressed)", flush=True)
+        print("BLOCKED: SNAPSHOT_OR_ADAPTER_INVALID", flush=True)
         return 1
 
 
