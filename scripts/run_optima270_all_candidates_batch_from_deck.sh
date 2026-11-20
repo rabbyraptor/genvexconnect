@@ -38,34 +38,19 @@ for file in "$PROFILE/client.crt" "$PROFILE/client-encrypted.key" "$LIB"; do
 done
 echo "PASS: existing test profile and SDK files are present"
 
-# Never echo the account, hostname, device ID, or encrypted-key passphrase.
-IFS= read -r -s -p "Nabto-identitet (e-mail; skjult): " GENVEX_NABTO_IDENTITY || exit 2
-printf '\n'
-IFS= read -r -s -p "Genvex device-ID (12 cifre; skjult): " DEVICE_ID || exit 2
-printf '\n'
+# Email and device ID are deliberately visible while typing, at the operator's
+# request. Neither is repeated by the script or written to logs. Avoid sharing
+# terminal recordings containing these inputs. Only the key passphrase is hidden.
+IFS= read -r -p "Nabto-identitet (e-mail; synlig): " GENVEX_NABTO_IDENTITY || exit 2
+IFS= read -r -p "Genvex device-ID (12 cifre; synligt): " DEVICE_ID || exit 2
 if [[ ! "$DEVICE_ID" =~ ^[0-9]{12}$ ]]; then
   echo "FAIL: device ID must be exactly 12 ASCII digits" >&2
   exit 2
 fi
-# The previously successful phase-1 scripts accepted the *full* known host.
-# Ask for that same full host independently and compare locally, without
-# logging or printing either the ID or the host.
-IFS= read -r -s -p "Tidligere fungerende Nabto-hostnavn (skjult): " KNOWN_HOST || exit 2
-printf '\n'
-if [[ ! "$KNOWN_HOST" =~ ^[0-9]{12}\.remote\.lscontrol\.dk$ ]]; then
-  echo "FAIL: known gateway hostname format invalid" >&2
-  unset DEVICE_ID KNOWN_HOST
-  exit 2
-fi
-if [[ "$KNOWN_HOST" != "${DEVICE_ID}.remote.lscontrol.dk" ]]; then
-  echo "FAIL: device ID does not match the previously working gateway hostname; no RPC will be sent" >&2
-  unset DEVICE_ID KNOWN_HOST
-  exit 2
-fi
-echo "PASS: device ID matches independently entered known working hostname"
+# Follow the known-good remote hostname format; do not ask for a duplicate host.
 export GENVEX_NABTO_IDENTITY
-export GENVEX_NABTO_HOST="$KNOWN_HOST"
-unset DEVICE_ID KNOWN_HOST
+export GENVEX_NABTO_HOST="${DEVICE_ID}.remote.lscontrol.dk"
+unset DEVICE_ID
 
 # Explicit shell prompt before starting a timed subprocess.
 echo "Næste indtastning er adgangskoden til den eksisterende krypterede testnøgle."
