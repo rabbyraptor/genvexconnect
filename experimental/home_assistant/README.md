@@ -7,7 +7,7 @@ The skeleton contains:
 - `coordinator.py` (60-second update interval; one atomic five-reading result);
 - `sensor.py` (five sensor entities with stable IDs, device registry grouping, measurement state classes);
 - `snapshot.py` (strict, freshness-bounded complete-schema validation);
-- `runtime_client.py` (unconfigured bridge that *always raises*, so a user cannot mistake fake readings for actual device data);
+- `runtime_client.py` (safe-default unconfigured bridge that always raises; plus a separately injectable authenticated HTTP snapshot consumer, **not activated** by integration setup);
 - English and Danish translated labels.
 
 **Deliberate behavior:** If installed prematurely, a Config Entry can be created, but startup cannot succeed because `UnconfiguredReader` raises `RuntimeUnavailable` on first refresh. There is **no working authenticated runtime IPC** and **no automated CA onboarding**. Therefore this is not a live or installable product release.
@@ -23,7 +23,7 @@ The skeleton contains:
 
 The separate [certification prototype](../genvex_remote/enrollment_core.py) and [runtime test App](../../haos-apps/genvex-nabto-runtime-test/DOCS.md) provide earlier validated building blocks. The 51/51 offline Python test suite was validated on HAOS, **before** this HA scaffold; it is not evidence that the new Home Assistant files themselves have passed HA startup tests.
 
-To run parser-only tests without Home Assistant installed:
+To run parser and mocked HTTP consumer tests without Home Assistant installed:
 
 ```sh
 python3 -m unittest discover -s experimental/home_assistant/tests -p "test_*.py" -v
