@@ -102,6 +102,14 @@ The [2B test matrix](remote-optima270-rpc45-expansion-testmatrix.md) records the
 
 The previous failure `status=26,event=1000015` remains an observed gateway lookup failure. The successful host-matching run resolves the immediate blocker but does not prove the earlier root cause; an earlier mistyped ID or transient gateway availability could both be consistent with the outputs. See the [full 2B matrix](remote-optima270-rpc45-expansion-testmatrix.md).
 
+### 2B – all 12 source-defined candidate addresses read successfully in a single RPC45 batch (2026-11-20)
+
+**VERIFIED from user-provided Steam Deck terminal output:** With the existing authorized encrypted profile, a single read-only RPC45 call, `obj=0`, `trailer=1`, exact ordered addresses `24,18,19,35,36,41,42,53,40,114,115,50`, returned **RPC status 0**, elapsed **358 ms** and **12/12 signed int16 values**. SDK session close and shutdown were both status 0. The values, in that same order, were **`[0,6000,5800,2432,2268,0,0,0,0,0,0,10]`**. No automatic retries, writes, scans or installed HAOS changes.
+
+**Numerical agreement with official Genvex Connect app screenshot (not concurrent):** `fan_duty_supply` addr 18 scales `6000/100=60.0%`, matching displayed supply fan **60.00%**; `fan_duty_extract` addr 19 scales `5800/100=58.0%`, matching displayed extract fan **58.00%**. Address 24 scales `(0-300)/10 = -30.0 °C`, matching both app T8 and T9, but it does **not** identify either uniquely or prove that a physical sensor is active. Raw 2432/2268 on addresses 35/36 are source-labeled RPM and plausible, but have not been independently validated. Values 0 for PWM, bypass and alarm words, and raw 10 for rotor speed, **do not** prove actual hardware presence, absence of alarms, or exact semantics.
+
+**Evidence distinction:** All **17** source-documented RPC45 datapoints (five previously live-verified plus these 12) have now been shown **remote-readable** on this controller. This is not evidence that all 17 sensors are safe to expose as physical Home Assistant entities. The active five-item `capability_catalog.py`, `verified_read_plan.py`, snapshot contract v1 and Home Assistant scaffolding are **unchanged**; the new 12 remain candidate-only pending semantics, hardware validation and versioned expansion of the snapshot. The [2B test matrix](remote-optima270-rpc45-expansion-testmatrix.md) records all values and limitations. No account email, device identifier, hostname, private profile or passphrase is copied into GitHub.
+
 ## Evidence labels
 
 - **VERIFIED:** observed successfully in our controlled tests, with SDK return values or independent certificate checks.
