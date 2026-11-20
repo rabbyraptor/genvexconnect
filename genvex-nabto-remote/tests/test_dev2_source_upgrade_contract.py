@@ -122,7 +122,6 @@ class Dev2UpgradeContractTests(unittest.TestCase):
             "5c15ac644063f1a0fbcbcc3fd2050a56715922bf7f7f5640032b6f49bcdbfaac",
             prior_hash,
         )
-        source = source.replace("  set -eu\n  umask 077", "  set -eux\n  umask 077")
         local_script = self.root / "isolated-transaction.sh"
         local_script.write_text(source)
         (self.bin / "ssh").write_text(
@@ -130,7 +129,7 @@ class Dev2UpgradeContractTests(unittest.TestCase):
             "last=${!#}\n"
             "case \"$last\" in\n"
             "  'sh -s -- --execute-readonly') cat >/dev/null; exit 0 ;;\n"
-            "  'sh -c '* ) exec sh -xc \"$last\" ;;\n"
+            "  'sh -c '* ) exec sh -c \"$last\" ;;\n"
             "  *) exit 8 ;;\n"
             "esac\n"
         )
