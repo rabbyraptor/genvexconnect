@@ -99,3 +99,10 @@ Ved godkendt live-test: Højst **én** `nabtoRpcInvoke` for den valgte adresse v
 **Driftsbegrænsning:** Den proprietære SDK's kald er ikke nødvendigvis afbrydelige fra Python. En senere operatørgodkendt kørsel skal derfor have en ekstern, hård tidsgrænse og efterkontrol af testprofil-oprydning. Tvangsafbrydelse eller SDK-nedbrud kan efterlade en midlertidig credential-kopi, som kræver kontrolleret oprydning. Denne risiko er en yderligere grund til ikke at aktivere live-kørslen før separat aftale.
 
 [Offline CLI-/response-regressionstests](../experimental/genvex_remote/test_single_candidate_cli.py) kontrollerer standard-preview, særskilt autorisation, ét kendt objekt, fravær af skrive-RPC og fail-closed JSON-afkodning. Ingen af disse tests opretter en Nabto-session.
+
+
+### Seneste offline-accept (`5a41bb1`)
+
+Katalog/kandidater, verified-only-requestplanen og engangstestværktøjets CLI-sikkerhedstests blev kørt i [Remote Nabto offline CI](https://github.com/rabbyraptor/genvexconnect/actions/runs/44801745246) og [Remote App offline CI](https://github.com/rabbyraptor/genvexconnect/actions/runs/44801744289), begge **PASS**. Også [formattering](https://github.com/rabbyraptor/genvexconnect/actions/runs/44801744047) og [Hassfest](https://github.com/rabbyraptor/genvexconnect/actions/runs/44801744124) bestod. Ingen live Nabto-test blev kørt.
+
+[HACS-validatering](https://github.com/rabbyraptor/genvexconnect/actions/runs/44801744154) fejler stadig alene på repositorymetadata: **Issues slået fra** og **manglende gyldige topics**. Denne uafhængige releaseopgave findes allerede i vedligeholdelsesplanen; projektets konfiguration ændres ikke her.
