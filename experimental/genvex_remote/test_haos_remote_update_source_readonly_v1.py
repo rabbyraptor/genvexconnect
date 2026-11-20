@@ -41,7 +41,7 @@ class UpdateSourceReadOnlyTests(unittest.TestCase):
                 "#!/bin/sh\n"
                 "cat >/dev/null\n"
                 "printf '%s\\n' '  name: unlock_secret' '  value: SECRET'"
-                f" 'state: {state}' 'boot: manual' 'version: 0.1.0-dev1'\n"
+                f" 'state: {state}' 'boot: {boot}' 'version: 0.1.0-dev1'\n"
             )
             docker = home / "docker"
             docker.write_text(
