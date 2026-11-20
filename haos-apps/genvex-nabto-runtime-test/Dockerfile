@@ -58,6 +58,12 @@ FROM ghcr.io/home-assistant/base:3.24
 ARG BUILD_ARCH
 ARG BUILD_VERSION
 
+# Native ARM64 certificate-enrollment prerequisites. Kept separate from the
+# verified x86_64 Nabto SDK under QEMU. No live enrollment or key creation.
+RUN apk add --no-cache python3 py3-cryptography openssl ca-certificates \
+    && python3 -c 'import cryptography; from cryptography import x509; print("PASS: native cryptography")' \
+    && openssl version >/dev/null
+
 COPY --from=tools /usr/bin/qemu-x86_64-static /usr/local/bin/qemu-x86_64-static
 COPY --from=tools /opt/nabto/ /opt/nabto/
 COPY --from=x86sysroot /lib/x86_64-linux-gnu/ /opt/x86_64-sysroot/lib/x86_64-linux-gnu/
