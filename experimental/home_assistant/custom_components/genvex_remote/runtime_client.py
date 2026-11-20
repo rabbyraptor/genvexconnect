@@ -93,9 +93,9 @@ class AuthenticatedSnapshotReader:
             raise RuntimeUnavailable("Runtime snapshot unavailable") from None
 
 # Fixed Supervisor-internal App DNS name, not a user-supplied hostname or
-# private IP. Private IPs and arbitrary app_ names could exfiltrate the token.
+# private IP. Private IPs and arbitrary App names could exfiltrate the token.
 EXPECTED_APP_ENDPOINT = (
-    "http://app_local_genvex_nabto_remote:18275/v1/snapshot"
+    "http://local-genvex-nabto-remote:18275/v1/snapshot"
 )
 
 
