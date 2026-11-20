@@ -6,6 +6,7 @@ on:
       - remote-nabto-connection
     paths:
       - "experimental/genvex_remote/**"
+      - "experimental/home_assistant/**"
       - ".github/workflows/remote-nabto-offline.yml"
   pull_request:
     paths:
@@ -34,3 +35,7 @@ jobs:
         run: python -m pip install "cryptography==${{ matrix.cryptography }}"
       - name: Run tests (no live vendor account, network or secrets)
         run: python -m unittest discover -s experimental/genvex_remote -p "test_*.py" -v
+      - name: Run HA scaffold parser tests (no HA Core required)
+        run: python -m unittest discover -s experimental/home_assistant/tests -p "test_*.py" -v
+      - name: Compile HA scaffold source
+        run: python -m compileall -q experimental/home_assistant/custom_components/genvex_remote
