@@ -78,6 +78,10 @@ The user ran the first [SDK adapter offline test runner](../scripts/run_haos_sdk
 
 The user ran the pinned `run_haos_remote_install_preflight_v2.sh` on HAOS: **102 backend tests, 101 passed, 1 errored**. `test_post_and_other_path_not_exposed` expected JSON but the HTTP handler returned Python's default HTML on a body-bearing POST. This is a test/server response-format defect, **not a Nabto RPC failure**. The handler now emits JSON `400` errors; additional regression tests check POST bodies and listener restrictions. HA offline transport test doubles were also updated for bounded reads and disabled redirects. [`run_haos_remote_install_preflight_v5.sh`](../scripts/run_haos_remote_install_preflight_v5.sh) is a new pinned runner covering both backend and HA tests; **not yet run/verified on HAOS**. No live device or certificate access occurred.
 
+### Complete runtime and HA source preflight v5 — VERIFIED 2026-11-20
+
+**User-provided HAOS terminal output:** `run_haos_remote_install_preflight_v5.sh` completed **104 backend tests in 12.628 seconds, OK**, and **15 Home Assistant transport/snapshot tests in 0.070 seconds, OK**. It also passed backend/HA source compilation and JSON manifest/UI strings validation, finishing with `PASS: REMOTE RUNTIME + HA SOURCE PRE-FLIGHT`. **119/119 tests passed**. No new App was installed or started; no real device RPC or certificate access occurred. The later root-level App candidate, its bootstrap tests, and the v7 preflight are **NOT YET VERIFIED ON HAOS**. These results do not prove an installed HAOS App image, private App-to-Core network access, live 60-second polling reliability or restart behavior.
+
 ## Evidence labels
 
 - **VERIFIED:** observed successfully in our controlled tests, with SDK return values or independent certificate checks.
