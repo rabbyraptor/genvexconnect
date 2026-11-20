@@ -69,6 +69,29 @@ class RuntimeServerTests(unittest.TestCase):
         self.assertEqual(payload, {"error": "bad_request"})
         self.assertEqual(self.request(token=self.token, path="/debug")[0], 404)
 
+    def test_rejects_request_body_with_json_error(self):
+        req = Request(
+            f"http://127.0.0.1:{self.port}/v1/snapshot",
+            data=b"no-write-allowed",
+            headers={"Authorization": "Bearer " + self.token},
+            method="POST",
+        )
+        with self.assertRaises(HTTPError) as result:
+            urlopen(req, timeout=2)
+        self.assertEqual(result.exception.code, 400)
+        self.assertEqual(
+            json.loads(result.exception.read()),
+            {"error": "bad_request"},
+        )
+
+    def test_rejects_untrusted_bind_address(self):
+        with self.assertRaises(ValueError):
+            SnapshotHTTPServer(
+                bind_host="192.0.2.12", port=18275, token=self.token,
+                device_id="123456789012",
+                snapshot_provider=lambda: self.snapshot,
+            )
+
 
 class RuntimeConfigTests(unittest.TestCase):
     def setUp(self):
