@@ -37,3 +37,40 @@ mocks the SDK adapter.
 - A successful SDK call does not by itself prove long-running reliability.
 - The runner fails closed on malformed input or invalid snapshot and emits no
   credentials or raw SDK output.
+
+## Isolated HAOS execution (operator gate, no App deployment)
+
+The reviewed `scripts/haos_live_once_operator.py` can launch **one disposable**
+Docker container using the already installed DEV2 image, without starting the
+Supervisor-managed DEV2 App. It first checks that DEV2 is stopped, manual boot,
+diagnostic flag remains true and all Supervisor credential options are empty.
+It validates the existing App-private profile and the two root-owned staged
+scripts. If these prerequisites fail, it makes **no** Nabto connection.
+
+The launcher prompts for device ID, identity and key unlock secret via an SSH
+TTY (getpass), constructs a single JSON input line in memory, and supplies it
+to the container via stdin only. The image ID comes from the existing stopped
+`app_local_genvex_nabto_remote` Docker container. If that container was
+removed, the launcher **fails closed**, rather than guessing an image ID.
+
+The disposable container runs `live_once.py` as its entrypoint, with:
+- Read-only root filesystem and read-only profile and script bind mounts.
+- `--network bridge` (not host network), all Linux capabilities dropped,
+  no-new-privileges, and PID/memory limits.
+- Docker log driver disabled; ephemeral writable tmpfs for SDK session files.
+- Maximum 110 seconds wall-clock, with a force-remove cleanup attempt even
+  on timeout.
+
+The operator must use a reviewed/pinned copy of the two scripts staged in
+a root-owned 0700 directory, with each file mode 0600. The launcher does not
+send credentials to Supervisor options, pass them as command-line arguments or
+persist them to disk. It never runs the App's normal polling startup.
+
+**Important limitations:** the separate Docker process is still root inside
+its container, the x86_64 SDK executes through QEMU, and the temporary
+container needs outbound network access to the remote endpoint. This is an
+experimental supervised live probe, **not** a production integration.
+
+After the offline regression tests pass, use the approved operator procedure
+to stage the scripts and run the interactive one-shot test. Do not paste
+credentials into chat or into commands.
