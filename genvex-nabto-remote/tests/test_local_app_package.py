@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 from pathlib import Path
 import tarfile
 import subprocess
@@ -33,6 +34,46 @@ class LocalAppPackageTests(unittest.TestCase):
         self.assertNotIn("ha apps install", content)
         self.assertNotIn("ha apps start", content)
         self.assertNotIn("docker run", content)
+
+    def test_read_only_stage_preflight_with_fake_ssh(self):
+        with tempfile.TemporaryDirectory() as directory:
+            temp = Path(directory)
+            out = temp / "artifact"
+            out.mkdir()
+            with (
+                patch.object(packager, "DEST", out),
+                patch.object(packager, "ARCHIVE", out / "genvex-nabto-remote-local-app-source.tar.gz"),
+            ):
+                archive = packager.create_archive()
+            home = temp / "home"
+            keydir = home / ".ssh"
+            keydir.mkdir(parents=True)
+            (keydir / "id_ed25519").write_text("FAKE-KEY-FOR-OFFLINE-TEST")
+            bin_dir = temp / "bin"
+            bin_dir.mkdir()
+            shim = bin_dir / "ssh"
+            calls = temp / "ssh-calls"
+            shim.write_text(
+                "#!/bin/sh\\n"
+                'printf "%s\\\\n" "$*" >> "$FAKE_SSH_CALLS"\\n'
+                "exit 0\\n"
+            )
+            shim.chmod(0o755)
+            env = os.environ.copy()
+            env["HOME"] = str(home)
+            env["PATH"] = str(bin_dir) + os.pathsep + env.get("PATH", "")
+            env["FAKE_SSH_CALLS"] = str(calls)
+            proc = subprocess.run(
+                [
+                    "bash", str(ROOT / "scripts/stage_remote_diagnostic_app_source.sh"),
+                    "--preflight", str(archive), str(out / "APP_SOURCE_SHA256SUMS"),
+                ],
+                capture_output=True, text=True, env=env, timeout=15,
+            )
+            self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+            self.assertIn("preflight only; no remote files changed", proc.stdout)
+            self.assertEqual(len(calls.read_text().splitlines()), 1)
+            self.assertIn("test ! -e", calls.read_text())
 
     def test_allowlist_excludes_credentials_and_unknown_files(self):
         paths = packager.archive_sources()
