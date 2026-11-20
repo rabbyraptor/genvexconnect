@@ -34,6 +34,12 @@ This file is the **single source of truth for the current project state**. The o
 
 **Conclusion:** authenticated remote RPC 45 **does not require host networking** in this tested Docker bridge configuration. This is not proof that the future Supervisor-managed App-to-Core internal HTTP connection, authorization, startup persistence, resilience or long-running polling work; those remain implementation/test gates.
 
+### Phase 2 HAOS offline suite + IPC test blocker — 2026-11-20
+
+**VERIFIED from the user's submitted HAOS test log:** `run_haos_remote_phase2_tests.sh` ran **75/75** native backend tests successfully (6.760 s), **23/23** Home Assistant test invocations successfully (0.067 s), and passed the Home Assistant scaffold Python `compileall` check. **Nine HA tests were accidentally duplicated** because `test_runtime_client.py` imported the `SnapshotTest` test case from `test_snapshot.py`; **89 distinct tests passed**. That test import has been corrected in source, but the correction is **not yet retested on HAOS**.
+
+The IPC portion created the dedicated no-internet Docker bridge successfully, but **failed before server/client HTTP testing** with Docker error `container rootfs is marked read-only` while using `docker cp` to copy scripts into a disposable read-only container. This is a deployment/test harness limitation, **not evidence that IPC authentication or data exchange passed or failed**. The script was amended to stream a tar archive via `docker exec -i ... tar -xf - -C /tmp/genvex-ipc` and deliver the temporary token via `docker exec -i ... cat > /tmp/genvex-ipc/token`, preserving the read-only rootfs. The revised IPC test is awaiting verification; no real credentials or Genvex RPC were involved.
+
 ## Evidence labels
 
 - **VERIFIED:** observed successfully in our controlled tests, with SDK return values or independent certificate checks.
