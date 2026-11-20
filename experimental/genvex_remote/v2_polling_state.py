@@ -102,5 +102,9 @@ class V2SnapshotState:
         self._snapshot = None
 
     @property
+    def device_id(self) -> str:
+        return self._poller.device_id
+
+    @property
     def generation(self) -> int:
         return self._generation
