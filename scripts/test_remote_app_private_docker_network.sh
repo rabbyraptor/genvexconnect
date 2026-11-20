@@ -73,8 +73,21 @@ run_client unavailable
 echo "===== ACTUAL APP BOOTSTRAP: DIAGNOSTIC ONLY ====="
 docker rm -f "$SERVER" >/dev/null
 DIAG_DIR=$(mktemp -d /tmp/genvex-ci-diagnostic.XXXXXX)
+# Synthetic-only config can be world-readable in ephemeral CI. The container
+# runs with all capabilities dropped and cannot traverse mktemp's 0700 host
+# directory otherwise (root inside the container is not the host runner).
+chmod 0755 "$DIAG_DIR"
 # Deliberately fake-only App options: no Nabto identity, profile, token, or key.
 printf '%s\n' '{"diagnostic_only":true,"device_id":"","identity":"","unlock_secret":"","ipc_token":"","poll_seconds":60}' > "$DIAG_DIR/options.json"
+# Fail with an explicit harmless configuration check if the synthetic
+# bind mount is inaccessible under dropped Linux capabilities.
+docker run --rm \
+  --network none --read-only --tmpfs /tmp:rw,nosuid,nodev,size=16m \
+  --mount "type=bind,source=$DIAG_DIR,target=/data,readonly" \
+  --cap-drop ALL --security-opt no-new-privileges \
+  --entrypoint python3 "$IMAGE" \
+  -c 'import sys; sys.path.insert(0, "/opt/genvex-remote/runtime"); from app_bootstrap import read_options; assert read_options()["diagnostic_only"] is True; print("PASS: synthetic App options accessible without privileges")'
+
 docker run -d \
   --name "$SERVER" \
   --network "$NET" --network-alias "$HOST" \
