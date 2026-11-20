@@ -64,19 +64,58 @@ class BootstrapTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             app.read_options(self.opt_path)
 
-    def test_profile_copied_to_private_permissions(self):
-        app.prepare_private_profile(self.src, self.dst)
+    def _create_private_profile(self):
+        self.dst.mkdir(mode=0o700)
         for name in ("client.crt", "client-encrypted.key"):
             target = self.dst / name
-            self.assertEqual(target.read_bytes(), (self.src / name).read_bytes())
-            self.assertEqual(stat.S_IMODE(target.stat().st_mode), 0o600)
-        self.assertEqual(stat.S_IMODE(self.dst.stat().st_mode), 0o700)
+            target.write_bytes((self.src / name).read_bytes())
+            target.chmod(0o600)
+
+    def test_valid_private_profile(self):
+        self._create_private_profile()
+        app.validate_private_profile(self.dst)
+
+    def test_missing_profile_rejected(self):
+        with self.assertRaises(FileNotFoundError):
+            app.validate_private_profile(self.dst)
+
+    def test_shared_source_not_imported(self):
+        # Existing /share source is never consulted or copied.
+        with self.assertRaises(FileNotFoundError):
+            app.validate_private_profile(self.dst)
+        self.assertFalse(self.dst.exists())
+
+    def test_insecure_directory_rejected(self):
+        self._create_private_profile()
+        self.dst.chmod(0o755)
+        with self.assertRaises(ValueError):
+            app.validate_private_profile(self.dst)
+
+    def test_insecure_key_permissions_rejected(self):
+        self._create_private_profile()
+        (self.dst / "client-encrypted.key").chmod(0o644)
+        with self.assertRaises(ValueError):
+            app.validate_private_profile(self.dst)
 
     def test_symlink_profile_file_rejected(self):
-        (self.src / "client.crt").unlink()
-        (self.src / "client.crt").symlink_to(self.src / "client-encrypted.key")
+        self._create_private_profile()
+        (self.dst / "client.crt").unlink()
+        (self.dst / "client.crt").symlink_to(self.dst / "client-encrypted.key")
+        with self.assertRaises(OSError):
+            app.validate_private_profile(self.dst)
+
+    def test_symlink_profile_directory_rejected(self):
+        self._create_private_profile()
+        link = self.root / "linked-profile"
+        link.symlink_to(self.dst, target_is_directory=True)
         with self.assertRaises(ValueError):
-            app.prepare_private_profile(self.src, self.dst)
+            app.validate_private_profile(link)
+
+    def test_malformed_private_key_rejected(self):
+        self._create_private_profile()
+        (self.dst / "client-encrypted.key").write_text("not a PEM")
+        with self.assertRaises(ValueError):
+            app.validate_private_profile(self.dst)
 
     def test_token_written_private(self):
         dest = self.root / "ipc-token"
