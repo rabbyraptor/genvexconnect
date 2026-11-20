@@ -346,3 +346,28 @@ successfully before being treated as image-validated.
 None of these checks proves real remote RPC45 connectivity. No
 additional HAOS App was installed and no existing LAN integration
 or test App has been changed.
+
+## Supervisor local App deployment preflight – non-mutating
+
+Current Home Assistant App documentation describes putting App source under
+`local_apps` on HAOS (historically local add-ons), then using the
+Supervisor to build and install the App. When the App config has no
+`image:` field, the Supervisor builds the source locally on the device;
+an imported `genvex-nabto-remote:ci` Docker image is not automatically
+a Supervisor-managed App:
+https://contributors.home-assistant.io/apps/guides/testing/
+https://contributors.home-assistant.io/apps/reference/configuration/
+
+Before recommending any on-Pi installation or build, the operator can
+run `scripts/audit_haos_local_app_readiness_readonly.sh` on the HAOS
+host to report **only** whether possible local App source directories
+exist, the target/test App containers exist, the prior development
+image remains imported and high-level available disk/RAM. The script
+does not list App contents, read secrets, inspect full container
+configurations, start/stop anything or issue Supervisor install calls.
+An offline source test verifies its restricted command scope.
+
+No local App install command is supplied until the observed host layout
+is known and the operator explicitly authorizes installing a new,
+manual-only diagnostic App. The real remote Nabto connection remains
+unverified and will not be attempted in this phase.
