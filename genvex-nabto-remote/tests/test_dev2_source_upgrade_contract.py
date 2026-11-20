@@ -45,7 +45,7 @@ class Dev2UpgradeContractTests(unittest.TestCase):
         fake = self.bin / "ssh"
         fake.write_text(
             "#!/bin/sh\n"
-            "printf '%s\\n' \"$*\" >> \"$FAKE_SSH_CALLS\"\n"
+            "printf 'CALL:%s\\n' \"$*\" >> \"$FAKE_SSH_CALLS\"\n"
             "if [ \"$FAKE_SSH_EXIT\" = failure ]; then exit 9; fi\n"
             "cat >/dev/null\n"
             "echo 'PASS: mocked SSH transport only'\n"
