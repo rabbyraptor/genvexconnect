@@ -1,0 +1,28 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Genvex Remote (development)",
+        "description": "Enter the 12-digit device ID. Automatic certificate enrollment and authenticated runtime communication are not enabled yet.",
+        "data": {
+          "device_id": "Device ID"
+        }
+      }
+    },
+    "error": {
+      "invalid_device_id": "Enter exactly 12 ASCII digits."
+    },
+    "abort": {
+      "already_configured": "This device is already configured."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "supply_air": { "name": "Supply air" },
+      "outdoor_air": { "name": "Outdoor air" },
+      "exhaust_air": { "name": "Exhaust air" },
+      "extract_air": { "name": "Extract air" },
+      "humidity": { "name": "Humidity" }
+    }
+  }
+}
