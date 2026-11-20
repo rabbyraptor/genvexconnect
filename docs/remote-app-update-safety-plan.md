@@ -167,3 +167,23 @@ Supervisor catalog reload or update, start the dev2 image, provision private
 PEMs, enable live Nabto or change the existing LAN integration. Source folder
 replacement and a safe rollback strategy still need an explicitly approved
 operator procedure that uses a verified archive and does not touch App data.
+
+## Prepared operator-only source transaction preflight (read-only)
+
+After the operator confirmed the five installed `0.1.0-dev1` source digests,
+`scripts/audit_haos_dev2_source_transaction_preflight_v1.sh` was added.
+It checks the installed App is stopped/manual/dev1 with no running dedicated
+container; walks **only** the existing local App *source* directory and rejects
+unknown or linked entries; requires exact SHA256 matches for the five
+operator-observed baseline files; and refuses occupied transaction staging or
+backup names. It never opens/enumerates `apps/data`, imports a certificate,
+reloads Supervisor, or changes source files. Synthetic regressions on the first
+version passed [GitHub Actions 44830106651](https://github.com/rabbyraptor/genvexconnect/actions/runs/44830106651): **284 backend tests and 27 HA tests** in both environments.
+A subsequent hardening makes an unreadable source-tree traversal fail closed;
+that change also needs passing CI before the script is used on HAOS.
+
+This audit is a prerequisite, **not** a source swap or backup. If it reports
+unexpected source entries, review privately without attempting an automatic
+`rm`, `chmod` or replacement. Actual backup and source replacement require
+an independently reviewed transaction and operator action; updating Supervisor
+itself remains a separate approval gate.
