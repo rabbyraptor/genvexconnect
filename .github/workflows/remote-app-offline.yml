@@ -1,0 +1,57 @@
+name: Genvex Remote HAOS App candidate offline checks
+
+on:
+  push:
+    branches:
+      - remote-nabto-connection
+    paths:
+      - "haos-apps/genvex-nabto-remote/**"
+      - "experimental/genvex_remote/**"
+      - ".github/workflows/remote-app-offline.yml"
+  pull_request:
+    paths:
+      - "haos-apps/genvex-nabto-remote/**"
+      - "experimental/genvex_remote/**"
+      - ".github/workflows/remote-app-offline.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check bundled runtime matches validated source
+        run: |
+          for src in haos-apps/genvex-nabto-remote/runtime/*.py; do
+            file=$(basename "$src")
+            if [ "$file" != app_bootstrap.py ]; then
+              cmp "$src" "experimental/genvex_remote/$file"
+            fi
+          done
+      - name: Compile native runtime and App bootstrap
+        run: python -m compileall -q haos-apps/genvex-nabto-remote/runtime
+      - name: Run fake-credential bootstrap tests (no real profile)
+        run: python -m unittest discover -s haos-apps/genvex-nabto-remote/tests -p "test_*.py" -v
+      - name: Validate isolated App configuration
+        run: |
+          python -m pip install PyYAML
+          python - <<'PY'
+          from pathlib import Path
+          import yaml
+          config = yaml.safe_load(Path("haos-apps/genvex-nabto-remote/config.yaml").read_text())
+          assert config["slug"] == "genvex_nabto_remote"
+          assert config["boot"] == "manual"
+          assert config["host_network"] is False
+          assert config["arch"] == ["aarch64"]
+          assert config["map"] == ["share:ro"]
+          assert not config.get("ports")
+          assert config["schema"]["unlock_secret"] == "password"
+          assert config["schema"]["ipc_token"] == "password"
+          PY
