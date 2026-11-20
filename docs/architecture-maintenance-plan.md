@@ -17,8 +17,8 @@
 
 | ID | Topic | Priority / phase | Required outcome | State |
 | --- | --- | --- | --- | --- |
-| **2A** | Canonical sensor + capability model | Critical / now | Model-specific read-only specifications with stable semantic keys, supported types, scaling and provenance; isolate from HA/SDK; no duplicate hand-maintained mappings | **Starting** |
-| **2B** | Read-all / metadata / discovery Nabto RPC research | Critical / now | Classify bulk *values* vs capability *enumeration*; identify validated device-specific interface if available; propose safe dynamic HA discovery or explicit model catalog fallback | **Starting — offline only** |
+| **2A** | Canonical sensor + capability model | Critical / now | Typed, source-grounded catalog; no App/HA change until v2 contract | **Offline prototype + CI PASS; adoption pending** |
+| **2B** | Read-all / metadata / discovery Nabto RPC research | Critical / now | Distinguish known-address RPC45 batching from ping metadata and true device enumeration | **Initial offline research completed; inventory remains unproven** |
 | **2C** | Protect working LAN integration | Permanent prohibition | No source/config/deployment modifications without separate strict-necessity approval | **Enforced** |
 | **2D** | Private profile and credentials consolidation | Critical / review now | Reconcile three existing offline mechanisms; verify copy-only, safe no-clobber, crash recovery, permissions, secret lifecycle and single production entry point | Planned |
 | **2E** | Automate shared-runtime packaging | High / now | Single authoritative Python source, reproducible App packaging, CI parity and contract checks | Planned |
@@ -68,5 +68,5 @@ Update this section as tasks finish; a committed plan or passing synthetic tests
 
 | Task | Completion evidence | Outstanding gates |
 | --- | --- | --- |
-| 2B | Pending research report | Confirm any genuine manufacturer-defined capability/metadata RPC using authorized sources; live test needs approval |
-| 2A | Pending catalog and offline tests | Versioned multi-type HA contract, multi-model validation, entity creation in HA Core |
+| 2B | [Offline research](remote-device-discovery-2b.md): RPC17 ping metadata; verified RPC45 bulk reads; no manufacturer sensor-inventory RPC identified | Authoritative manufacturer app interface and opt-in live metadata validation remain pending; never scan |
+| 2A | [Typed prototype](../experimental/genvex_remote/capability_catalog.py) and [tests](../experimental/genvex_remote/test_capability_catalog.py); [GitHub Actions run #64](https://github.com/rabbyraptor/genvexconnect/actions/runs/44791766493) passed with both cryptography versions | Single canonical source adoption, v2 multi-type contract, model validation and actual HA Core entity generation |
