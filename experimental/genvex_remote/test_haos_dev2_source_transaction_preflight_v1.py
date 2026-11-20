@@ -107,6 +107,7 @@ class SourceTransactionGateTest(unittest.TestCase):
         source = SCRIPT.read_text()
         self.assertNotIn("/apps/data/", source)
         self.assertIn("runtime/*.py", source)
+        self.assertIn("source tree enumeration failed", source)
         self.assertIn("config.yaml 5c15ac644", source)
         for unsafe in ("ha apps start", "ha apps update", "ha apps stop",
                        "ha store reload", "docker exec", "mv ", "rm -rf",
