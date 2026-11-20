@@ -89,5 +89,24 @@ class ReadOnlyAuditTests(unittest.TestCase):
 
 
 
+    def test_local_app_install_preflight_is_read_only(self):
+        script = ROOT / "scripts/audit_haos_local_app_readiness_readonly.sh"
+        result = subprocess.run(["sh", "-n", str(script)], capture_output=True)
+        self.assertEqual(result.returncode, 0, result.stderr.decode())
+        contents = script.read_text()
+        self.assertIn("/mnt/data/supervisor/addons/local", contents)
+        self.assertIn("app_local_genvex_nabto_remote", contents)
+        self.assertIn("app_local_genvex_nabto_runtime_test", contents)
+        self.assertIn("READ-ONLY PREFLIGHT COMPLETE", contents)
+        self.assertNotRegex(
+            contents,
+            r"\\bdocker\\s+(?:run|start|stop|rm|load|build|create|cp|pull|push|exec)\\b"
+        )
+        self.assertNotIn("ha apps install", contents)
+        self.assertNotIn("ha apps start", contents)
+        self.assertNotIn("cat /data/", contents)
+
+
+
 if __name__ == "__main__":
     unittest.main()
