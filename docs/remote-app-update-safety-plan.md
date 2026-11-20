@@ -13,8 +13,9 @@ real Nabto RPC is authorized by this document.
   the host and container both report `0755`, UID/GID `0:0`, with an
   in-container UID probe reporting `0`.
 - Synthetic diagnostic endpoint was present and production snapshot disabled.
-  The App does **not automatically stop** after attestation. Verify stopped
-  state before the next stage; never assume it from the successful audit.
+  After attestation, the operator ran the read-only Phase F stop gate again
+  and confirmed that Supervisor reported **stopped/manual/dev1**, with no
+  residual dedicated Docker container. No App data or keys were accessed.
 - The isolated ARM64 image was built in GitHub Actions and the fake-only
   profile lifecycle passed with `/data` 0755, `/data/profile` 0700 and
   PEM files 0600, without network or host mounts.
@@ -69,6 +70,26 @@ real Nabto RPC is authorized by this document.
 - The private profile must be delivered through a separately reviewed,
   confidential channel. File modes alone do not protect secrets against
   a root-privileged operator or other privileged containers.
-- Confirm old diagnostic App stopped following the successful mount/UID test.
+- **Completed:** the operator independently confirmed the diagnostic App
+  stopped after the mount/UID test using Phase F. A fresh stop check is still
+  required before any mutating future upgrade.
+- The installed source file fingerprints must be checked before drafting a
+  replacement source transaction; only allowlisted code/configuration paths
+  may be read. The dedicated App data directory must not be enumerated.
 
 This document records a future decision gate, not permission to run one.
+
+## Read-only source fingerprint gate prepared
+
+`scripts/audit_haos_remote_update_source_readonly_v1.sh` has an inert
+`--preflight` and explicit `--execute-readonly`. It checks Supervisor
+`stopped/manual/0.1.0-dev1`, refuses a running dedicated Docker container,
+and computes SHA256 **only** for fixed allowlisted existing local App *source*
+files (manifest, Dockerfile, entrypoint and two runtime modules). It does not
+read or enumerate `/mnt/data/supervisor/apps/data`, options, profile or tokens,
+and does not stage, install, update, reload or start anything. A missing
+expected source file blocks rather than guessing. The test uses fake source,
+fake Supervisor and Docker; real HAOS execution is not yet verified.
+
+The fingerprint result must be reviewed before any approval to replace an
+existing local Supervisor source tree. This is not itself an upgrade.
