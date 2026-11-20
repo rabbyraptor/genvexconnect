@@ -69,3 +69,16 @@ are required before any live provisioning.
 
 The new GitHub Actions offline checks are **not yet confirmed** for these
 latest commits; do not treat their existence as proof of a pass.
+
+## Integrated offline profile handoff checks
+
+App bootstrap validation now requires **exact** PEM envelope types: X.509
+`CERTIFICATE` and `ENCRYPTED PRIVATE KEY` (not merely any `BEGIN` header),
+plus bounded private regular files. Provisioner tests now directly call App
+bootstrap's validator to verify the entire fake-profile handoff, and assert
+that swapped file types or an unencrypted key are rejected.
+
+These changes are development-source-only. The earlier successful offline
+workflow run covers the preceding provisioning tests; these **new integration
+tests have not yet been confirmed passed in CI**. The previously imported HAOS
+image has not been rebuilt, and no secret provisioning has been attempted.
