@@ -244,3 +244,47 @@ contract check is not proof of runtime DNS, actual reachability,
 Supervisor network isolation or secure token distribution. A real
 App installation remains blocked on reviewed private credential
 provisioning and safe on-host fake-only acceptance tests.
+
+## Experimental App diagnostic-only mode (not yet installed on HAOS)
+
+Added a **default-disabled** App option `diagnostic_only: false` to
+`genvex-nabto-remote/config.yaml`. Only an explicit boolean `true`
+allows diagnostic startup. The mode requires all four normal App options
+(`device_id`, `identity`, `unlock_secret`, `ipc_token`) to be empty and
+refuses to start if an App-private `/data/profile` or `/data/ipc-token`
+exists, including dangling symlinks.
+
+Diagnostic startup follows an independent Python HTTP server module and
+does **not** import `polling_runtime`, start the Nabto CLI or SDK,
+open any private profile or write token files. The listener uses the
+expected internal App port 18275 and provides precisely
+`GET /v1/diagnostic`, returning a clearly marked, deterministic
+synthetic payload with `mode=DIAGNOSTIC_ONLY` and
+`notice=NOT_REAL_SENSOR_DATA`. The diagnostic document omits
+`device_id`, `timestamp_utc`, `schema_version` and `health` fields
+required for actual snapshots. All requests to `/v1/snapshot`, including
+those providing bearer tokens, return HTTP 404, so the HA consumer cannot
+interpret fake values as live measurements. Requests with a body return
+HTTP 400. This unauthenticated diagnostic endpoint may **only** expose
+non-sensitive fabricated data: the Supervisor `hassio` network is shared,
+not trusted exclusively to Home Assistant Core. No port publishing or
+host networking is added.
+
+Offline unit/socket tests cover opt-in, non-empty credential rejection,
+existing profile and token rejection, return-value separation and
+routing. Image-build CI adds a disposable Docker `--internal` bridge
+test of the **actual App bootstrap** using a temporary, fake-only
+`/data/options.json` mount and another container as HTTP client.
+No real profile or token is present. The Docker test still cannot
+prove on-HAOS Supervisor DNS or reachability.
+
+**DO NOT enable for production**: diagnostic mode is deliberately not
+protected by a bearer token because it serves only known synthetic
+measurements and no device information. Turn it off before any live
+credentials are provisioned. Do not expose port 18275 on the host,
+do not install the separate HA integration to read test measurements,
+and do not treat fake-mode success as a remote Nabto RPC proof.
+
+Actual installation onto HAOS remains a separate user-authorized test
+gate. The existing LAN integration and earlier host-network test App
+remain unchanged.
