@@ -1,0 +1,34 @@
+name: DEV3 single-shot RPC45 offline tests
+
+on:
+  push:
+    branches:
+      - feature/dev3-live-once
+  pull_request:
+    paths:
+      - 'genvex-nabto-remote/runtime/**'
+      - 'genvex-nabto-remote/tests/test_live_once.py'
+      - '.github/workflows/dev3-live-once.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-single-shot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: genvex-nabto-remote
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Syntax check
+        run: python -m compileall -q runtime tests/test_live_once.py
+      - name: Test single-shot contract (no network credentials)
+        run: python -m unittest discover -s tests -p test_live_once.py -v
