@@ -28,9 +28,9 @@ assert os.geteuid() == 0, "Unexpected user for CI image"
 assert stat.S_IMODE(root.stat().st_mode) == 0o755
 assert root.stat().st_uid == os.geteuid()
 
-cert = b"-----BEGIN CERTIFICATE-----\\nFAKE-ONLY\\n-----END CERTIFICATE-----\\n"
-key = (b"-----BEGIN ENCRYPTED PRIVATE KEY-----\\nFAKE-ONLY\\n"
-       b"-----END ENCRYPTED PRIVATE KEY-----\\n")
+cert = b"-----BEGIN CERTIFICATE-----\nFAKE-ONLY\n-----END CERTIFICATE-----\n"
+key = (b"-----BEGIN ENCRYPTED PRIVATE KEY-----\nFAKE-ONLY\n"
+       b"-----END ENCRYPTED PRIVATE KEY-----\n")
 blob = struct.pack(">I", len(cert)) + cert + struct.pack(">I", len(key)) + key
 provision(io.BytesIO(blob), data_dir=root)
 profile = root / "profile"
