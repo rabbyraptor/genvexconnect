@@ -13,7 +13,7 @@
     },
     "error": {
       "invalid_device_id": "Enter exactly 12 ASCII digits.",
-      "invalid_runtime_config": "Enter a private HAOS App URL on port 18275 and a valid internal token."
+      "invalid_runtime_config": "Enter the fixed Genvex Remote App URL (local-genvex-nabto-remote:18275) and a valid internal token."
     },
     "abort": {
       "already_configured": "This device is already configured."
