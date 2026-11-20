@@ -63,7 +63,7 @@ class LauncherTests(unittest.TestCase):
             if argv[:3] == ["docker", "inspect", "--type"]:
                 return Mock(returncode=1, stdout="")
             if argv[:3] == ["docker", "image", "ls"]:
-                return Mock(returncode=0, stdout="\\n".join(items))
+                return Mock(returncode=0, stdout="\n".join(items))
             if argv[:3] == ["docker", "image", "inspect"]:
                 return Mock(returncode=0, stdout=json.dumps([{
                     "Id": image_id, "Architecture": "arm64",
@@ -92,7 +92,7 @@ class LauncherTests(unittest.TestCase):
                     "Repository": "local/aarch64-genvex_nabto_remote",
                     "Tag":"0.1.0-dev2", "ID": value,
                 }) for value in (image1, image2)]
-                return Mock(returncode=0, stdout="\\n".join(lines))
+                return Mock(returncode=0, stdout="\n".join(lines))
             raise AssertionError("Should not inspect an ambiguous image")
         with patch.object(launcher.subprocess, "run", side_effect=fake_run):
             with self.assertRaisesRegex(RuntimeError, "ambiguous"):
