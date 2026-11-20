@@ -48,9 +48,25 @@ if [[ ! "$DEVICE_ID" =~ ^[0-9]{12}$ ]]; then
   echo "FAIL: device ID must be exactly 12 ASCII digits" >&2
   exit 2
 fi
+# The previously successful phase-1 scripts accepted the *full* known host.
+# Ask for that same full host independently and compare locally, without
+# logging or printing either the ID or the host.
+IFS= read -r -s -p "Tidligere fungerende Nabto-hostnavn (skjult): " KNOWN_HOST || exit 2
+printf '\\n'
+if [[ ! "$KNOWN_HOST" =~ ^[0-9]{12}\.remote\.lscontrol\.dk$ ]]; then
+  echo "FAIL: known gateway hostname format invalid" >&2
+  unset DEVICE_ID KNOWN_HOST
+  exit 2
+fi
+if [[ "$KNOWN_HOST" != "${DEVICE_ID}.remote.lscontrol.dk" ]]; then
+  echo "FAIL: device ID does not match the previously working gateway hostname; no RPC will be sent" >&2
+  unset DEVICE_ID KNOWN_HOST
+  exit 2
+fi
+echo "PASS: device ID matches independently entered known working hostname"
 export GENVEX_NABTO_IDENTITY
-export GENVEX_NABTO_HOST="${DEVICE_ID}.remote.lscontrol.dk"
-unset DEVICE_ID
+export GENVEX_NABTO_HOST="$KNOWN_HOST"
+unset DEVICE_ID KNOWN_HOST
 
 # Explicit shell prompt before starting a timed subprocess.
 echo "Næste indtastning er adgangskoden til den eksisterende krypterede testnøgle."
