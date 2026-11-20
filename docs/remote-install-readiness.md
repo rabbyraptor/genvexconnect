@@ -2,6 +2,25 @@
 
 ## Current state
 
+**Latest verified installation milestone (20 November 2026):** Following
+explicit user approval, Supervisor built and installed
+`local_genvex_nabto_remote` v`0.1.0-dev1` on ARM64. Logs show build start
+17:29:02, build completion and successful install 17:30:34. The CLI then
+reported `already installed` due to a subsequent installation attempt;
+this does **not** mean the build failed. Supervisor shows
+`state: stopped`, `boot: manual`, `version: 0.1.0-dev1` and the
+Supervisor-built image `local/aarch64-addon-genvex_nabto_remote:0.1.0-dev1`
+(reported 375 MB). No new App container appeared in `docker ps -a`.
+The earlier test App remains `started` at `0.5.0`.
+**Phase C is finished; do not reinstall.** The new App has not run, no
+synthetic-only acceptance test has been performed, and no live Nabto connection
+has been made. Separate explicit approval is required before configuring
+`diagnostic_only: true` with all four identity/credential/token fields empty
+and manually starting the App for synthetic-only tests. No secret enrollment,
+private key migration, live RPC45 polling, or modification of the LAN
+integration/older App is authorized. See [install plan](remote-local-haos-diagnostic-install-plan.md).
+
+
 **Latest HAOS milestone (20 November 2026):** Local source for
 `local_genvex_nabto_remote` was staged and discovered by Supervisor after
 `ha store reload` (not `ha apps reload`). Supervisor validated its config and
