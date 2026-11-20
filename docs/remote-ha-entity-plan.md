@@ -16,6 +16,10 @@ Both runs on the user's HAOS Raspberry Pi through the *existing isolated* v0.4.0
 
 This is a short repeatability smoke test, **not** proof of week-long uptime or automatic reconnect behavior. No setpoint writes were tested.
 
+## Phase A certificate enrollment progress
+
+An **offline-only** [legacy CA enrollment prototype](../experimental/genvex_remote/enrollment_core.py) plus [fake CA tests](../experimental/genvex_remote/test_enrollment_core.py) now implement candidate RSA-1024 CSR and encrypted key generation, observed CA result parsing, key/certificate match and expiration checks. It does **not** make HTTP requests, verify the actual legacy Nabto trust chain, persist secrets, create UI, or enroll a real device. Its encrypted key format still needs SDK 4.9.11 compatibility testing, and full secure rotation is unimplemented. Six offline prototype tests passed locally.
+
 ## Scaffold committed
 
 [`experimental/genvex_remote/sensor_model.py`](../experimental/genvex_remote/sensor_model.py) defines the five supported sensors, decimal device-ID → Nabto hostname conversion, temperature transformation `(raw - 300)/10`, humidity conversion, strict signed-int16 validation and fail-whole-batch behavior. It contains **no Nabto SDK binary and no private credentials**.
