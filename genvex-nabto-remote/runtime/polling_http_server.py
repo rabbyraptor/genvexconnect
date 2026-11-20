@@ -50,14 +50,26 @@ class SnapshotHTTPServer:
                 if self.headers.get("Transfer-Encoding") or self.headers.get("Content-Length"):
                     self._json_reply(400, b'{"error":"bad_request"}')
                     return
-                status, payload = handle_read_request(
+                # Authorize and validate the route before consulting the
+                # snapshot provider. Unauthorized or unknown requests must
+                # never invoke it (or expose provider exceptions).
+                request = dict(
                     method=self.command,
                     path=self.path,
                     authorization=self.headers.get("Authorization"),
                     expected_token=token,
                     device_id=device_id,
-                    snapshot=snapshot_provider(),
                 )
+                status, payload = handle_read_request(**request, snapshot=None)
+                if status != 503:
+                    self._json_reply(status, payload)
+                    return
+                try:
+                    snapshot = snapshot_provider()
+                except Exception:
+                    self._json_reply(503, b'{"error":"unavailable"}')
+                    return
+                status, payload = handle_read_request(**request, snapshot=snapshot)
                 self._json_reply(status, payload)
 
             def do_GET(self): self._handle()
