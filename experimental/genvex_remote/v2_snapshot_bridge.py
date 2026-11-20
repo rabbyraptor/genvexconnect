@@ -47,14 +47,16 @@ class OptInV2SnapshotBridge:
         }
 
     def new_loopback_server(
-        self, *, token: str, port: int = 0
+        self, *, token: str, port: int = 0, bind_host: str = "127.0.0.1",
+        private_opt_in: bool = False,
     ) -> ExperimentalV2HTTPServer:
         """Construct but do not start a test-only loopback HTTP listener."""
         return ExperimentalV2HTTPServer(
-            bind_host="127.0.0.1",
+            bind_host=bind_host,
             port=port,
             token=token,
             device_id=self.device_id,
             snapshot_provider=self.current_v1,
             v2_snapshot_provider=self.current_v2,
+            private_opt_in=private_opt_in,
         )
