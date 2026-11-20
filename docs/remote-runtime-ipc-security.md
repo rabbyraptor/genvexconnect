@@ -20,7 +20,7 @@
 
 ## Blocking unknowns
 
-- Does authenticated remote Nabto RPC45 continue to work with `host_network: false`? Requires an isolated HAOS App test (no production key migration).
+- **RESOLVED FOR THE TESTED PATH:** the user's authenticated remote RPC45 succeeded on a disposable Docker bridge container (five readings, status 0); Supervisor lifecycle and internal IPC remain unverified.
 - Can the App and HA Core establish and rotate a truly private shared secret without manual terminal steps? Requires an explicit onboarding design. Do not ship an unauthenticated snapshot endpoint.
 - The actual **legacy LS Control Nabto CA trust anchor** is not independently pinned; user password enrollment remains disabled.
 - The actual x86_64 SDK has not accepted a *new* CA-issued key from our automated Python code, only the pre-existing profile.
@@ -39,6 +39,12 @@
 [`snapshot_api.py`](../experimental/genvex_remote/snapshot_api.py) now includes the **socket-free** handler core for `GET /v1/snapshot`. It requires the existing prototype's bearer token validator, rejects all other paths/methods, accepts only a fresh/complete matching-device snapshot via `snapshot_contract.py`, and returns only the five public sensor fields (no secrets or arbitrary SDK data). Failures use fixed 401/404/503 JSON responses. [Offline tests](../experimental/genvex_remote/test_snapshot_api.py) cover allowed read, missing/wrong token, unauthorized routes, wrong device, stale data and secret-field rejection.
 
 **Not a deployed server.** No listener, exposed port, token provisioning or transport encryption is implemented yet. Do not connect this prototype to the existing host-network test App; the trusted production App network and authenticated secret lifecycle remain gates.
+
+## Two-container isolated HTTP proof — staged, NOT YET VERIFIED
+
+[`scripts/run_haos_ipc_two_container_test.sh`](../scripts/run_haos_ipc_two_container_test.sh) creates a **temporary `--internal` Docker bridge** and two disposable read-only containers from the existing runtime image. It uses synthetic sensor measurements only. [`ipc_demo_server.py`](../experimental/genvex_remote/ipc_demo_server.py) is deliberately a **fake-only** `/v1/snapshot` service with no Nabto import; [`ipc_demo_client.py`](../experimental/genvex_remote/ipc_demo_client.py) requests over container-to-container HTTP. The script generates a per-run 256-bit token using Python `secrets`, copies it into tmpfs **without placing the token in shell argv or the process environment**, and checks: missing token 401, incorrect token 401, correct token 200 and five complete validated values. It uses no published ports, host mounts, live Genvex session, CA enrollment or user secrets; both containers, the private network and temporary files are removed on exit. Because the bridge is internal, its HTTP traffic has no internet path. **This test does not establish secure automatic token provisioning or production network isolation** and does not start in the installed App.
+
+The separate HA integration's [`AuthenticatedSnapshotReader`](../experimental/home_assistant/custom_components/genvex_remote/runtime_client.py) now has a bounded, fail-closed HTTP consumer with injected session/endpoint/token, but `UnconfiguredReader` remains the active default. Its [mock tests](../experimental/home_assistant/tests/test_runtime_client.py) do not run inside real HA Core. Cleartext HTTP with a bearer token is **not an approved production design** without a documented, appropriate isolation or encryption boundary.
 
 ## Next offline acceptance gate
 
