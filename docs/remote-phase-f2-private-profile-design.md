@@ -54,3 +54,9 @@ Any ambiguous host path, permission mismatch, unexpected App state, existing tar
 - Inspect only directory metadata and mount mappings for the Supervisor-managed App data directory; never dump options, PEM files, tokens, or environmental variables.
 - A host path under `/mnt/data/supervisor/apps/data/` is an observation, not proof of the container `/data` mapping; verify it independently against actual Supervisor/Docker metadata before any sensitive copying.
 - Keep the App stopped; no install, rebuild, SDK startup, enrollment, or LAN integration changes are authorized by the F2.4 audit.
+
+## F2.5 SSH execution correction (2026-11-20)
+- Steam Deck invocation `ssh ... sh < scripts/run_f25_mount_attestation.sh` repeatedly yielded `sh: syntax error: unterminated quoted string`, at or before the precheck. No mount result was produced. A separate state check afterward showed `state=stopped boot=manual`; do not mark F2.5 passed.
+- The probable cause is an SSH child process consuming part of the streamed shell input. The cause is not conclusively proven. Avoid executing shell scripts from the same stdin shared with Supervisor CLI subprocesses.
+- Use `scripts/run_f25_from_deck.sh` on Steam Deck instead. It first verifies local shell syntax, transfers the attestation script to a randomly named `/tmp` file on the HAOS host, executes that file, and cleans it up. This does not change App source or install anything, but does temporarily create the script file and start/stop the experimental App in diagnostics mode.
+- Only count F2.5 passed if mount equality is printed as PASS **and** the final state is explicitly confirmed `stopped`.
