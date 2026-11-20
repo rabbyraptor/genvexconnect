@@ -82,6 +82,10 @@ The user ran the pinned `run_haos_remote_install_preflight_v2.sh` on HAOS: **102
 
 **User-provided HAOS terminal output:** `run_haos_remote_install_preflight_v5.sh` completed **104 backend tests in 12.628 seconds, OK**, and **15 Home Assistant transport/snapshot tests in 0.070 seconds, OK**. It also passed backend/HA source compilation and JSON manifest/UI strings validation, finishing with `PASS: REMOTE RUNTIME + HA SOURCE PRE-FLIGHT`. **119/119 tests passed**. No new App was installed or started; no real device RPC or certificate access occurred. The later root-level App candidate, its bootstrap tests, and the v7 preflight are **NOT YET VERIFIED ON HAOS**. These results do not prove an installed HAOS App image, private App-to-Core network access, live 60-second polling reliability or restart behavior.
 
+### Complete runtime + HA + App source preflight v7 — VERIFIED 2026-11-20
+
+**User-provided HAOS output:** `run_haos_remote_install_preflight_v7.sh` passed **104 backend tests in 11.770 seconds**, **15 Home Assistant transport/snapshot tests in 0.072 seconds**, and **7 isolated HAOS App bootstrap tests in 0.032 seconds**: **126/126 tests passed**. The same run passed source parity (App runtime copy vs experimental backend), Python compilation and HA integration JSON manifest/UI strings checks. Printed `PASS: REMOTE RUNTIME + APP + HA SOURCE PRE-FLIGHT`. This is **source-only**; no App installed or started, no real Nabto RPC or certificate access. **App Docker image build, live private App-to-HA connection, 60-second polling stability and reboot recovery remain unverified.**
+
 ## Evidence labels
 
 - **VERIFIED:** observed successfully in our controlled tests, with SDK return values or independent certificate checks.
