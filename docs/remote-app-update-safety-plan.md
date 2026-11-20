@@ -187,3 +187,41 @@ unexpected source entries, review privately without attempting an automatic
 `rm`, `chmod` or replacement. Actual backup and source replacement require
 an independently reviewed transaction and operator action; updating Supervisor
 itself remains a separate approval gate.
+
+## Prepared dev1 → dev2 source-only transaction
+
+**Operator-approved scope:** backup and swap the existing *local App source tree only*.
+Do not update the Supervisor-installed App image or reload the store yet.
+
+`scripts/upgrade_remote_local_app_source_dev2.sh` runs from Steam Deck
+with three explicit arguments (`--preflight` or `--apply`, the audited
+source tarball, and its SHA256SUMS file). The archive is generated locally
+from `genvex-nabto-remote/` with `scripts/package_remote_diagnostic_app.py`
+and is restricted to code/configuration source files. The pinned
+`scripts/audit_haos_dev2_source_transaction_preflight_v1.sh` must be copied
+next to the archive. The operator's command must enforce that the Steam Deck
+checkout is on `remote-nabto-connection` and `git pull --ff-only` succeeds.
+
+The transaction verifies the local archive SHA256 and required dev2 manifest,
+runs the full read-only HAOS source preflight, then rechecks stopped/manual
+Supervisor dev1 status and all five operator-verified source SHA256 values.
+Only then does it stage an archive in the *local source parent*; it checks the
+transferred compressed bytes' SHA256 before extraction. It moves the old
+`genvex_nabto_remote` source tree to the new hidden
+`.genvex-remote-dev1-source-backup` path and moves the staged dev2 source
+into the original source path. On a failed promotion, it tries to restore
+the original source from the backup; it never overwrites a pre-existing
+backup or stage directory. **After success the old source backup is retained.**
+This transaction never touches App `/data`, runs a Docker container,
+enrolls PEMs, reloads Supervisor, updates/starts the installed App or contacts
+the Genvex gateway.
+
+**Offline evidence:** [GitHub Actions 44831369395](https://github.com/rabbyraptor/genvexconnect/actions/runs/44831369395)
+passed 79 App tests and 27 HA transport tests, including an actual dev2
+source swap in an isolated fake HAOS tree, retention of the dev1 backup,
+simulation of a failed promotion and automatic original-source restoration.
+These are not a substitute for the operator's real HAOS preflight.
+**Post-apply gate:** Independently inspect the new source version,
+the retained backup and stopped/manual installed dev1 status. Do not
+trigger `ha store reload` or `ha apps update` before separately approving
+the Supervisor update/backup stage.
