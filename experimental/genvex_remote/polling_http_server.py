@@ -5,7 +5,6 @@ Docker/App network; NEVER publish this port on the host or internet.
 """
 from __future__ import annotations
 
-import asyncio
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Thread
 from typing import Callable
@@ -34,9 +33,20 @@ class SnapshotHTTPServer:
         class Handler(BaseHTTPRequestHandler):
             protocol_version = "HTTP/1.0"
 
+            def _json_reply(self, status: int, payload: bytes) -> None:
+                self.send_response(status)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Cache-Control", "no-store")
+                self.send_header("X-Content-Type-Options", "nosniff")
+                self.send_header("Content-Length", str(len(payload)))
+                self.end_headers()
+                self.wfile.write(payload)
+
             def _handle(self):
+                # This is a body-free read-only API. Reject any request body
+                # without leaking HTML from BaseHTTPRequestHandler.send_error.
                 if self.headers.get("Transfer-Encoding") or self.headers.get("Content-Length"):
-                    self.send_error(400)
+                    self._json_reply(400, b'{"error":"bad_request"}')
                     return
                 status, payload = handle_read_request(
                     method=self.command,
@@ -46,12 +56,7 @@ class SnapshotHTTPServer:
                     device_id=device_id,
                     snapshot=snapshot_provider(),
                 )
-                self.send_response(status)
-                self.send_header("Content-Type", "application/json")
-                self.send_header("Cache-Control", "no-store")
-                self.send_header("Content-Length", str(len(payload)))
-                self.end_headers()
-                self.wfile.write(payload)
+                self._json_reply(status, payload)
 
             def do_GET(self): self._handle()
             def do_POST(self): self._handle()
