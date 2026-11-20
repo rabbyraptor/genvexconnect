@@ -45,6 +45,12 @@ Any ambiguous host path, permission mismatch, unexpected App state, existing tar
 - Replaced `os.rename` with Linux `renameat2(RENAME_NOREPLACE)` through ctypes, **without a fallback** that could overwrite an empty destination directory.
 - Staged fake files are private (`0600`), staging directory `0700`, and fsynced before promotion. Injected failures remove staging; success retains a private lock marker to prevent re-use of the same disposable test root.
 - Added tests for destination creation during staging (including empty directory and symlink), two concurrent importer simulations, and rejection when atomic no-replace is unavailable.
-- **12/12 tests passed in an isolated local Linux environment** (0.076 s); **Steam Deck rerun pending**. The 7/7 F2.2 tests were separately reported passed by the user.
+- **12/12 tests passed in an isolated local Linux environment** (0.076 s); **12/12 passed on Steam Deck (0.019 s), reported by the user**. The 7/7 F2.2 tests were separately reported passed by the user.
 - Run: `python3 -m unittest discover -s tests -p 'test_remote_profile_atomic_prototype.py' -v`.
 - **Not a production importer:** code creates only built-in fake PEM data. No real-profile reading, source-race protection, approved Supervisor mount mapping, or real credential migration is implemented. Path race hardening, crash/power-loss testing and long-running concurrency stress remain outstanding.
+
+## F2.4 next gate — read-only Supervisor data-path attestation
+- Confirm the experimental App remains stopped and its credential options remain empty, with no private profile or IPC token present.
+- Inspect only directory metadata and mount mappings for the Supervisor-managed App data directory; never dump options, PEM files, tokens, or environmental variables.
+- A host path under `/mnt/data/supervisor/apps/data/` is an observation, not proof of the container `/data` mapping; verify it independently against actual Supervisor/Docker metadata before any sensitive copying.
+- Keep the App stopped; no install, rebuild, SDK startup, enrollment, or LAN integration changes are authorized by the F2.4 audit.
