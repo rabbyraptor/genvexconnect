@@ -70,6 +70,10 @@ The user ran the first [SDK adapter offline test runner](../scripts/run_haos_sdk
 
 **VERIFIED from the user's HAOS terminal output:** the pinned [`run_haos_sdk_adapter_offline_v3.sh`](../scripts/run_haos_sdk_adapter_offline_v3.sh) completed **93 tests in 10.417 seconds, OK**, and printed `PASS: SDK ADAPTER OFFLINE TESTS AND COMPILATION`. No live device, certificate or credentials were accessed. This verifies the source-only subprocess adapter and polling tests under native ARM64; **it does not verify repeated live Nabto RPCs, daemon persistence, reboot recovery, or Home Assistant Core integration**.
 
+### Two serial live RPC45 polls on HAOS — PARTIAL SUCCESS 2026-11-20
+
+**VERIFIED from user-provided HAOS output:** [`run_haos_two_live_polls_v1.sh`](../scripts/run_haos_two_live_polls_v1.sh) used disposable bridge containers and the existing encrypted profile. Its automatic read-only SDK subprocess polling printed a validated first live batch, then **two failed polling attempts** (`Read-only poll failed; values unavailable`), followed by a validated second live batch. The two successes had distinct timestamps, and stopping the service cleared its snapshot. The runner exited `PASS: TWO SERIAL REAL NABTO RPC45 POLLS` because it only required two successful reads, **not because every attempt succeeded**. Thus: automatic polling, fail-closed behavior and eventual recovery demonstrated; stable repeated reads **NOT VERIFIED**. The failure reason is unknown from sanitized output. Do not infer that connection churn or gateway throttling caused the failures without additional evidence. No installed App or LAN integration changed.
+
 ## Evidence labels
 
 - **VERIFIED:** observed successfully in our controlled tests, with SDK return values or independent certificate checks.
