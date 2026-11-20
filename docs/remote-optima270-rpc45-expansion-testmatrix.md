@@ -163,3 +163,20 @@ FAIL: single-candidate probe returned status 1; no automatic retry.
 Hvis gatewayen fortsat ikke findes, stop uden flere adresseforsøg og undersøg autoriseret enhedsidentitet, online-status, remote-registrering og netværk. En **eventuel** ny enkeltstående RPC17/45-kontrol mod det korrekte kendte hostnavn skal være særskilt valgt/godkendt; ingen automatisk retry, registerscan eller batch på 17 adresser.
 
 **Efterfølgende kodeforbedring:** [Testscriptet](../scripts/probe_optima270_single_source_candidate.py) klassificerer nu `(status=26,event=1000015)` som `GATEWAY_NOT_KNOWN_OR_UNAVAILABLE` uden at udskrive rå JSON. [Regressionstests](../experimental/genvex_remote/test_single_candidate_cli.py) dækker forskellen på gatewayfejl og manglende klient-XML-query. Kodeændringen foretager ingen netværkskald.
+
+
+## 2B hostnavnssammenligning – offline kodeaudit (2026-11-20)
+
+Efter brugerens bekræftelse på, at Genvex Connect-appen viser aktuelle målinger, blev de tidligere succesfulde scripts sammenholdt med den nye enkelt-sensor-test:
+
+| Kode | Hvordan vælges gateway? | Faktisk format |
+| --- | --- | --- |
+| [`probe_remote_sensors_phase1.py`](../scripts/probe_remote_sensors_phase1.py) og [`probe_remote_sensors_batch_phase1b.py`](../scripts/probe_remote_sensors_batch_phase1b.py) | Operatøren indtaster fuldt `GENVEX_NABTO_HOST` fra den allerede kendte gateway | Videresendes uændret til `nabto://...` |
+| [`sensor_model.remote_hostname()`](../experimental/genvex_remote/sensor_model.py) og [`sdk_snapshot_adapter.py`](../experimental/genvex_remote/sdk_snapshot_adapter.py) | Konstrueres fra et valideret 12-cifret device-ID | `<12-digit-ID>.remote.lscontrol.dk` |
+| Første version af [`run_optima270_one_read_from_deck.sh`](../scripts/run_optima270_one_read_from_deck.sh) | Operatøren indtaster kun 12-cifret device-ID; runneren konstruerer hostnavn | Samme suffix som den tidligere verificerede adapter |
+
+**Konklusion:** Hostnavnsformatet er **ikke forskelligt**. Der er ikke fundet nogen dokumenteret kodefejl i suffixet. Det er dog muligt, at det ID, som blev indtastet under det fejlede live-forsøg, ikke var det samme som i den tidligere vellykkede test; dette er **ikke bekræftet**. En fungerende iPhone-app viser, at appens adgangsvej virker, men garanterer ikke, at den særskilte SDK-profil, gatewayidentitet eller remote session virker samtidig.
+
+**Sikker rettelse:** Steam Deck-runneren kræver nu, at operatøren indtaster både device-ID og det **tidligere fungerende fulde Nabto-hostnavn** via skjulte prompts. Den kontrollerer format og præcis overensstemmelse **lokalt før** nøgleadgangskode, Nabto SDK eller RPC. Hvis de ikke matcher, stopper den uden netværk og uden at udskrive nogen af værdierne. Ingen automatisk gentagelse, ingen ny sensor og ingen HAOS-ændring.
+
+**Vigtig begrænsning:** Det er en menneskelig, uafhængig sammenligning med det *tidligere dokumenteret fungerende* hostnavn – ikke en verifikation mod serveren. Operatøren må ikke bare konstruere det samme hostnavn på ny ud fra det samme ubekræftede ID; så mister kontrollen sin værdi. Hvis det tidligere hostnavn ikke kan findes lokalt, skal testen stoppes og den oprindelige succesfulde testkonfiguration gennemgås uden at eksponere device-ID eller credentials.
