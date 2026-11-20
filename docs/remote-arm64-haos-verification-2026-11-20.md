@@ -198,3 +198,33 @@ The target `app_local_genvex_nabto_remote` hostname pinned in the HA
 transport remains **unverified**. Do not assume correct DNS or private
 reachability until the on-host check and a later fake-only App test
 prove it. Never disable authentication based on Docker network flags.
+
+## Core DNS audit and corrected Supervisor App alias
+
+Read-only Core DNS query on the user's HAOS reported:
+- `supervisor` and `hassio`: resolves.
+- `local-genvex-nabto-runtime-test`: resolves (the previously installed test App).
+- `app_local_genvex_nabto_runtime_test`: does not resolve.
+- `local-genvex-nabto-remote`: does not resolve, **new App not installed**.
+- `app_local_genvex_nabto_remote`: does not resolve.
+
+Home Assistant's official documentation describes the convention:
+App ID `{repository}_{slug}`, DNS hostname with underscores converted to
+hyphens, so local App slug `genvex_nabto_remote` should be reachable as
+`local-genvex-nabto-remote` once installed:
+https://contributors.home-assistant.io/apps/guides/communication/
+https://contributors.home-assistant.io/apps/reference/environment/
+
+The Home Assistant consumer's previously hard-pinned
+`app_local_genvex_nabto_remote` URL was incorrect: that string reflects
+a Docker container naming convention, not the Supervisor DNS hostname.
+The consumer is now pinned instead to the **expected**, but not yet
+on-host-tested, URL
+`http://local-genvex-nabto-remote:18275/v1/snapshot`.
+Tests reject the old name, another installed App, other addresses and
+lookalike URLs. This fix is code-only; the custom integration has not
+been installed or reloaded, and the actual new App has not been started.
+
+**Remaining:** Verify the new App's Supervisor-reported hostname and DNS
+resolution when it eventually exists, with fake credentials and no actual
+Nabto session. No real bearer token should be provisioned yet.
