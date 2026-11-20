@@ -57,7 +57,17 @@ def validate_private_profile(path: Path = PROFILE) -> None:
     if not stat.S_ISDIR(info.st_mode) or info.st_mode & 0o077:
         raise ValueError("App-private profile directory must have mode 0700")
 
-    for name in ("client.crt", "client-encrypted.key"):
+    expected = {
+        "client.crt": (
+            b"-----BEGIN CERTIFICATE-----",
+            b"-----END CERTIFICATE-----",
+        ),
+        "client-encrypted.key": (
+            b"-----BEGIN ENCRYPTED PRIVATE KEY-----",
+            b"-----END ENCRYPTED PRIVATE KEY-----",
+        ),
+    }
+    for name, (header, footer) in expected.items():
         candidate = path / name
         fd = os.open(candidate, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
         try:
@@ -67,8 +77,10 @@ def validate_private_profile(path: Path = PROFILE) -> None:
                     or not 1 <= info.st_size <= 131072):
                 raise ValueError("Unsafe App-private profile file")
             with os.fdopen(fd, "rb", closefd=False) as stream:
-                header = stream.read(96)
-            if not header.startswith(b"-----BEGIN "):
+                contents = stream.read(131073).strip()
+            if (not contents.startswith(header)
+                    or not contents.endswith(footer)
+                    or b"\x00" in contents):
                 raise ValueError("Invalid PEM profile file")
         finally:
             os.close(fd)
