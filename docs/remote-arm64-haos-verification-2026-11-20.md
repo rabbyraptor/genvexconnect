@@ -105,3 +105,18 @@ reachable peers, and lifecycle in a controlled HAOS test. Plain HTTP bearer
 tokens require a trusted isolated network; no real token should be used before
 that is verified. These latest changes are not yet independently verified in
 GitHub Actions.
+
+## Actual socket-level offline HTTP acceptance test staged
+
+`genvex-nabto-remote/tests/test_http_loopback.py` now starts the **real**
+`SnapshotHTTPServer` on `127.0.0.1` and a randomly allocated local TCP port
+inside an ephemeral test process. It verifies authenticated JSON snapshots,
+wrong/missing tokens (401), missing/stale readings (503), unsupported methods
+and routes (404), body rejection (400), response no-cache/no-sniff headers,
+and denial of arbitrary interface binding.
+
+The test uses fake device data and tokens; no SDK session, Nabto credentials
+or gateway traffic. Loopback socket tests cover the HTTP implementation but
+**do not establish HAOS Supervisor App DNS trust, container-to-Core reachability,
+or production network isolation**. Those still require bounded tests on HAOS.
+The additional test has not yet been confirmed passing in CI.
