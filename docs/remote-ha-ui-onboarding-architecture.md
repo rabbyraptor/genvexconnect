@@ -97,6 +97,10 @@ Installed isolated App `genvex_nabto_runtime_test` **v0.5.0** on Raspberry Pi HA
 
 **Boundary:** this verifies native OpenSSL functionality and the intended output structure, **not** Python `sdk_compat.py` compatibility against the Alpine Python/cryptography versions, independent trust of a pinned real legacy CA, or successful Nabto SDK session with a newly issued certificate. The existing live profile was not accessed/modified.
 
+### HAOS cryptography runtime verified — 2026-11-20
+
+The user ran native `python3` inside the installed v0.5.0 HAOS runtime and reported **cryptography 47.0.0**, `x509.load_pem_x509_certificate` available and `x509.Certificate.not_valid_after_utc` available. This confirms API presence only, **not** that our Python enrollment modules or simulated CA tests already pass there. [Offline CI](../.github/workflows/remote-nabto-offline.yml) now covers both 46.0.4 and 47.0.0 (workflow run status unconfirmed). The [isolated HAOS native test runner](../scripts/run_haos_offline_enrollment_tests.sh) copies only the public prototype into a disposable container directory and invokes offline unit tests without reading the existing Nabto profile, making CA HTTP requests, or modifying the installed App image.
+
 ### Additional implementation staged (2026-11-20)
 
 The following development components have been added **outside the installed App and Home Assistant integration**:
