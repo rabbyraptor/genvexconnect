@@ -60,3 +60,11 @@ Any ambiguous host path, permission mismatch, unexpected App state, existing tar
 - The probable cause is an SSH child process consuming part of the streamed shell input. The cause is not conclusively proven. Avoid executing shell scripts from the same stdin shared with Supervisor CLI subprocesses.
 - Use `scripts/run_f25_from_deck.sh` on Steam Deck instead. It first verifies local shell syntax, transfers the attestation script to a randomly named `/tmp` file on the HAOS host, executes that file, and cleans it up. This does not change App source or install anything, but does temporarily create the script file and start/stop the experimental App in diagnostics mode.
 - Only count F2.5 passed if mount equality is printed as PASS **and** the final state is explicitly confirmed `stopped`.
+
+## F2.5 verified — diagnostic App mount attestation (2026-11-20)
+- Steam Deck executed `sh scripts/run_f25_from_deck.sh` after updating the branch. User supplied full successful output.
+- `PASS: diagnostic configuration and absent credentials`: required manual boot, stopped initial state, `diagnostic_only=true`, and empty `device_id`, `identity`, `unlock_secret`, `ipc_token`; profile/token paths absent.
+- `PASS: experimental App /data mount matches Supervisor directory`: runtime Docker mount `/data` matched `/mnt/data/supervisor/apps/data/local_genvex_nabto_remote`.
+- `PASS: App stopped`: automatic cleanup invoked Supervisor stop and checked final `state=stopped`.
+- **F2.5 complete**, but this does not attest network silence beyond diagnostic-only configuration, and it does not authorize real credential operations.
+- Outstanding F2.6: design and offline-test a real-source **copy-only** importer with path/ownership checks, source file descriptor pinning, safe no-clobber, crash handling and rollback. Review parent directory mode `0755` and destination file permissions, verify the existing working profile is never modified. No real profile transfer without separate explicit operator approval.
