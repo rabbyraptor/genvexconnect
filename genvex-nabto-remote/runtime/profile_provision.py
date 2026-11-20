@@ -108,9 +108,12 @@ def provision(stream, *, data_dir: Path = Path("/data")) -> None:
     cert, key = read_profile(stream)
     # Hold a directory descriptor throughout publication: an lstat() of
     # a path followed later by a fresh open() permits a swapped path.
-    parent_fd = os.open(
-        data_dir, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
-    )
+    try:
+        parent_fd = os.open(
+            data_dir, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+        )
+    except OSError:
+        raise ValueError("Unsafe App data directory") from None
     try:
         _provision_in_open_data_dir(cert, key, data_dir, parent_fd)
     finally:
