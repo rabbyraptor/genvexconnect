@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from http.client import HTTPConnection
+import builtins
 import importlib.util
 import json
 from pathlib import Path
@@ -117,6 +118,29 @@ class DiagnosticBootstrapTests(unittest.TestCase):
         diagnostics.assert_called_once_with()
         validation.assert_not_called()
         write_token.assert_not_called()
+        self.assertFalse(self.profile.exists())
+        self.assertFalse(self.token_file.exists())
+
+    def test_diagnostic_bootstrap_never_imports_live_polling(self):
+        """Offline safety check: diagnostic path must not import live SDK code."""
+        original_import = builtins.__import__
+        blocked = {"polling_runtime", "sdk_snapshot_adapter",
+                   "probe_remote_snapshot", "polling_service"}
+
+        def guard(name, *args, **kwargs):
+            if name.split(".", 1)[0] in blocked:
+                raise AssertionError("diagnostic attempted live-module import")
+            return original_import(name, *args, **kwargs)
+
+        with (
+            patch.object(bootstrap, "OPTIONS", self.options),
+            patch.object(bootstrap, "PROFILE", self.profile),
+            patch.object(bootstrap, "TOKEN", self.token_file),
+            patch.object(bootstrap, "run_diagnostic_only") as diagnostics,
+            patch("builtins.__import__", side_effect=guard),
+        ):
+            bootstrap.main()
+        diagnostics.assert_called_once_with()
         self.assertFalse(self.profile.exists())
         self.assertFalse(self.token_file.exists())
 
