@@ -111,7 +111,7 @@ class Dev2UpgradeContractTests(unittest.TestCase):
         base.mkdir()
         old = base / "genvex_nabto_remote"
         old.mkdir()
-        (old / "config.yaml").write_text('version: "0.1.0-dev1"\\n')
+        (old / "config.yaml").write_text('version: "0.1.0-dev1"\n')
         prior_hash = hashlib.sha256((old / "config.yaml").read_bytes()).hexdigest()
         data = self.root / "private-app-data"
         data.mkdir()
@@ -125,28 +125,28 @@ class Dev2UpgradeContractTests(unittest.TestCase):
         local_script = self.root / "isolated-transaction.sh"
         local_script.write_text(source)
         (self.bin / "ssh").write_text(
-            "#!/bin/bash\\n"
-            "last=${!#}\\n"
-            "case \"$last\" in\\n"
-            "  'sh -s -- --execute-readonly') cat >/dev/null; exit 0 ;;\\n"
-            "  'sh -c '* ) exec sh -c \"$last\" ;;\\n"
-            "  *) exit 8 ;;\\n"
-            "esac\\n"
+            "#!/bin/bash\n"
+            "last=${!#}\n"
+            "case \"$last\" in\n"
+            "  'sh -s -- --execute-readonly') cat >/dev/null; exit 0 ;;\n"
+            "  'sh -c '* ) exec sh -c \"$last\" ;;\n"
+            "  *) exit 8 ;;\n"
+            "esac\n"
         )
         (self.bin / "ssh").chmod(0o700)
         (self.bin / "ha").write_text(
-            "#!/bin/sh\\n"
-            "printf '%s\\\\n' 'state: stopped' 'boot: manual' 'version: 0.1.0-dev1'\\n"
+            "#!/bin/sh\n"
+            "printf '%s\\\n' 'state: stopped' 'boot: manual' 'version: 0.1.0-dev1'\n"
         )
         (self.bin / "ha").chmod(0o700)
-        (self.bin / "docker").write_text("#!/bin/sh\\nexit 1\\n")
+        (self.bin / "docker").write_text("#!/bin/sh\nexit 1\n")
         (self.bin / "docker").chmod(0o700)
         if fail_promotion:
             (self.bin / "mv").write_text(
-                "#!/bin/sh\\n"
+                "#!/bin/sh\n"
                 "case \"$1\" in *dev2-source-stage/genvex_nabto_remote)"
-                " echo 'SIMULATED PROMOTION FAILURE' >&2; exit 3 ;; esac\\n"
-                "exec /bin/mv \"$@\"\\n"
+                " echo 'SIMULATED PROMOTION FAILURE' >&2; exit 3 ;; esac\n"
+                "exec /bin/mv \"$@\"\n"
             )
             (self.bin / "mv").chmod(0o700)
         run = subprocess.run(
