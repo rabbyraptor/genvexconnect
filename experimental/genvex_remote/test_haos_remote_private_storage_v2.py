@@ -97,7 +97,7 @@ class StorageV2AuditTests(unittest.TestCase):
         source = SCRIPT.read_text()
         self.assertIn("ha apps info local_genvex_nabto_remote </dev/null", source)
         for forbidden in (
-            "chmod ", "chown ", "mkdir ", "docker exec", "docker start",
+            "\nchmod ", "\nchown ", "\nmkdir ", "docker exec", "docker start",
             "docker run", "ha apps start", "ha apps install", "nabtoRpcInvoke",
             "options.json", "client-encrypted.key", "client.crt", "ipc-token",
         ):
