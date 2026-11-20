@@ -55,18 +55,51 @@ def checked_image():
         "device_id", "identity", "unlock_secret", "ipc_token",
     )), "App credentials unexpectedly populated")
 
-    container = subprocess.run(
+    # Supervisor may delete the stopped App container. Resolve the pinned local
+    # image without starting or creating a Supervisor-managed container.
+    containers = subprocess.run(
         ["docker", "inspect", "--type", "container", IMAGE_CONTAINER],
+        capture_output=True, text=True, timeout=20, check=False,
+    )
+    if containers.returncode == 0:
+        found = json.loads(containers.stdout)
+        require(len(found) == 1, "Unexpected App container count")
+        require(not found[0]["State"]["Running"], "App container is running")
+
+    listed = subprocess.run(
+        ["docker", "image", "ls", "--no-trunc", "--format", "{{json .}}"],
         capture_output=True, text=True, timeout=20, check=True,
     )
-    result = json.loads(container.stdout)
-    require(len(result) == 1, "Unexpected container count")
-    require(not result[0]["State"]["Running"], "App container is running")
-    image_id = result[0]["Image"]
-    require(
-        isinstance(image_id, str) and image_id.startswith("sha256:"),
-        "Unexpected Docker image reference",
+    candidates = set()
+    for line in listed.stdout.splitlines():
+        item = json.loads(line)
+        repository = item.get("Repository", "")
+        tag = item.get("Tag", "")
+        image_id = item.get("ID", "")
+        # Local Home Assistant builds use a local/ image repository.
+        if (repository.startswith("local/")
+                and ("genvex_nabto_remote" in repository
+                     or "genvex-nabto-remote" in repository)
+                and tag == "0.1.0-dev2"
+                and isinstance(image_id, str)
+                and image_id.startswith("sha256:")):
+            candidates.add(image_id)
+
+    require(len(candidates) == 1, "Missing or ambiguous local DEV2 image")
+    image_id = next(iter(candidates))
+    inspected = subprocess.run(
+        ["docker", "image", "inspect", image_id],
+        capture_output=True, text=True, timeout=20, check=True,
     )
+    image_info = json.loads(inspected.stdout)
+    require(len(image_info) == 1, "Unexpected image inspection")
+    image = image_info[0]
+    require(image.get("Id") == image_id, "Image ID changed")
+    require(image.get("Architecture") == "arm64", "Wrong image architecture")
+    labels = (image.get("Config") or {}).get("Labels") or {}
+    require(labels.get("io.hass.version") == "0.1.0-dev2",
+            "Unexpected image version label")
+    require(labels.get("io.hass.type") == "app", "Unexpected image type")
     return image_id
 
 
