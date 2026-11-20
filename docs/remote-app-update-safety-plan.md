@@ -237,3 +237,42 @@ the Supervisor update/backup stage.
 **OPERATOR-VERIFIED on HAOS (2026-11-20):** After a prior BusyBox checksum-flag failure, the corrected `sha256sum -c` transaction successfully completed on the Steam Deck and real HAOS. Both read-only transaction gates passed and the remote output reported `PASS-source-swap-dev2-backup-retained` followed by `PASS: dev2 App SOURCE swapped, dev1 source backup retained`. The script neither reloaded the Supervisor store nor updated/restarted the installed App. **The installer reports source-swap success; independent post-swap inspection is pending.** The installed Supervisor App is still expected to report stopped/manual/0.1.0-dev1. Do not assume source replacement means Supervisor has registered dev2.
 
 **Prepared source-only post-swap attestation:** `scripts/audit_haos_dev2_source_swap_result_v1.sh` is read-only. It confirms stopped/manual installed dev1, no running dedicated container, absence of temporary staging, allowlisted source-tree contents, the five fixed original dev1 backup SHA256s and the five SHA256s for dev2 files pinned to the exact packaged source candidate. It never opens Supervisor App data, options, credentials or private profiles. It does not reload/update/start anything. A passing result is the gate for *planning* Supervisor update and backup; Supervisor update remains separately permissioned.
+
+## HAOS source and backup verified; next Supervisor read-only gate
+
+**OPERATOR-VERIFIED on actual HAOS (2026-11-20):** Independent
+`scripts/audit_haos_dev2_source_swap_result_v1.sh` post-swap audit returned
+all PASS and `DEV2 SOURCE SWAP RESULT VERIFIED`: Supervisor installed
+App still stopped/manual/version `0.1.0-dev1`; temporary staging absent;
+existing App source `genvex_nabto_remote` and retained
+`.genvex-remote-dev1-source-backup` both exist and contain only allowed
+source entries; all five original dev1 digests and five pinned dev2 digests
+match; no private App data, configurations, keys or Supervisor updates were
+accessed. This completes the source-only transaction and its independent
+verification.
+
+**Prepared only, no further HAOS mutation:** Read-only
+`scripts/audit_haos_dev2_supervisor_update_readiness_v1.sh` verifies stopped,
+manual, installed dev1; the unchanged critical dev2 and backup source digests;
+no transaction staging; free space on the App source filesystem; and displays
+only the allowlisted `version_latest` and `update_available` fields from
+Supervisor App info. Without a catalog reload it may report
+`NOT READY: Supervisor has not yet confirmed an available dev2 update`.
+This is an informational, non-mutating result, **not** an error that should
+be repaired by an automatic reload or update. Offline regressions passed
+[GitHub Actions 44832699141](https://github.com/rabbyraptor/genvexconnect/actions/runs/44832699141):
+300 backend tests and 27 HA tests in each of two environments.
+
+Supervisor API documentation confirms that local-store reload and installed
+App update are separate operations. Explicit `backup: true` is necessary
+to request an update backup when using the Supervisor Store API, whose
+documented default is false. Revisit the documented migration edge case for
+stale app source paths only if a later, separately approved update fails;
+do not change Supervisor's internal state speculatively.
+- https://contributors.home-assistant.io/apps/supervisor-api/store/
+- https://github.com/home-assistant/supervisor/issues/6917
+
+**Next decision gate:** The operator may run the read-only Supervisor catalog
+and disk readiness audit. A passing read-only result does not authorize
+`ha store reload`, a Supervisor App backup, `ha apps update`, an
+App start or Nabto profile enrollment; those require separate consent.
