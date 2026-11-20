@@ -75,3 +75,17 @@ experimental supervised live probe, **not** a production integration.
 After the offline regression tests pass, use the approved operator procedure
 to stage the scripts and run the interactive one-shot test. Do not paste
 credentials into chat or into commands.
+
+## Safe failure classification (after first blocked live read)
+
+The first real isolated run reached the container but returned the generic blocked
+message. The runner now emits only allowlisted stage codes such as
+`PROFILE_INVALID`, `SDK_STARTUP_FAILED`, `SDK_SESSION_FAILED`,
+`SDK_RPC45_FAILED` and `SDK_RESPONSE_INVALID`; it never copies raw stdout,
+SDK diagnostics, identifiers or secrets to the host output.
+
+The host operator must stage **three** private 0600 scripts from the same
+reviewed commit: `live_once.py`, `sdk_snapshot_adapter.py`, and
+`scripts/haos_live_once_operator.py`. The two runtime scripts are mounted
+read-only over their installed DEV2 image equivalents. The installation,
+Supervisor options and original profile remain unchanged.
