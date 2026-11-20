@@ -74,15 +74,15 @@ echo "===== ACTUAL APP BOOTSTRAP: DIAGNOSTIC ONLY ====="
 docker rm -f "$SERVER" >/dev/null
 DIAG_DIR=$(mktemp -d /tmp/genvex-ci-diagnostic.XXXXXX)
 # Deliberately fake-only App options: no Nabto identity, profile, token, or key.
-printf '%s\\n' '{"diagnostic_only":true,"device_id":"","identity":"","unlock_secret":"","ipc_token":"","poll_seconds":60}' > "$DIAG_DIR/options.json"
-docker run -d \\
-  --name "$SERVER" \\
-  --network "$NET" --network-alias "$HOST" \\
-  --read-only --tmpfs /tmp:rw,nosuid,nodev,size=16m \\
-  --mount "type=bind,source=$DIAG_DIR,target=/data,readonly" \\
-  --cap-drop ALL --security-opt no-new-privileges \\
-  --memory 256m --pids-limit 64 \\
-  --entrypoint python3 \\
+printf '%s\n' '{"diagnostic_only":true,"device_id":"","identity":"","unlock_secret":"","ipc_token":"","poll_seconds":60}' > "$DIAG_DIR/options.json"
+docker run -d \
+  --name "$SERVER" \
+  --network "$NET" --network-alias "$HOST" \
+  --read-only --tmpfs /tmp:rw,nosuid,nodev,size=16m \
+  --mount "type=bind,source=$DIAG_DIR,target=/data,readonly" \
+  --cap-drop ALL --security-opt no-new-privileges \
+  --memory 256m --pids-limit 64 \
+  --entrypoint python3 \
   "$IMAGE" -u /opt/genvex-remote/runtime/app_bootstrap.py >/dev/null
 
 test "$(docker inspect "$SERVER" --format '{{json .HostConfig.PortBindings}}')" = '{}'
@@ -101,12 +101,12 @@ for _ in $(seq 1 30); do
 done
 test "$ready" = 1
 
-docker run --rm \\
-  --network "$NET" --read-only \\
-  --tmpfs /tmp:rw,nosuid,nodev,size=16m \\
-  --cap-drop ALL --security-opt no-new-privileges \\
-  --memory 256m --pids-limit 64 \\
-  --entrypoint python3 \\
+docker run --rm \
+  --network "$NET" --read-only \
+  --tmpfs /tmp:rw,nosuid,nodev,size=16m \
+  --cap-drop ALL --security-opt no-new-privileges \
+  --memory 256m --pids-limit 64 \
+  --entrypoint python3 \
   "$IMAGE" "$SCRIPT" check-diagnostic "$HOST"
 
 echo "PASS: fake-only internal Docker IPC AND actual diagnostic App startup; no host ports or Nabto connections"
