@@ -1,6 +1,7 @@
 """Offline candidate recovery policy for intermittent legacy Nabto RPC45 errors.
 
-Not wired to the live operator, HAOS App or Home Assistant coordinator.
+Only used by the manually requested --recover-once single-shot test.
+Not wired to the HAOS App, ordinary live reads or Home Assistant coordinator.
 A fresh SDKSnapshotAdapter.poll_once() starts and cleans up a separate SDK
 process for each attempt. No persistent session and no hidden background loop.
 """
@@ -35,7 +36,8 @@ async def read_with_one_recovery(
 ) -> dict[str, Any]:
     """Exactly one first attempt; at most one *new* attempt after 60 seconds.
 
-    This is an explicit opt-in callable for offline simulation only.
+    This callable is used only by an explicit manual experiment; offline
+    regression tests cover the policy without any SDK or network.
     Non-eligible failures pass through unchanged. Cancellation must interrupt
     any attempt or the delay. No credentials or error text are logged.
     """
