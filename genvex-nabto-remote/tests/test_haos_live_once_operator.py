@@ -163,6 +163,34 @@ class LauncherTests(unittest.TestCase):
                 launcher.bounded_trial(image, b"private", sleep=lambda _: None)
         probe.assert_called_once()
 
+    def test_diagnostic_flag_forwarded_without_credentials(self):
+        calls = []
+        def fake_run(argv, **kwargs):
+            calls.append((argv, kwargs))
+            return Mock(returncode=0)
+        payload = b"private-input-only"
+        with patch.object(launcher.subprocess, "run", side_effect=fake_run):
+            launcher.run_once("sha256:" + "a" * 64, payload, diagnose=True)
+        cmd, kwargs = calls[0]
+        self.assertEqual(cmd[-1], "--diagnose")
+        self.assertNotIn("private-input-only", " ".join(cmd))
+        self.assertEqual(kwargs["input"], payload)
+        self.assertEqual(calls[1][0][1:3], ["rm", "-f"])
+
+    def test_diagnostic_trial_keeps_exact_three_attempts(self):
+        image = "sha256:" + "a" * 64
+        sleeps = []
+        with patch.object(launcher, "preflight", return_value=image), \
+             patch.object(launcher, "run_once") as run_once, \
+             patch("sys.stdout", new_callable=io.StringIO) as output:
+            self.assertTrue(launcher.bounded_trial(
+                image, b"private", sleep=sleeps.append, diagnose=True
+            ))
+        self.assertEqual(run_once.call_count, 3)
+        self.assertTrue(all(c.kwargs == {"diagnose": True} for c in run_once.call_args_list))
+        self.assertEqual(sleeps, [60, 60])
+        self.assertNotIn("private", output.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()
