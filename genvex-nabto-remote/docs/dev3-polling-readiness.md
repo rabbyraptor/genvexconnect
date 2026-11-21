@@ -173,3 +173,28 @@ Reference: https://downloads.nabto.com/assets/docs/TEN025%20Writing%20a%20Nabto%
 The next approved field trial may distinguish a transport-level
 `CONNECT_TIMEOUT` event from an RPC failure without such an event.
 Until then, SDK status 26 remains an **unmapped API return code**.
+
+## Inert recovery-policy prototype (offline only)
+
+`runtime/recovery_policy.py` introduces a narrowly scoped, explicit
+`read_with_one_recovery(poll_once)` callable. It is **not connected** to
+`live_once.py`, the HAOS App, `PollingService`, or Home Assistant.
+It does not start a service, perform a live call on import, change the
+installed SDK, or introduce polling.
+
+Only the **exact** combination `SDK_RPC45_FAILED`, SDK return status
+`26`, and redacted diagnostic events `(1000015,)` may trigger a
+single retry. It waits **60 seconds**, then calls the injected reader
+exactly once more; that reader must create a fresh disposable SDK session.
+A second failure terminates immediately; there is no third request or
+loop. Missing, conflicting, malformed or different diagnostics are
+non-retriable. Cancellation stops work. No raw SDK exception, secret or
+profile data is logged.
+
+The policy is conservative and experimental, not a claim that these
+codes are always transient. It has SDK-free regression tests for success,
+missing/unrelated event codes, maximum attempts, delay and cancellation.
+The current fail-closed snapshot/coordinator semantics are unchanged:
+known failed reads invalidate published data; no stale values may
+be represented as fresh. Any future integration into a real worker
+requires a separate design review and field-test authorization.
