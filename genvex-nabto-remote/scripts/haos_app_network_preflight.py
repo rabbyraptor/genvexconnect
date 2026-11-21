@@ -13,7 +13,7 @@ import subprocess
 import sys
 
 APP_SLUG = "local_genvex_nabto_remote"
-APP_CONTAINER = "addon_local_genvex_nabto_remote"
+APP_CONTAINER = "app_local_genvex_nabto_remote"
 CORE_CONTAINER = "homeassistant"
 EXPECTED_HOST = "local-genvex-nabto-remote"
 MAX_OUTPUT = 131072
@@ -59,12 +59,15 @@ def check_app_metadata() -> tuple[bool, bool]:
         metadata = json.loads(output)
         if not isinstance(metadata, dict):
             raise ValueError
+        if metadata.get("result") != "ok" or not isinstance(metadata.get("data"), dict):
+            raise ValueError
+        metadata = metadata["data"]
         slug = metadata.get("slug")
         if slug not in (APP_SLUG, "genvex_nabto_remote"):
             raise ValueError
         boot = metadata.get("boot")
         network = metadata.get("host_network")
-        if boot != "manual_only" or network is not False:
+        if boot != "manual" or network is True:
             print("BLOCKED: APP_SAFETY_SETTINGS_MISMATCH")
             return False, False
         state = metadata.get("state")
