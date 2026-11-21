@@ -508,3 +508,22 @@ of a regression in the remote integration.
 App-to-HA IPC.** No network server or socket listener exists in this
 candidate; secure IPC token provisioning and network binding must be
 reviewed before installation. See `docs/dev3-private-ipc-readiness.md`.
+
+## Inert private IPC HTTP adapter readiness
+
+`runtime/ipc_web_candidate.py` now exposes only an aiohttp
+application/handler factory, without any binding or App startup.
+The existing source-side authentication and validated snapshot handler
+remain authoritative. A new SDK-free real-Core CI test verifies that
+only an authenticated exact GET can read the snapshot, that unknown
+tokens never touch the snapshot provider, that bad paths/methods and
+unexpected bodies are rejected, and that missing/invalid data
+produces a redacted unavailable response. Real-Core workflow
+`44850577962` completed successfully on code revision
+`fc6e0f27fa8010561c4d2914be06e158b352ce5a`.
+
+The App image and boot scripts remain untouched, with no listener
+started or TCP port opened. Runtime dependency packaging, private
+network topology, token provisioning and controlled on-device
+testing are explicitly gated by the separate architecture review
+in `docs/dev3-private-ipc-readiness.md`.
