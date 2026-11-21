@@ -80,10 +80,13 @@ class RealLoopbackTests(unittest.TestCase):
             status, body, _ = self.request(token=token)
             self.assertEqual(status, 401)
             self.assertEqual(body, b'{"error":"unauthorized"}')
-        for method, path in (("POST", "/v1/snapshot"),
-                             ("GET", "/v1/snapshot?debug=1"),
-                             ("GET", "/v1/private")):
-            status, body, _ = self.request(method, path)
+        # http.client supplies Content-Length: 0 on POST; this is rejected
+        # before route processing. Both 400 and 404 prohibit snapshot access.
+        status, body, _ = self.request("POST", "/v1/snapshot")
+        self.assertEqual(status, 400)
+        self.assertEqual(body, b'{"error":"bad_request"}')
+        for path in ("/v1/snapshot?debug=1", "/v1/private"):
+            status, body, _ = self.request("GET", path)
             self.assertEqual(status, 404)
             self.assertEqual(body, b'{"error":"not_found"}')
         self.assertEqual(self.calls, 0)
