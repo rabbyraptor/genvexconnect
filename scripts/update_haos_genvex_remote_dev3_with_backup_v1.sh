@@ -25,20 +25,13 @@ safe_info() {
   ha apps info local_genvex_nabto_remote </dev/null 2>/dev/null |
     sed -n '/^state: /p; /^boot: /p; /^version: /p; /^version_latest: /p; /^update_available: /p'
 }
-# The App must have been stopped before the source transaction.
-# Reload local App catalog only on this explicit execute path.
-echo "ACTION: reloading Supervisor local App catalog"
-ha store reload </dev/null >/dev/null 2>/dev/null || {
-  echo "BLOCKED: store reload failed; dev2 image unchanged"; exit 1;
-}
+# Check stopped/manual dev2 BEFORE touching even the Supervisor catalog.
 META=$(safe_info) || { echo "BLOCKED: App info unavailable"; exit 1; }
 readfield() { printf '%s\n' "$META" | sed -n "s/^$1: *//p"; }
 [ "$(readfield state)" = stopped ] &&
 [ "$(readfield boot)" = manual ] &&
-[ "$(readfield version)" = 0.1.0-dev2 ] &&
-[ "$(readfield version_latest)" = 0.1.0-dev3 ] &&
-[ "$(readfield update_available)" = true ] || {
-  echo "BLOCKED: installed App must be stopped/manual/dev2 with dev3 offered"; exit 1;
+[ "$(readfield version)" = 0.1.0-dev2 ] || {
+  echo "BLOCKED: installed App must be stopped/manual/dev2"; exit 1;
 }
 if docker inspect --type container app_local_genvex_nabto_remote >/dev/null 2>&1; then
   RUNNING=$(docker inspect --type container app_local_genvex_nabto_remote --format '{{.State.Running}}') || exit 1
@@ -97,7 +90,23 @@ case "$HELP" in
   *) echo "BLOCKED: CLI lacks backup flag"; exit 1 ;;
 esac
 
-# The one and only mutating operation. Supervisor makes the backup first
+echo "ACTION: reloading local App catalog after source and stopped-state checks"
+ha store reload </dev/null >/dev/null 2>/dev/null || {
+  echo "BLOCKED: store reload failed; dev2 image unchanged"; exit 1;
+}
+META=$(safe_info) || { echo "BLOCKED: App info unavailable after reload"; exit 1; }
+[ "$(readfield state)" = stopped ] &&
+[ "$(readfield boot)" = manual ] &&
+[ "$(readfield version)" = 0.1.0-dev2 ] &&
+[ "$(readfield version_latest)" = 0.1.0-dev3 ] &&
+[ "$(readfield update_available)" = true ] || {
+  echo "BLOCKED: Supervisor did not offer dev3 as a stopped/manual dev2 update"
+  exit 1
+}
+echo "PASS: Supervisor offers backed-up dev3 update"
+
+# After catalog refresh, request one explicit backup-enabled App update.
+# The one and only App image mutation. Supervisor makes the backup first
 # and aborts on backup failure. Never retry automatically.
 echo "ACTION: one backup-enabled Supervisor update requested"
 if ha apps update local_genvex_nabto_remote --backup </dev/null >/dev/null 2>/dev/null; then
