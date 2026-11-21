@@ -257,3 +257,26 @@ SDK response text, sensor readings, or vendor diagnostic strings.
 The API and runtime request counts remain unchanged, at most two
 RPC45 calls under explicit `--recover-once`. This is verified by
 offline tests only; successful on-device recovery is not yet proven.
+
+## Process-based offline recovery verification
+
+The single-shot runner now emits **RECOVERY_RESULT: SUCCESS** only after
+the second snapshot has passed the same five-sensor validation, and
+**RECOVERY_RESULT: FAILED** if a triggered second attempt fails or its
+snapshot is invalid. Successful first attempts produce no recovery result
+marker. The event that triggered the cooldown remains the exact
+SDK status 26 plus event (1000015,). No SDK or host diagnostics are
+printed in either outcome marker.
+
+`tests/test_dev3_recovery_subprocess.py` exercises the *real adapter*
+process creation and stdout parsing using only a local stub Python
+executable. A synthetic first child emits SDK 26/event 1000015;
+a second newly spawned child emits a valid five-sensor snapshot.
+The regression verifies two distinct child PIDs, one 60-second logical
+cooldown request, and one validated final snapshot. A second scenario
+uses nonmatching event 1000026 and asserts only one child process and
+zero cooldown calls. The cooldown function is stubbed for speed.
+This remains an **offline simulation**, not a successful field retry.
+
+No additional remote calls, HAOS App changes, credential storage or
+continuous polling were introduced by these tests.
