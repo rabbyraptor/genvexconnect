@@ -124,7 +124,7 @@ class SnapshotStateTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(worker.maximum, 1)
         self.assertEqual(state.generation, 2)
 
-    async def test_clear_prior_result_during_slow_refresh(self):
+    async def test_retains_only_fresh_prior_result_during_slow_refresh(self):
         started = asyncio.Event()
         release = asyncio.Event()
 
@@ -141,6 +141,33 @@ class SnapshotStateTests(unittest.IsolatedAsyncioTestCase):
 
         state = SnapshotState(SlowPoller())
         self.assertTrue(await state.refresh())
+        task = asyncio.create_task(state.refresh())
+        await asyncio.wait_for(started.wait(), 1)
+        self.assertEqual(state.current()["values"], VALUES)
+        release.set()
+        self.assertTrue(await task)
+        self.assertIsNotNone(state.current())
+
+    async def test_stale_prior_result_unavailable_during_slow_refresh(self):
+        started = asyncio.Event()
+        release = asyncio.Event()
+
+        class SlowPoller:
+            device_id = DEVICE
+            calls = 0
+            async def poll_once(self):
+                self.calls += 1
+                if self.calls == 1:
+                    return fresh_snapshot()
+                started.set()
+                await release.wait()
+                return fresh_snapshot()
+
+        state = SnapshotState(SlowPoller())
+        self.assertTrue(await state.refresh())
+        state._snapshot["timestamp_utc"] = (
+            datetime.now(timezone.utc) - timedelta(seconds=200)
+        ).isoformat()
         task = asyncio.create_task(state.refresh())
         await asyncio.wait_for(started.wait(), 1)
         self.assertIsNone(state.current())
