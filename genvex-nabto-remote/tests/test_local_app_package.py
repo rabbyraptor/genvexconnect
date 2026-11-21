@@ -77,14 +77,14 @@ class LocalAppPackageTests(unittest.TestCase):
             self.assertEqual(len(calls.read_text().splitlines()), 1)
             self.assertIn("test ! -e", calls.read_text())
 
-    def test_dev2_candidate_version_matches_arm64_image_build(self):
+    def test_dev3_candidate_version_matches_arm64_image_build(self):
         config = (ROOT / "genvex-nabto-remote/config.yaml").read_text()
         workflow = (ROOT / ".github/workflows/remote-app-image-build.yml").read_text()
-        self.assertIn('version: "0.1.0-dev2"', config)
+        self.assertIn('version: "0.1.0-dev3"', config)
         self.assertIn("boot: manual_only", config)
         self.assertIn("host_network: false", config)
-        self.assertIn("--build-arg BUILD_VERSION=0.1.0-dev2", workflow)
-        self.assertIn('if [ "$IMAGE_VERSION" != 0.1.0-dev2 ]; then', workflow)
+        self.assertIn("--build-arg BUILD_VERSION=0.1.0-dev3", workflow)
+        self.assertIn('if [ "$IMAGE_VERSION" != 0.1.0-dev3 ]; then', workflow)
 
     def test_allowlist_excludes_credentials_and_unknown_files(self):
         paths = packager.archive_sources()
