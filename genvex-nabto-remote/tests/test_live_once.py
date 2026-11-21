@@ -11,7 +11,7 @@ RUNTIME = Path(__file__).resolve().parents[1] / "runtime"
 sys.path.insert(0, str(RUNTIME))
 
 import live_once
-from sdk_snapshot_adapter import classify_probe_failure, parse_rpc_diagnostics, SDKSnapshotError
+from sdk_snapshot_adapter import classify_probe_failure, parse_rpc_diagnostics, parse_rpc_events, SDKSnapshotError
 
 
 class FakeStdin:
@@ -127,10 +127,35 @@ class FailureClassificationTests(unittest.TestCase):
             b"Batch RPC status: 2\nRPC elapsed_ms: 99999999\n"), (2, None))
         self.assertEqual(parse_rpc_diagnostics(b"\xff\xfe"), (None, None))
 
+    def test_rpc_events_allowlisted_from_redacted_probe_only(self):
+        self.assertEqual(parse_rpc_events(
+            b"Batch RPC status: 26\nDiagnostic: ('ERROR_JSON', [1000026])\n"),
+            (1000026,))
+        self.assertEqual(parse_rpc_events(
+            b"Diagnostic: ('NO_JSON_DIAGNOSTIC', [])\n"), ())
+        self.assertEqual(parse_rpc_events(
+            b"Diagnostic: ('ERROR_JSON', [1000009, 1000026])\n"),
+            (1000009, 1000026))
+
+    def test_rpc_events_reject_malformed_or_untrusted_data(self):
+        for value in (
+            b"Diagnostic: ('ERROR_JSON', [1000026, 1000026])\n",
+            b"Diagnostic: ('ERROR_JSON', [1000026])\nDiagnostic: ('ERROR_JSON', [1])\n",
+            b"Diagnostic: ('ERROR_JSON', [True])\n",
+            b"Diagnostic: ('ERROR_JSON', [-1])\n",
+            b"Diagnostic: ('ERROR_JSON', [10000001])\n",
+            b"Diagnostic: ('ERROR_JSON', ['secret'])\n",
+            b"Diagnostic: __import__('os').system('false')\n",
+            b"Diagnostic: ('ERROR_JSON', [1,2,3,4,5,6,7,8,9])\n",
+            b"Diagnostic: ('ERROR_JSON', {'code': 1000026})\n",
+        ):
+            with self.subTest(value=value):
+                self.assertEqual(parse_rpc_events(value), ())
+
     def test_diagnostic_failure_prints_only_allowlisted_numbers(self):
         payload = {"device_id": "123456789012", "identity": "private@example.com",
                    "unlock_secret": "sensitive"}
-        error = SDKSnapshotError("SDK_RPC45_FAILED", rpc_status=5, elapsed_ms=1432)
+        error = SDKSnapshotError("SDK_RPC45_FAILED", rpc_status=5, elapsed_ms=1432, rpc_events=(1000026,))
         with patch.object(sys, "argv", ["live_once.py", "--diagnose"]), \
              patch.object(live_once, "read_settings", return_value=payload), \
              patch.object(live_once, "validate_private_profile"), \
@@ -141,7 +166,8 @@ class FailureClassificationTests(unittest.TestCase):
         self.assertEqual(output.getvalue(),
                          "BLOCKED: SDK_RPC45_FAILED\n"
                          "DIAG RPC45_STATUS: 5\n"
-                         "DIAG RPC45_ELAPSED_MS: 1432\n")
+                         "DIAG RPC45_ELAPSED_MS: 1432\n"
+                         "DIAG RPC45_EVENTS: 1000026\n")
         self.assertNotIn("private@example.com", output.getvalue())
         self.assertNotIn("sensitive", output.getvalue())
 
@@ -157,6 +183,7 @@ class FailureClassificationTests(unittest.TestCase):
             self.assertEqual(live_once.main(), 1)
         self.assertIn("DIAG RPC45_STATUS: unknown", output.getvalue())
         self.assertIn("DIAG RPC45_ELAPSED_MS: unknown", output.getvalue())
+        self.assertIn("DIAG RPC45_EVENTS: none", output.getvalue())
 
 
 class SingleReadTests(unittest.IsolatedAsyncioTestCase):
