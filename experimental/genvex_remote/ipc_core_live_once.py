@@ -75,6 +75,10 @@ async def serve_once(settings: dict, *, sleep=asyncio.sleep) -> None:
     )
     try:
         server.start()
+        # A fixed, non-sensitive readiness marker lets the host wait for
+        # the single real RPC45 read before probing Core. No credentials,
+        # sensor values or SDK output are ever emitted.
+        print("IPC_READY", flush=True)
         # No external acknowledgement or write endpoint is exposed.
         # The host operator terminates this disposable container as soon
         # as its one Core read verifies the snapshot.
