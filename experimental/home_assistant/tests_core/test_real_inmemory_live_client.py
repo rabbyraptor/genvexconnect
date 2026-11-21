@@ -53,6 +53,7 @@ def test_actual_core_classes_in_memory_read_real_loopback_tcp(socket_enabled):
     compiled = probe.build_core_client(sources)
     assert 'local-genvex-nabto-remote' in compiled
     assert "genvex_remote_probe" in compiled
+    assert 'phase = "HA_IMPORT"' in compiled
     assert "not-a-secret" not in compiled
 
     provider_calls = []
