@@ -82,7 +82,7 @@ class Dev3AppUpgradeContractTests(unittest.TestCase):
     def test_preflight_calls_only_remote_readonly_gate(self):
         result = self.run_source("--preflight")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        calls = self.calls.read_text().splitlines()
+        calls = self.calls.read_text().split('CALL:')[1:]
         self.assertEqual(len(calls), 1)
         self.assertIn("sh -s -- --execute-readonly", calls[0])
         self.assertNotIn("sh -c", calls[0])
@@ -90,7 +90,7 @@ class Dev3AppUpgradeContractTests(unittest.TestCase):
     def test_apply_runs_readonly_before_single_source_swap(self):
         result = self.run_source("--apply")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        calls = self.calls.read_text().splitlines()
+        calls = self.calls.read_text().split('CALL:')[1:]
         self.assertEqual(len(calls), 2)
         self.assertIn("sh -s -- --execute-readonly", calls[0])
         self.assertIn("sh -c", calls[1])
@@ -105,7 +105,7 @@ class Dev3AppUpgradeContractTests(unittest.TestCase):
         self.env["TEST_SSH_FAIL"] = "yes"
         result = self.run_source("--apply")
         self.assertNotEqual(result.returncode, 0)
-        self.assertEqual(len(self.calls.read_text().splitlines()), 1)
+        self.assertEqual(len(self.calls.read_text().split('CALL:')[1:]), 1)
 
     def test_checksum_tamper_blocks_before_ssh(self):
         with self.archive.open("ab") as f:
