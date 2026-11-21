@@ -127,8 +127,44 @@ def verify_archive(archive_file: Path, expected_sha: str) -> tuple[str, ...]:
             if not all(line in lines for line in required):
                 raise UpgradeBlocked("DEV4_MANIFEST_INVALID")
             return tuple(sorted(names))
-    except (tarfile.TarError, EOFError, OSError):
-        raise UpgradeBlocked("ARCHIVE_NOT_READABLE") from None
+    except (tarfile.TarError, EOFError, OSError) as exc:
+        raise UpgradeBlocked("ARCHIVE_READ_" + type(exc).__name__) from None
+
+
+def diagnose_archive(archive_file: Path, expected_sha: str) -> None:
+    """Only bounded environment/format diagnostics; never print archive data."""
+    import importlib.util
+
+    print("===== DEV4 ARCHIVE READ DIAGNOSTIC =====", flush=True)
+    print("PYTHON_ZLIB:", "AVAILABLE" if importlib.util.find_spec("zlib") else "MISSING")
+    try:
+        blob = archive_file.read_bytes()
+        print("ARCHIVE_BYTES:", len(blob))
+        print("ARCHIVE_SHA256:", "MATCH" if hashlib.sha256(blob).hexdigest() == expected_sha else "MISMATCH")
+    except Exception as exc:
+        print("ARCHIVE_LOCAL_READ:", type(exc).__name__)
+        print("ARCHIVE_DIAGNOSTIC_COMPLETE")
+        return
+    try:
+        with tarfile.open(archive_file, "r:gz") as tf:
+            members = tf.getmembers()
+            print("PYTHON_TAR_GZIP: PASS")
+            print("PYTHON_TAR_MEMBERS:", len(members))
+            manifest = tf.extractfile("genvex_nabto_remote/config.yaml")
+            print("PYTHON_MANIFEST_ACCESS:", "PASS" if manifest and manifest.read() else "FAIL")
+    except Exception as exc:
+        print("PYTHON_TAR_GZIP:", "FAIL_" + type(exc).__name__)
+    try:
+        check = subprocess.run(
+            ["tar", "-tzf", str(archive_file)],
+            stdin=subprocess.DEVNULL, capture_output=True, timeout=30,
+        )
+        print("SYSTEM_TAR_GZIP:", "PASS" if check.returncode == 0 else "FAIL")
+        if check.returncode == 0:
+            print("SYSTEM_TAR_MEMBERS:", len(check.stdout.splitlines()))
+    except Exception as exc:
+        print("SYSTEM_TAR_GZIP:", "FAIL_" + type(exc).__name__)
+    print("ARCHIVE_DIAGNOSTIC_COMPLETE", flush=True)
 
 
 def unpack(archive_file: Path, names: tuple[str, ...], target: Path) -> Path:
@@ -222,12 +258,14 @@ def apply(archive_file: Path, expected_sha: str) -> None:
 
 
 def main() -> int:
-    if len(sys.argv) != 4 or sys.argv[1] not in ("--validate-archive", "--apply"):
+    if len(sys.argv) != 4 or sys.argv[1] not in ("--validate-archive", "--diagnose-archive", "--apply"):
         print("Usage: python3 dev4_upgrade_transaction.py --validate-archive|--apply ARCHIVE SHA256", file=sys.stderr)
         return 2
     archive, digest = Path(sys.argv[2]), sys.argv[3]
     try:
-        if sys.argv[1] == "--validate-archive":
+        if sys.argv[1] == "--diagnose-archive":
+            diagnose_archive(archive, digest)
+        elif sys.argv[1] == "--validate-archive":
             print("ARCHIVE_MEMBERS:", len(verify_archive(archive, digest)))
             print("DEV4_ARCHIVE_GATE: PASS")
         else:
