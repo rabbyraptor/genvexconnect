@@ -61,7 +61,7 @@ class EntityProbeOperatorTests(unittest.TestCase):
                  patch.object(sys, "argv", ["operator"]), \
                  patch("sys.stdout", new_callable=io.StringIO) as output:
                 self.assertEqual(op.main(), 0)
-                self.assertIn("actual HA reader", op.base.CORE_CLIENT)
+                self.assertIn("GenvexRemoteCoordinator", op.base.CORE_CLIENT)
                 self.assertIn("HA_COORDINATOR", op.base.CORE_FAILURE_PHASES)
                 self.assertIn("PASS: real snapshot validated", output.getvalue())
             with patch.object(op, "read_reviewed_sources", return_value=sources), \
