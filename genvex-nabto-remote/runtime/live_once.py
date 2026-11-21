@@ -63,11 +63,12 @@ async def read_once(settings: dict, *, show_values: bool = False) -> None:
     )
     result = await adapter.poll_once()
     readings = parse_snapshot(result, expected_device_id=settings["device_id"])
+    lines = format_readings(readings) if show_values else ()
     # Credentials, hostname, device ID and raw SDK output never reach stdout.
     print("PASS: one read-only RPC45 snapshot validated", flush=True)
     if show_values:
         print("READINGS_BEGIN", flush=True)
-        for line in format_readings(readings):
+        for line in lines:
             print(line, flush=True)
         print("READINGS_END", flush=True)
 
