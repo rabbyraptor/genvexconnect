@@ -10,7 +10,7 @@ if [[ $# -ne 1 || ( "$1" != "--apply" && "$1" != "--preflight" ) ]]; then
   exit 2
 fi
 MODE="$1"
-SOURCE_COMMIT="0bab05c642f4c9bfb63bbce240b7f93888828220"
+SOURCE_COMMIT="e113cf8ef036a91f50d82acfccd871d8f9223ee9"
 HOST="root@rabbyshome.duckdns.org"
 PORT=22222
 WORK="$(mktemp -d /tmp/genvex-dev4-upgrade.XXXXXX)"
@@ -50,6 +50,7 @@ run() {
   [[ -f "$archive" && -f "$sums" ]] || return 2
   local digest
   digest="$(sha256sum "$archive" | cut -d ' ' -f 1)" || return $?
+  (cd "$root" && python3 scripts/dev4_upgrade_transaction.py --validate-archive "$archive" "$digest") || return $?
   echo "ARCHIVE_PACKAGE: VERIFIED"
 
   REMOTE_DIR="$(ssh_cmd 'umask 077; mktemp -d /mnt/data/supervisor/apps/local/.genvex-dev4-transfer.XXXXXX')" || return $?
@@ -66,6 +67,7 @@ run() {
     <"$archive" || return $?
   echo "TRANSFER_STAGED: PASS"
 
+  ssh_cmd "python3 '$REMOTE_DIR/dev4_upgrade_transaction.py' --diagnose-archive '$REMOTE_DIR/source.tar.gz' '$digest'" || return $?
   ssh_cmd "python3 '$REMOTE_DIR/dev4_upgrade_transaction.py' --validate-archive '$REMOTE_DIR/source.tar.gz' '$digest'" || return $?
   ssh_cmd "python3 '$REMOTE_DIR/dev4_source_baseline_preflight.py' --execute-readonly" || return $?
   echo "PREFLIGHT: PASS"
