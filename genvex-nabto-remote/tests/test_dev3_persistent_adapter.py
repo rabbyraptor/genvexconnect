@@ -309,10 +309,11 @@ class PersistentWorkerProtocolTests(unittest.TestCase):
             ])
             self.assertNotIn("fixture-secret", stdout.getvalue())
 
-    def test_source_is_not_wired_into_live_app(self):
-        from importlib import util
+    def test_persistent_mode_requires_explicit_opt_in(self):
         source = (ROOT / "polling_runtime.py").read_text()
-        self.assertNotIn("persistent_sdk_adapter", source)
+        self.assertIn('if config.get("persistent_session", False):', source)
+        self.assertIn('else:\n        adapter = SDKSnapshotAdapter(', source)
+        self.assertIn('await adapter.aclose()', source)
         compile((ROOT / "persistent_rpc45_worker.py").read_bytes(),
                 "<persistent_rpc45_worker>", "exec")
 
