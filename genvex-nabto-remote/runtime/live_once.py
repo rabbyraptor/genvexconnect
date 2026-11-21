@@ -124,6 +124,10 @@ def main() -> int:
         print("BLOCKED: " + exc.code, flush=True)
         if diagnose:
             # Never print raw stdout, exception text, URLs or credentials.
+            if exc.code == "SDK_SESSION_FAILED":
+                session = (exc.session_status if exc.session_status is not None
+                           else "unknown")
+                print(f"DIAG SESSION_STATUS: {session}", flush=True)
             # These are strictly bounded numeric markers from the SDK probe.
             status = exc.rpc_status if exc.rpc_status is not None else "unknown"
             elapsed = exc.elapsed_ms if exc.elapsed_ms is not None else "unknown"
