@@ -112,47 +112,47 @@ class FailureClassificationTests(unittest.TestCase):
 
     def test_bounded_rpc_status_and_elapsed(self):
         self.assertEqual(parse_rpc_diagnostics(
-            b"SDK startup: 0\\nBatch RPC status: 5\\nRPC elapsed_ms: 1432\\n"),
+            b"SDK startup: 0\nBatch RPC status: 5\nRPC elapsed_ms: 1432\n"),
             (5, 1432))
 
     def test_no_untrusted_text_or_ambiguous_markers(self):
         self.assertEqual(parse_rpc_diagnostics(
-            b"Batch RPC status: 5 secret\\nRPC elapsed_ms: 20\\n"), (None, 20))
+            b"Batch RPC status: 5 secret\nRPC elapsed_ms: 20\n"), (None, 20))
         self.assertEqual(parse_rpc_diagnostics(
-            b"Batch RPC status: 5\\nBatch RPC status: 6\\nRPC elapsed_ms: 30\\n"),
+            b"Batch RPC status: 5\nBatch RPC status: 6\nRPC elapsed_ms: 30\n"),
             (None, 30))
         self.assertEqual(parse_rpc_diagnostics(
-            b"Batch RPC status: 99999999\\nRPC elapsed_ms: -1\\n"), (None, None))
+            b"Batch RPC status: 99999999\nRPC elapsed_ms: -1\n"), (None, None))
         self.assertEqual(parse_rpc_diagnostics(
-            b"Batch RPC status: 2\\nRPC elapsed_ms: 99999999\\n"), (2, None))
-        self.assertEqual(parse_rpc_diagnostics(b"\\xff\\xfe"), (None, None))
+            b"Batch RPC status: 2\nRPC elapsed_ms: 99999999\n"), (2, None))
+        self.assertEqual(parse_rpc_diagnostics(b"\xff\xfe"), (None, None))
 
     def test_diagnostic_failure_prints_only_allowlisted_numbers(self):
         payload = {"device_id": "123456789012", "identity": "private@example.com",
                    "unlock_secret": "sensitive"}
         error = SDKSnapshotError("SDK_RPC45_FAILED", rpc_status=5, elapsed_ms=1432)
-        with patch.object(sys, "argv", ["live_once.py", "--diagnose"]), \\
-             patch.object(live_once, "read_settings", return_value=payload), \\
-             patch.object(live_once, "validate_private_profile"), \\
-             patch.object(live_once, "PROBE", Mock(is_file=lambda: True)), \\
-             patch.object(live_once, "read_once", new_callable=AsyncMock, side_effect=error), \\
+        with patch.object(sys, "argv", ["live_once.py", "--diagnose"]), \
+             patch.object(live_once, "read_settings", return_value=payload), \
+             patch.object(live_once, "validate_private_profile"), \
+             patch.object(live_once, "PROBE", Mock(is_file=lambda: True)), \
+             patch.object(live_once, "read_once", new_callable=AsyncMock, side_effect=error), \
              patch("sys.stdout", new_callable=io.StringIO) as output:
             self.assertEqual(live_once.main(), 1)
         self.assertEqual(output.getvalue(),
-                         "BLOCKED: SDK_RPC45_FAILED\\n"
-                         "DIAG RPC45_STATUS: 5\\n"
-                         "DIAG RPC45_ELAPSED_MS: 1432\\n")
+                         "BLOCKED: SDK_RPC45_FAILED\n"
+                         "DIAG RPC45_STATUS: 5\n"
+                         "DIAG RPC45_ELAPSED_MS: 1432\n")
         self.assertNotIn("private@example.com", output.getvalue())
         self.assertNotIn("sensitive", output.getvalue())
 
     def test_diagnostic_unknown_values(self):
         payload = {"device_id": "123456789012", "identity": "a", "unlock_secret": "b"}
         error = SDKSnapshotError("SDK_RPC45_FAILED", rpc_status=-1, elapsed_ms=99999999)
-        with patch.object(sys, "argv", ["live_once.py", "--diagnose"]), \\
-             patch.object(live_once, "read_settings", return_value=payload), \\
-             patch.object(live_once, "validate_private_profile"), \\
-             patch.object(live_once, "PROBE", Mock(is_file=lambda: True)), \\
-             patch.object(live_once, "read_once", new_callable=AsyncMock, side_effect=error), \\
+        with patch.object(sys, "argv", ["live_once.py", "--diagnose"]), \
+             patch.object(live_once, "read_settings", return_value=payload), \
+             patch.object(live_once, "validate_private_profile"), \
+             patch.object(live_once, "PROBE", Mock(is_file=lambda: True)), \
+             patch.object(live_once, "read_once", new_callable=AsyncMock, side_effect=error), \
              patch("sys.stdout", new_callable=io.StringIO) as output:
             self.assertEqual(live_once.main(), 1)
         self.assertIn("DIAG RPC45_STATUS: unknown", output.getvalue())
