@@ -63,17 +63,29 @@ async def read_once(settings: dict, *, show_values: bool = False,
         probe_file=str(PROBE),
         timeout_seconds=85,
     )
-    if recover_once:
-        async def cooldown(seconds: float) -> None:
-            # The policy only invokes this callback for the exact allowlisted
-            # SDK code + event; no raw SDK output is exposed.
-            print("RECOVERY: eligible RPC45 event; waiting 60 seconds before final attempt", flush=True)
-            await asyncio.sleep(seconds)
-        result = await read_with_one_recovery(adapter.poll_once, sleep=cooldown)
-    else:
-        result = await adapter.poll_once()
-    readings = parse_snapshot(result, expected_device_id=settings["device_id"])
-    lines = format_readings(readings) if show_values else ()
+    recovery_attempted = False
+    try:
+        if recover_once:
+            async def cooldown(seconds: float) -> None:
+                nonlocal recovery_attempted
+                # Mark the conditional retry before the delay, so even a
+                # failed final read has an unambiguous, bounded result.
+                recovery_attempted = True
+                print("RECOVERY: eligible RPC45 event; waiting 60 seconds before final attempt", flush=True)
+                await asyncio.sleep(seconds)
+            result = await read_with_one_recovery(adapter.poll_once, sleep=cooldown)
+        else:
+            result = await adapter.poll_once()
+        readings = parse_snapshot(result, expected_device_id=settings["device_id"])
+        lines = format_readings(readings) if show_values else ()
+    except Exception:
+        # Never mark recovery as successful before the final complete
+        # snapshot is validated. No vendor output or exception text.
+        if recovery_attempted:
+            print("RECOVERY_RESULT: FAILED", flush=True)
+        raise
+    if recovery_attempted:
+        print("RECOVERY_RESULT: SUCCESS", flush=True)
     # Credentials, hostname, device ID and raw SDK output never reach stdout.
     print("PASS: one read-only RPC45 snapshot validated", flush=True)
     if show_values:
