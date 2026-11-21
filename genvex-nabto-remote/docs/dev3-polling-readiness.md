@@ -359,3 +359,34 @@ a specific SDK failure mechanism or changing the recovery policy.
 
 This discovery blocks unattended polling. Neither DEV2 nor the existing
 LAN integration is modified.
+
+## Five-entity HA availability lifecycle (offline stub tests)
+
+The experimental Home Assistant coordinator validates all five readings
+as one atomic snapshot. Its `UpdateFailed` path is used both when the
+runtime is unavailable (regardless of whether a real SDK session or an
+RPC45 call failed) and when snapshot validation rejects a stale,
+wrong-device or incomplete batch. It does not expose private runtime
+exception strings.
+
+`experimental/home_assistant/tests/test_dev3_sensor_availability.py`
+now imports the **real candidate sensor entity and coordinator source**
+through minimal Home Assistant API stubs, then simulates the HA
+`DataUpdateCoordinator.last_update_success` transition. The tests
+verify that:
+
+- a prior complete five-sensor snapshot becomes unavailable on a
+  subsequent pre-RPC session failure even if the coordinator retains its
+  previous in-memory data;
+- an analogous RPC45 failure makes all five unavailable, and a later
+  *validated* five-sensor snapshot restores all five together;
+- an incomplete snapshot never becomes an available partial state;
+- an invalid initial read exposes no available values;
+- the five sensor entity identifiers remain unique for the device.
+
+This is an **offline behavioral contract**, not an installed HA Core
+integration test: the coordinator's success flag and entity availability
+are represented by intentionally small HA stubs. The tests do not
+start HAOS, enable polling or modify the installed LAN integration.
+Actual Core entity-registry/state-machine behavior still requires a
+separately approved test in an isolated HA environment.
