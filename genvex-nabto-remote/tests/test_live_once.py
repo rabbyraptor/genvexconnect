@@ -83,7 +83,7 @@ class SettingsTests(unittest.TestCase):
              patch("sys.stdout", new_callable=io.StringIO) as output:
             self.assertEqual(live_once.main(), 1)
             read_settings.assert_not_called()
-            self.assertEqual(output.getvalue(), "BLOCKED: INPUT_INVALID\\n")
+            self.assertEqual(output.getvalue(), "BLOCKED: INPUT_INVALID\n")
 
 
 class FailureClassificationTests(unittest.TestCase):
