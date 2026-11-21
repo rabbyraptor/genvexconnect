@@ -40,9 +40,35 @@ class SDKSnapshotError(Exception):
         "SDK_EARLY_EXIT", "SDK_SNAPSHOT_INVALID",
     })
 
-    def __init__(self, code="SDK_PROCESS_FAILURE"):
+    def __init__(self, code="SDK_PROCESS_FAILURE", *, rpc_status=None, elapsed_ms=None):
         self.code = code if code in self.ALLOWED else "SDK_PROCESS_FAILURE"
+        # Only bounded integers extracted from exact SDK stage markers are
+        # allowed to reach the optional operator diagnostic view.
+        self.rpc_status = rpc_status if type(rpc_status) is int and 0 <= rpc_status <= 100000 else None
+        self.elapsed_ms = elapsed_ms if type(elapsed_ms) is int and 0 <= elapsed_ms <= 120000 else None
         super().__init__(self.code)
+
+
+def parse_rpc_diagnostics(output: bytes) -> tuple[int | None, int | None]:
+    """Extract only exact, bounded numeric RPC markers; never return raw output."""
+    if len(output) > _MAX_PROBE_OUTPUT_BYTES:
+        return None, None
+    try:
+        lines = output.decode("utf-8", "strict").splitlines()
+    except UnicodeError:
+        return None, None
+
+    def number(prefix: str, limit: int) -> int | None:
+        found = [line[len(prefix):].strip() for line in lines if line.startswith(prefix)]
+        if len(found) != 1:
+            return None
+        raw = found[0]
+        if not raw or len(raw) > 8 or not raw.isascii() or not raw.isdecimal():
+            return None
+        value = int(raw)
+        return value if value <= limit else None
+
+    return number("Batch RPC status:", 100000), number("RPC elapsed_ms:", 120000)
 
 
 def classify_probe_failure(output: bytes) -> str:
@@ -171,7 +197,12 @@ class SDKSnapshotAdapter:
                          + self._unlock_secret + "\n").encode("utf-8")
                     )
                 if proc.returncode != 0:
-                    raise SDKSnapshotError(classify_probe_failure(out))
+                    rpc_status, elapsed_ms = parse_rpc_diagnostics(out)
+                    raise SDKSnapshotError(
+                        classify_probe_failure(out),
+                        rpc_status=rpc_status,
+                        elapsed_ms=elapsed_ms,
+                    )
                 return parse_probe_output(out, device_id=self.device_id)
             except asyncio.CancelledError:
                 raise
