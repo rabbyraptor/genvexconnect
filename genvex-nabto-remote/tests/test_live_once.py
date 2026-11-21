@@ -55,7 +55,8 @@ class SettingsTests(unittest.TestCase):
     def test_no_credentials_in_failure_output(self):
         payload = {"device_id": "abc", "identity": "private@example.com",
                    "unlock_secret": "sensitive"}
-        with patch.object(live_once, "read_settings", return_value=payload), \
+        with patch.object(sys, "argv", ["live_once.py"]), \
+             patch.object(live_once, "read_settings", return_value=payload), \
              patch.object(live_once, "validate_private_profile", side_effect=ValueError("sensitive")), \
              patch("sys.stdout", new_callable=io.StringIO) as output:
             self.assertEqual(live_once.main(), 1)
@@ -112,6 +113,63 @@ class SingleReadTests(unittest.IsolatedAsyncioTestCase):
         adapter.assert_called_once()
         fake.poll_once.assert_awaited_once()
         validate.assert_called_once_with({"example": 1}, expected_device_id="abc")
+
+    async def test_show_values_only_after_validation(self):
+        settings = {"device_id": "123456789012", "identity": "hidden@example.com",
+                    "unlock_secret": "secret-not-for-output"}
+        snapshot = {"health": "ok", "device_id": settings["device_id"]}
+        readings = {"supply_air": 19.7, "outdoor_air": -1.2,
+                    "exhaust_air": 23.0, "extract_air": 21.5,
+                    "humidity": 47.0}
+        fake = AsyncMock()
+        fake.poll_once.return_value = snapshot
+        with patch.object(live_once, "SDKSnapshotAdapter", return_value=fake), \
+             patch.object(live_once, "parse_snapshot", return_value=readings), \
+             patch("sys.stdout", new_callable=io.StringIO) as output:
+            await live_once.read_once(settings, show_values=True)
+        lines = output.getvalue().splitlines()
+        self.assertEqual(lines[0], "PASS: one read-only RPC45 snapshot validated")
+        self.assertEqual(lines[1], "READINGS_BEGIN")
+        self.assertEqual(lines[2], "VALUE supply_air: 19.7 °C")
+        self.assertEqual(lines[3], "VALUE outdoor_air: -1.2 °C")
+        self.assertEqual(lines[4], "VALUE exhaust_air: 23.0 °C")
+        self.assertEqual(lines[5], "VALUE extract_air: 21.5 °C")
+        self.assertEqual(lines[6], "VALUE humidity: 47 %")
+        self.assertEqual(lines[7], "READINGS_END")
+        self.assertEqual(len(lines), 8)
+        self.assertNotIn("123456789012", output.getvalue())
+        self.assertNotIn("hidden@example.com", output.getvalue())
+        self.assertNotIn("secret-not-for-output", output.getvalue())
+        fake.poll_once.assert_awaited_once()
+
+    async def test_invalid_snapshot_never_shows_values(self):
+        settings = {"device_id": "123456789012", "identity": "hidden@example.com",
+                    "unlock_secret": "secret-not-for-output"}
+        fake = AsyncMock()
+        fake.poll_once.return_value = {"invalid": True}
+        with patch.object(live_once, "SDKSnapshotAdapter", return_value=fake), \
+             patch.object(live_once, "parse_snapshot", side_effect=ValueError("invalid")), \
+             patch("sys.stdout", new_callable=io.StringIO) as output:
+            with self.assertRaises(ValueError):
+                await live_once.read_once(settings, show_values=True)
+        self.assertEqual(output.getvalue(), "")
+        fake.poll_once.assert_awaited_once()
+
+    async def test_default_hides_all_values(self):
+        settings = {"device_id": "123456789012", "identity": "hidden@example.com",
+                    "unlock_secret": "secret-not-for-output"}
+        fake = AsyncMock()
+        fake.poll_once.return_value = {"health": "ok"}
+        readings = {"supply_air": 19.7, "outdoor_air": -1.2,
+                    "exhaust_air": 23.0, "extract_air": 21.5,
+                    "humidity": 47.0}
+        with patch.object(live_once, "SDKSnapshotAdapter", return_value=fake), \
+             patch.object(live_once, "parse_snapshot", return_value=readings), \
+             patch("sys.stdout", new_callable=io.StringIO) as output:
+            await live_once.read_once(settings)
+        self.assertNotIn("VALUE ", output.getvalue())
+        self.assertNotIn("READINGS_BEGIN", output.getvalue())
+        fake.poll_once.assert_awaited_once()
 
 
 if __name__ == "__main__":
