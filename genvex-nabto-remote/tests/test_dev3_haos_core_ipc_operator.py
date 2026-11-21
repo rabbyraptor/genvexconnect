@@ -155,12 +155,12 @@ class CoreIPCTests(unittest.TestCase):
             if args[:3] == ["docker", "rm", "-f"]:
                 return Mock(returncode=0, stdout=b"")
             raise AssertionError(args)
-        with patch.object(op.os, "geteuid", return_value=0), \\
-             patch.object(op, "check_file"), \\
-             patch.object(op, "checked_image", return_value="sha256:" + "a" * 64), \\
-             patch.object(op, "select_core_network", return_value="hassio"), \\
-             patch.object(op, "core_network_mode", return_value="host"), \\
-             patch.object(op, "run", side_effect=runner), \\
+        with patch.object(op.os, "geteuid", return_value=0), \
+             patch.object(op, "check_file"), \
+             patch.object(op, "checked_image", return_value="sha256:" + "a" * 64), \
+             patch.object(op, "select_core_network", return_value="hassio"), \
+             patch.object(op, "core_network_mode", return_value="host"), \
+             patch.object(op, "run", side_effect=runner), \
              patch("sys.stdout", new_callable=io.StringIO):
             self.assertEqual(op.operator(), 0)
         self.assertEqual(commands[2][-1], "172.30.33.123")
