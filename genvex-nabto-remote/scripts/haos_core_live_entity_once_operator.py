@@ -23,7 +23,7 @@ SUCCESS = 'print("PASS: one real Genvex RPC45 snapshot reached HA Core over priv
 # The token and device ID remain in the existing bounded Docker stdin only.
 # No private material, sensor readings or traceback can reach stdout.
 HA_CLASSES_PROBE = r"""
-phase = "HA_CLASSES"
+phase = "HA_IMPORT"
 try:
     import asyncio
     import importlib
@@ -47,6 +47,7 @@ try:
         sys.modules[fullname] = mod
         exec(compile(SOURCES[module_name], "<read-only-ha-module>", "exec"), mod.__dict__)
 
+    phase = "HA_MODULES"
     const = importlib.import_module(package + ".const")
     runtime_client = importlib.import_module(package + ".runtime_client")
     coordinator_module = importlib.import_module(package + ".coordinator")
@@ -76,6 +77,8 @@ try:
             pass
 
     async def verify_actual_ha_classes():
+        global phase
+        phase = "HA_CONNECTOR"
         connector = TCPConnector(
             resolver=OnlyPrivateRuntimeResolver(),
             use_dns_cache=False, force_close=True,
@@ -90,12 +93,15 @@ try:
             # fetch + freshness, ID, completeness and numeric validation.
             # None is safe here: no Core lifecycle or polling is started;
             # _async_update_data() has no HomeAssistant side effects.
+            phase = "HA_COORDINATOR"
             coordinator = coordinator_module.GenvexRemoteCoordinator(
                 None, device, reader,
             )
+            phase = "HA_READER"
             readings = await coordinator._async_update_data()
             if set(readings) != {spec.key for spec in const.SENSORS}:
                 raise ValueError("Incomplete real HA coordinator snapshot")
+            phase = "HA_SENSORS"
             coordinator.data = readings
             entities = [
                 sensor_module.GenvexRemoteSensor(coordinator, spec)
@@ -110,10 +116,11 @@ try:
             ):
                 raise ValueError("Invalid real sensor class projection")
 
+    phase = "HA_ASYNC"
     asyncio.run(verify_actual_ha_classes())
 except Exception:
     # The parent operator only accepts this fixed diagnostic category.
-    print("CORE_PROBE_FAILED:HA_CLASSES", flush=True)
+    print("CORE_PROBE_FAILED:" + phase, flush=True)
     raise SystemExit(2)
 """
 
@@ -164,7 +171,10 @@ def main() -> int:
     try:
         sources = read_reviewed_sources()
         base.CORE_CLIENT = build_core_client(sources)
-        base.CORE_FAILURE_PHASES = base.CORE_FAILURE_PHASES | {"HA_CLASSES"}
+        base.CORE_FAILURE_PHASES = base.CORE_FAILURE_PHASES | {
+            "HA_IMPORT", "HA_MODULES", "HA_ASYNC", "HA_CONNECTOR",
+            "HA_COORDINATOR", "HA_READER", "HA_SENSORS",
+        }
         result = base.main()
         if result == 0:
             print("PASS: real snapshot validated by actual HA reader, coordinator and five sensor classes", flush=True)
