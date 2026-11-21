@@ -37,7 +37,7 @@ class OperatorTests(unittest.TestCase):
             },
         }
         service = SnapshotHTTPServer(
-            bind_host="127.0.0.1", port=18275,
+            bind_host="127.0.0.1", port=0,
             device_id=DEVICE, token=TOKEN,
             snapshot_provider=lambda: document,
         )
@@ -45,7 +45,8 @@ class OperatorTests(unittest.TestCase):
             service.start()
             payload = json.dumps({"device_id": DEVICE, "ipc_token": TOKEN}).encode() + b"\n"
             proc = subprocess.run(
-                [sys.executable, "-c", op.CORE_CLIENT, "127.0.0.1"],
+                [sys.executable, "-c", op.CORE_CLIENT, "127.0.0.1",
+                 str(service._server.server_address[1])],
                 input=payload, capture_output=True, timeout=12, check=False,
             )
             self.assertEqual(proc.returncode, 0, proc.stderr.decode()[-400:])
