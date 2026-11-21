@@ -68,6 +68,7 @@ class CoreIPCTests(unittest.TestCase):
              patch.object(op, "check_file"), \
              patch.object(op, "checked_image", return_value="sha256:" + "a" * 64), \
              patch.object(op, "select_core_network", return_value="hassio"), \
+             patch.object(op, "core_network_mode", return_value="bridge"), \
              patch.object(op.secrets, "token_hex", return_value="abcdef1234"), \
              patch.object(op, "run", side_effect=runner), \
              patch("sys.stdout", new_callable=io.StringIO) as output:
@@ -116,6 +117,53 @@ class CoreIPCTests(unittest.TestCase):
         self.assertEqual(sum(x[:3] == ["docker", "exec", "-i"] for x in commands), 5)
         self.assertEqual(commands[-1][:3], ["docker", "rm", "-f"])
         self.assertNotIn("secret ignored", output.getvalue())
+
+    def test_host_network_core_uses_hassio_bridge(self):
+        calls = []
+        def runner(args, **kwargs):
+            calls.append(args)
+            if args[:3] == ["docker", "inspect", "--type"]:
+                return Mock(returncode=0, stdout=json.dumps([{
+                    "State": {"Running": True},
+                    "HostConfig": {"NetworkMode": "host"},
+                    "NetworkSettings": {"Networks": {"host": {}}},
+                }]).encode())
+            if args[:3] == ["docker", "network", "inspect"]:
+                return Mock(returncode=0, stdout=fake_docker_network())
+            raise AssertionError(args)
+        with patch.object(op, "run", side_effect=runner):
+            self.assertEqual(op.select_core_network(), "hassio")
+        self.assertEqual(calls[-1], ["docker", "network", "inspect", "hassio"])
+
+    def test_host_core_uses_container_private_ip(self):
+        commands = []
+        success = (b"PASS: HA Core container reached authenticated private IPC;"
+                   b" 401/200/404\\n")
+        def runner(args, **kwargs):
+            commands.append(args)
+            if args[:3] == ["docker", "run", "-d"]:
+                return Mock(returncode=0, stdout=b"cid")
+            if args[:3] == ["docker", "inspect", "--type"]:
+                return Mock(returncode=0, stdout=json.dumps([{
+                    "NetworkSettings": {"Networks": {"hassio": {
+                        "IPAddress": "172.30.33.123",
+                    }}},
+                }]).encode())
+            if args[:3] == ["docker", "exec", "-i"]:
+                return Mock(returncode=0, stdout=success)
+            if args[:3] == ["docker", "rm", "-f"]:
+                return Mock(returncode=0, stdout=b"")
+            raise AssertionError(args)
+        with patch.object(op.os, "geteuid", return_value=0), \\
+             patch.object(op, "check_file"), \\
+             patch.object(op, "checked_image", return_value="sha256:" + "a" * 64), \\
+             patch.object(op, "select_core_network", return_value="hassio"), \\
+             patch.object(op, "core_network_mode", return_value="host"), \\
+             patch.object(op, "run", side_effect=runner), \\
+             patch("sys.stdout", new_callable=io.StringIO):
+            self.assertEqual(op.operator(), 0)
+        self.assertEqual(commands[2][-1], "172.30.33.123")
+        self.assertEqual(commands[-1][:3], ["docker", "rm", "-f"])
 
 
 if __name__ == "__main__":
