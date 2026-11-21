@@ -74,3 +74,37 @@ This does not implement a socket listener, token enrollment/rotation,
 an unattended Nabto poller, or any production deployment. It establishes
 which safeguards a later implementation must satisfy and preserves the
 existing evidence of intermittent SDK session-stage and RPC45 failures.
+
+## Inert HTTP adapter candidate: completed offline gate
+
+The source-only module `runtime/ipc_web_candidate.py` now creates
+an **unbound** aiohttp application and handler around our existing
+`snapshot_api.handle_read_request` and `ipc_auth.authorize_read`.
+The same file is mirrored into `experimental/genvex_remote/`.
+It is **not imported or executed** by the App's current `run.sh`
+or bootstrapping code. No `run_app`, `TCPSite`, `web.run_app`,
+socket bind, port exposure, or background task is included.
+
+The handler authenticates before inspecting routes or consulting
+the snapshot state; only an exact GET of `/v1/snapshot` may retrieve
+a five-value validated response. It rejects unexpected methods,
+query strings and request bodies (including chunked bodies). Unknown
+or mismatched tokens return a redacted 401, invalid routes a redacted
+404, bodies a 413, and missing/invalid snapshots a redacted 503.
+The snapshot callback is synchronous and must return an already
+validated, fail-closed snapshot state; it never performs an RPC itself.
+
+`experimental/home_assistant/tests_core/test_real_ipc_web_candidate.py`
+exercises the actual candidate handler without opening a socket.
+The dedicated real-Core CI run `44850577962` **passed**; the
+DEV3 contracts and HAOS App candidate offline checks also passed.
+This proves handler input/output safety under those offline fixtures,
+not safe host binding, credential provisioning or network operation.
+
+The native HAOS App image does not yet have a reviewed `aiohttp`
+runtime dependency, and the candidate is not wired into any App
+entrypoint. Before enabling the IPC listener, review the exact
+Supervisor network namespace, port reachability, per-install token
+lifecycle, App version separation and rollback. The initial
+authenticated socket test must be bounded, read-only and explicitly
+operator-approved. Persistent polling requires separate authorization.
