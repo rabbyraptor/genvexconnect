@@ -60,12 +60,14 @@ try:
     if not isinstance(ipaddress.ip_address(target), ipaddress.IPv4Address):
         raise ValueError("Expected private IPv4 runtime")
 
+    target_port = port
+
     class OnlyPrivateRuntimeResolver(AbstractResolver):
         async def resolve(self, host, port=0, family=socket.AF_INET):
             if (host, port) != ("local-genvex-nabto-remote", 18275):
                 raise OSError("Unexpected hostname")
             return [{
-                "hostname": host, "host": target, "port": 18275,
+                "hostname": host, "host": target, "port": target_port,
                 "family": socket.AF_INET, "proto": 0,
                 "flags": socket.AI_NUMERICHOST,
             }]
