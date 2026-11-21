@@ -12,7 +12,7 @@ import json
 import os
 from pathlib import Path
 import secrets
-import stat
+import time
 import subprocess
 import sys
 
@@ -137,13 +137,19 @@ def operator() -> int:
         started = run(cmd)
         require(started.returncode == 0,
                 "Private IPC test container could not start")
-        # One Docker exec in Core; internal Python retries readiness only,
-        # never reconnects to the gateway or changes HA configuration.
-        probe = run(
-            ["docker", "exec", "-i", CORE_NAME, "python3", "-", alias],
-            timeout=20, input=CLIENT.encode("utf-8"),
-        )
-        require(probe.returncode == 0,
+        # Docker networking and container startup may take a moment. Retrying
+        # only this fake TCP check cannot issue any Nabto requests.
+        probe = None
+        for attempt in range(5):
+            probe = run(
+                ["docker", "exec", "-i", CORE_NAME, "python3", "-", alias],
+                timeout=12, input=CLIENT.encode("utf-8"),
+            )
+            if probe.returncode == 0:
+                break
+            if attempt < 4:
+                time.sleep(1)
+        require(probe is not None and probe.returncode == 0,
                 "Core-to-App private TCP test failed")
         require(probe.stdout.strip() ==
                 b"PASS: HA Core container reached authenticated private IPC; 401/200/404",
