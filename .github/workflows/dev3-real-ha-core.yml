@@ -38,4 +38,4 @@ jobs:
             'homeassistant==2026.11.2' 'pytest-homeassistant==2026.11.2'
       - name: Test real HA Core coordinator + five sensors (no Nabto)
         run: |
-          python -m pytest -q -o asyncio_mode=auto tests_core
+          python -c 'import homeassistant; import pytest; raise SystemExit(pytest.main(["-q", "-o", "asyncio_mode=auto", "tests_core"]))'
