@@ -14,7 +14,7 @@ from pathlib import Path
 
 from app_bootstrap import validate_private_profile
 from sdk_snapshot_adapter import SDKSnapshotAdapter, SDKSnapshotError
-from sensor_model import remote_hostname
+from sensor_model import SENSORS, remote_hostname
 from snapshot_contract import parse_snapshot
 
 PROFILE = Path("/data/profile")
@@ -44,7 +44,15 @@ def read_settings() -> dict:
     return data
 
 
-async def read_once(settings: dict) -> None:
+def format_readings(values: dict[str, float]) -> tuple[str, ...]:
+    """Allowlisted five sensor values only, never raw SDK output or device ID."""
+    return tuple(
+        f"VALUE {spec.key}: {values[spec.key]:.{0 if spec.unit == '%' else 1}f} {spec.unit}"
+        for spec in SENSORS
+    )
+
+
+async def read_once(settings: dict, *, show_values: bool = False) -> None:
     adapter = SDKSnapshotAdapter(
         device_id=settings["device_id"],
         identity=settings["identity"],
@@ -54,13 +62,21 @@ async def read_once(settings: dict) -> None:
         timeout_seconds=85,
     )
     result = await adapter.poll_once()
-    parse_snapshot(result, expected_device_id=settings["device_id"])
-    # No raw sensor values, secrets, URLs or SDK diagnostics in stdout.
+    readings = parse_snapshot(result, expected_device_id=settings["device_id"])
+    # Credentials, hostname, device ID and raw SDK output never reach stdout.
     print("PASS: one read-only RPC45 snapshot validated", flush=True)
+    if show_values:
+        print("READINGS_BEGIN", flush=True)
+        for line in format_readings(readings):
+            print(line, flush=True)
+        print("READINGS_END", flush=True)
 
 
 def main() -> int:
     try:
+        if sys.argv[1:] not in ([], ["--show-values"]):
+            raise ValueError("Unsupported display option")
+        show_values = sys.argv[1:] == ["--show-values"]
         settings = read_settings()
     except Exception:
         print("BLOCKED: INPUT_INVALID", flush=True)
@@ -74,7 +90,7 @@ def main() -> int:
         print("BLOCKED: PROBE_MISSING", flush=True)
         return 1
     try:
-        asyncio.run(read_once(settings))
+        asyncio.run(read_once(settings, show_values=show_values))
         return 0
     except SDKSnapshotError as exc:
         # Strictly allowlisted code, not an exception message from SDK/QEMU.
