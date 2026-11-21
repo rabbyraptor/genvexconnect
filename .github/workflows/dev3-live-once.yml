@@ -12,6 +12,7 @@ on:
       - 'genvex-nabto-remote/tests/test_haos_live_once_operator.py'
       - 'genvex-nabto-remote/tests/test_dev3_polling_state.py'
       - 'genvex-nabto-remote/tests/test_dev3_recovery_policy.py'
+      - 'genvex-nabto-remote/tests/test_dev3_recovery_subprocess.py'
       - 'experimental/home_assistant/custom_components/genvex_remote/**'
       - 'experimental/home_assistant/tests/test_dev3_coordinator.py'
       - '.github/workflows/dev3-live-once.yml'
@@ -35,12 +36,14 @@ jobs:
         with:
           python-version: '3.12'
       - name: Syntax check
-        run: python -m compileall -q runtime scripts/haos_live_once_operator.py tests/test_live_once.py tests/test_haos_live_once_operator.py tests/test_dev3_polling_state.py tests/test_dev3_recovery_policy.py ../experimental/home_assistant/custom_components/genvex_remote ../experimental/home_assistant/tests/test_dev3_coordinator.py
+        run: python -m compileall -q runtime scripts/haos_live_once_operator.py tests/test_live_once.py tests/test_haos_live_once_operator.py tests/test_dev3_polling_state.py tests/test_dev3_recovery_policy.py tests/test_dev3_recovery_subprocess.py ../experimental/home_assistant/custom_components/genvex_remote ../experimental/home_assistant/tests/test_dev3_coordinator.py
       - name: Test single-shot contract and operator launcher (no network credentials)
         run: python -m unittest discover -s tests -p 'test_*live_once*.py' -v
       - name: Test atomic snapshot state and bounded polling (no SDK)
         run: python -m unittest discover -s tests -p 'test_dev3_polling_state.py' -v
       - name: Test bounded opt-in Nabto recovery policy (no SDK)
         run: python -m unittest discover -s tests -p 'test_dev3_recovery_policy.py' -v
+      - name: Test actual isolated subprocess replacement on eligible failure (no SDK)
+        run: python -m unittest discover -s tests -p 'test_dev3_recovery_subprocess.py' -v
       - name: Test HA coordinator unavailable and recovery (without HA Core)
         run: python -m unittest discover -s ../experimental/home_assistant/tests -p 'test_dev3_coordinator.py' -v
