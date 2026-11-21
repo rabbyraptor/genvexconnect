@@ -30,11 +30,14 @@ def load_config(path: Path) -> dict:
     if path.stat().st_size > 4096:
         raise ValueError("Configuration too large")
     data = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(data, dict) or set(data) != {
+    expected = {
         "device_id", "identity", "unlock_secret", "profile_dir",
         "probe_file", "token_file", "bind_host", "poll_seconds",
-    }:
+    }
+    if not isinstance(data, dict) or not expected <= set(data) or set(data) - expected - {"persistent_session"}:
         raise ValueError("Invalid runtime configuration")
+    if type(data.get("persistent_session", False)) is not bool:
+        raise ValueError("Invalid persistent session flag")
     if data["bind_host"] not in ("127.0.0.1", "0.0.0.0"):
         raise ValueError("Invalid bind address")
     return data
@@ -52,13 +55,24 @@ def read_token(path: Path) -> str:
 
 async def run(config: dict) -> None:
     token = read_token(Path(config["token_file"]))
-    adapter = SDKSnapshotAdapter(
-        device_id=config["device_id"],
-        identity=config["identity"],
-        unlock_secret=config["unlock_secret"],
-        profile_dir=config["profile_dir"],
-        probe_file=config["probe_file"],
-    )
+    if config.get("persistent_session", False):
+        from persistent_sdk_adapter import PersistentSDKSnapshotAdapter
+
+        adapter = PersistentSDKSnapshotAdapter(
+            device_id=config["device_id"],
+            identity=config["identity"],
+            unlock_secret=config["unlock_secret"],
+            profile_dir=config["profile_dir"],
+            worker_file=str(Path(__file__).with_name("persistent_rpc45_worker.py")),
+        )
+    else:
+        adapter = SDKSnapshotAdapter(
+            device_id=config["device_id"],
+            identity=config["identity"],
+            unlock_secret=config["unlock_secret"],
+            profile_dir=config["profile_dir"],
+            probe_file=config["probe_file"],
+        )
     state = SnapshotState(adapter)
     poller = PollingService(state, interval_seconds=config["poll_seconds"])
     server = SnapshotHTTPServer(
@@ -78,8 +92,14 @@ async def run(config: dict) -> None:
         print("Read-only runtime started (no public port required)", flush=True)
         await stop.wait()
     finally:
-        await poller.stop()
-        server.stop()
+        try:
+            await poller.stop()
+        finally:
+            try:
+                server.stop()
+            finally:
+                if config.get("persistent_session", False):
+                    await adapter.aclose()
         print("Read-only runtime stopped", flush=True)
 
 

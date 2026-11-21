@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feature/dev3-live-once
+      - feature/dev4-persistent-session
   pull_request:
     paths:
       - 'genvex-nabto-remote/runtime/**'

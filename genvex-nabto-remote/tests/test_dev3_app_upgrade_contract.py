@@ -76,7 +76,7 @@ class Dev3AppUpgradeContractTests(unittest.TestCase):
                                  or "options.json" in m.name
                                  for m in members))
             config = handle.extractfile("genvex_nabto_remote/config.yaml").read()
-            self.assertIn(b'version: "0.1.0-dev3"', config)
+            self.assertIn(b'version: "0.1.0-dev4"', config)
             self.assertIn(b"boot: manual_only", config)
             self.assertIn(b"host_network: false", config)
 

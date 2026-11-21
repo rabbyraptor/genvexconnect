@@ -5,6 +5,7 @@ on:
     branches:
       - remote-nabto-connection
       - feature/dev3-live-once
+      - feature/dev4-persistent-session
     paths:
       - "genvex-nabto-remote/Dockerfile"
       - "genvex-nabto-remote/run.sh"
@@ -46,7 +47,7 @@ jobs:
           set -euo pipefail
           docker build --platform linux/arm64 \
             --build-arg BUILD_ARCH=aarch64 \
-            --build-arg BUILD_VERSION=0.1.0-dev3 \
+            --build-arg BUILD_VERSION=0.1.0-dev4 \
             --tag genvex-nabto-remote:ci \
             genvex-nabto-remote
       - name: Inspect image and import runtime offline
@@ -67,7 +68,7 @@ jobs:
             exit 1
           fi
           IMAGE_VERSION=$(docker image inspect genvex-nabto-remote:ci --format '{{index .Config.Labels "io.hass.version"}}')
-          if [ "$IMAGE_VERSION" != 0.1.0-dev3 ]; then
+          if [ "$IMAGE_VERSION" != 0.1.0-dev4 ]; then
             echo "::error::App image version does not match v0.1.0-dev3 candidate"
             exit 1
           fi
