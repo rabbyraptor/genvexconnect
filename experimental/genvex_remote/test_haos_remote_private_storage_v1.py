@@ -5,7 +5,7 @@ import subprocess
 import tempfile
 import unittest
 
-SCRIPT = Path(__file__).resolve().parents[2] / "scripts/audit_haos_remote_private_storage_v1.sh"
+SCRIPT = Path(__file__).resolve().parents[2] / "scripts/archive/audit_haos_remote_private_storage_v1.sh"
 HOST_PATH = "/mnt/data/supervisor/apps/data/local_genvex_nabto_remote"
 
 

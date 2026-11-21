@@ -7,10 +7,17 @@ on:
     paths:
       - "experimental/genvex_remote/**"
       - "experimental/home_assistant/**"
+      - "docs/**"
+      - "scripts/**"
+      - "README.md"
       - ".github/workflows/remote-nabto-offline.yml"
   pull_request:
     paths:
       - "experimental/genvex_remote/**"
+      - "experimental/home_assistant/**"
+      - "docs/**"
+      - "scripts/**"
+      - "README.md"
       - ".github/workflows/remote-nabto-offline.yml"
   workflow_dispatch:
 
@@ -31,6 +38,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Validate repository links and archived script references
+        run: python scripts/check_repository_links.py
       - name: Install offline cryptography test dependency
         run: python -m pip install "cryptography==${{ matrix.cryptography }}"
       - name: Run tests (no live vendor account, network or secrets)
