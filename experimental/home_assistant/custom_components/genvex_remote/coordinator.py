@@ -31,5 +31,7 @@ class GenvexRemoteCoordinator(DataUpdateCoordinator[dict[str, float]]):
         try:
             payload = await self.reader.async_fetch_snapshot(self.device_id)
             return validate_snapshot(payload, expected_device_id=self.device_id)
-        except (RuntimeUnavailable, InvalidSnapshot, TimeoutError, OSError) as exc:
-            raise UpdateFailed("Genvex remote readings are unavailable") from exc
+        except (RuntimeUnavailable, InvalidSnapshot, TimeoutError, OSError):
+            # Do not chain a potentially sensitive transport exception into
+            # Home Assistant logs; the public error remains stable.
+            raise UpdateFailed("Genvex remote readings are unavailable") from None
