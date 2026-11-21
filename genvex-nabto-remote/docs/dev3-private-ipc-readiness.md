@@ -280,3 +280,46 @@ read-only remote contracts workflow `44892646302` passed.
 **The remaining on-device step requires the operator to stage the
 two new files and run the one-shot SSH command.** Never describe the
 full live link as passed until that sanitized output has been seen.
+
+## First combined HAOS attempt: inconclusive, diagnostic path corrected
+
+An operator executed the first combined real SDK -> private bridge -> Core
+one-shot after staging the pinned candidate. The host-side preflight
+passed and prompted for the three Nabto values, but reported only:
+
+```text
+LIVE CORE ONCE: one RPC45 -> validated private HTTP -> Core read; no polling
+BLOCKED: real Core IPC test incomplete; no readings disclosed
+```
+
+The original launcher discarded all runtime stdout and collapsed any
+exception, SDK failure or HTTP timeout into the same message. Therefore
+the cause of this attempt **cannot be inferred from the available output**.
+In particular, this is not evidence that a live RPC45 snapshot failed or
+that the Home Assistant network was unreachable.
+
+The launcher was revised to:
+
+1. Capture only a bounded, fixed diagnostic marker from the isolated
+   runtime (the raw vendor probe remains private), and report specific
+   allowlisted `SDK_*` failure categories; never echo arbitrary child
+   stdout, stderr, secrets or readings.
+2. Have the runtime emit `IPC_READY` only **after** a real RPC45
+   snapshot passes validation and the authenticated private HTTP
+   listener starts. The host waits for this marker over Docker's
+   attached stdout rather than repeatedly contacting Core while the
+   SDK connection is still in progress.
+3. Make the Core HTTP request timeout a bounded recoverable client-side
+   attempt, not a reason to abort the whole single-RPC test. The
+   original 112-second host deadline and one-SDK-call maximum remain.
+4. Distinguish a failed container launch, an SDK session/RPC problem,
+   a missing private address, a Core TCP failure and a successfully
+   expired private listener that Core failed to read.
+5. Regression-test the exact readiness pipe with a real, temporary
+   Python subprocess, allowlisted error classification, cleanup,
+   token handling, and HTTP timeout handling, without a real SDK.
+
+The user needs to **stage both** the revised
+`runtime/ipc_core_live_once.py` and
+`scripts/haos_core_live_once_operator.py` for the next attempt.
+The previous revision is not informative enough to retry.
