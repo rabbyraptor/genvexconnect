@@ -36,6 +36,9 @@ CHILD_FAILURE_CODES = frozenset({
     "SDK_RESPONSE_INVALID", "SDK_CLOSE_FAILED", "SDK_EARLY_EXIT",
     "SDK_SNAPSHOT_INVALID",
 })
+CORE_FAILURE_PHASES = frozenset({
+    "NO_TOKEN", "WRONG_TOKEN", "LIVE_SNAPSHOT", "UNKNOWN_ROUTE",
+})
 
 
 class OperatorFailure(Exception):
@@ -133,10 +136,21 @@ def check(auth, path, expected):
         conn.close()
 
 wrong = ("x" if token[0] != "x" else "y") + token[1:]
-check(None, "/v1/snapshot", 401)
-check(wrong, "/v1/snapshot", 401)
-check(token, "/v1/snapshot", 200)
-check(token, "/v1/not-a-route", 404)
+phase = "NO_TOKEN"
+try:
+    check(None, "/v1/snapshot", 401)
+    phase = "WRONG_TOKEN"
+    check(wrong, "/v1/snapshot", 401)
+    phase = "LIVE_SNAPSHOT"
+    check(token, "/v1/snapshot", 200)
+    phase = "UNKNOWN_ROUTE"
+    check(token, "/v1/not-a-route", 404)
+except Exception:
+    # Only this fixed stage marker is returned to the operator.
+    # Raw network exceptions, sensor readings, device IDs and tokens
+    # must never leave the Core probe.
+    print("CORE_PROBE_FAILED:" + phase, flush=True)
+    raise SystemExit(2)
 print("PASS: one real Genvex RPC45 snapshot reached HA Core over private HTTP")
 """
 
@@ -254,6 +268,7 @@ def operator() -> int:
         target = None
         had_client_attempt = False
         client_timed_out = False
+        last_core_phase = None
         while time.monotonic() < deadline:
             if proc.poll() is not None:
                 raise classify_runtime_exit(proc)
@@ -271,6 +286,11 @@ def operator() -> int:
                     # An unresponsive Core HTTP request is not an SDK retry.
                     client_timed_out = True
                     continue
+                if result.returncode != 0:
+                    marker = result.stdout.strip() if isinstance(result.stdout, bytes) else b""
+                    for phase in CORE_FAILURE_PHASES:
+                        if marker == ("CORE_PROBE_FAILED:" + phase).encode("ascii"):
+                            last_core_phase = phase
                 if result.returncode == 0:
                     require(result.stdout.strip() ==
                             b"PASS: one real Genvex RPC45 snapshot reached HA Core over private HTTP",
@@ -285,6 +305,8 @@ def operator() -> int:
         if client_timed_out:
             raise OperatorFailure("CORE_HTTP_PROBE_TIMEOUT")
         if had_client_attempt:
+            if last_core_phase is not None:
+                raise OperatorFailure("CORE_" + last_core_phase + "_FAILED")
             raise OperatorFailure("CORE_HTTP_SNAPSHOT_NOT_VALIDATED")
         raise OperatorFailure("CORE_READ_NOT_ATTEMPTED")
     finally:
