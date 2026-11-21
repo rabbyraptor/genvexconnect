@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Install or explicitly upgrade the isolated genvex_remote HA component.
 
-The default is a dry-run. A reviewed upgrade preserves a sibling backup of
-the prior component source and requires a later Home Assistant Core reload.
+The default is a dry-run. A reviewed upgrade preserves a backup outside
+custom_components/ to avoid invalid discovery domains and requires a later
+Home Assistant Core reload.
 No HA registries, LAN integration, App options or credentials are changed.
 """
 from __future__ import annotations
@@ -94,10 +95,13 @@ def upgrade(source: Path, config: Path, *, apply: bool) -> str:
         raise ValueError("Invalid Home Assistant configuration directory")
     parent = config / "custom_components"
     target = parent / DOMAIN
-    backup = parent / ".genvex_remote-upgrade-backup"
+    # Backups within custom_components/ are discovered as integration domains.
+    # A leading dot yields an invalid Python import: custom_components..genvex_remote...
+    backup = config / ".genvex_remote-upgrade-backup"
+    legacy_backup = parent / ".genvex_remote-upgrade-backup"
     if parent.is_symlink() or target.is_symlink() or not target.is_dir():
         raise ValueError("Expected installed remote component")
-    if backup.exists() or backup.is_symlink():
+    if any(path.exists() or path.is_symlink() for path in (backup, legacy_backup)):
         raise ValueError("Prior upgrade backup exists; review it first")
     if source.resolve() == target.resolve() or target.resolve() in source.resolve().parents:
         raise ValueError("Source must be independent of target")

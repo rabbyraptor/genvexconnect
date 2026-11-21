@@ -96,13 +96,28 @@ class ComponentInstallerTests(unittest.TestCase):
         self.assertIn("UPGRADED", installer.upgrade(
             self.source, self.config, apply=True
         ))
-        backup = self.config / "custom_components/.genvex_remote-upgrade-backup"
+        backup = self.config / ".genvex_remote-upgrade-backup"
         self.assertEqual((backup / "sensor.py").read_text(), old)
         self.assertFalse((backup / "translations/en.json").exists())
         self.assertTrue((target / "translations/en.json").is_file())
+        self.assertFalse((self.config / "custom_components/.genvex_remote-upgrade-backup").exists())
         self.assertEqual((target / "sensor.py").read_text(), "pass  # new release\\n")
         with self.assertRaises(ValueError):
             installer.upgrade(self.source, self.config, apply=True)
+
+    def test_preflight_rejects_legacy_hidden_backup_inside_custom_components(self):
+        installer.install(self.source, self.config, apply=True)
+        legacy = self.config / "custom_components/.genvex_remote-upgrade-backup"
+        legacy.mkdir()
+        with self.assertRaises(ValueError):
+            installer.upgrade(self.source, self.config, apply=False)
+
+    def test_preflight_rejects_new_backup_outside_custom_components(self):
+        installer.install(self.source, self.config, apply=True)
+        existing = self.config / ".genvex_remote-upgrade-backup"
+        existing.mkdir()
+        with self.assertRaises(ValueError):
+            installer.upgrade(self.source, self.config, apply=False)
 
     def test_upgrade_rejects_unrelated_existing_component(self):
         target = self.config / "custom_components" / "genvex_remote"

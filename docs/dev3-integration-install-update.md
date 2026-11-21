@@ -59,9 +59,10 @@ python3 genvex-nabto-remote/scripts/haos_install_remote_component.py \
 
 The explicit `--upgrade` mode stages a validated complete replacement
 and retains the old component as
-`custom_components/.genvex_remote-upgrade-backup`. If publishing the
+`/config/.genvex_remote-upgrade-backup` (outside `custom_components/`). If publishing the
 new component fails, it attempts to restore the previous directory.
-A leftover backup blocks further upgrades until reviewed. The update
+Both a leftover backup in the new location and a legacy hidden backup
+inside `custom_components/` block further upgrades until reviewed. The update
 does not modify Home Assistant's entity/config/device registries or the
 separate `genvex_connect` LAN component. Restart Home Assistant Core
 after the approved update so Python and translations reload.
@@ -87,3 +88,20 @@ It is host-specific and must not be assumed for other installations.
 Proprietary x86_64 Micro Nabto SDK redistribution rights, user-friendly
 secure enrollment, unattended App lifecycle, soak validation and fully
 tested upgrades across different HAOS installations remain open.
+
+## Gate K incident: invalid hidden backup discovery (2026-11-21)
+
+During the first live source upgrade, the older installer stored the
+rollback copy as `/config/custom_components/.genvex_remote-upgrade-backup`.
+After a successful source swap and Core restart, all five sensors remained
+unavailable. The App simultaneously returned authenticated HTTP 200 with
+five fresh values. Core logs contained `Unable to import component:
+No module named 'custom_components.'` immediately after startup. The
+hidden directory is a probable invalid integration-discovery candidate.
+
+**Correction:** keep rollback source at
+`/config/.genvex_remote-upgrade-backup`, outside Home Assistant's
+custom-component discovery tree. The new upgrade preflight refuses legacy
+and new backups until reviewed. The live remediation must move only the
+existing backup (without changing the installed component) and restart
+Core; successful sensor recovery must be independently verified.
