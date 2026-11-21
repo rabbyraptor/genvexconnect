@@ -11,7 +11,7 @@ RUNTIME = Path(__file__).resolve().parents[1] / "runtime"
 sys.path.insert(0, str(RUNTIME))
 
 import live_once
-from sdk_snapshot_adapter import classify_probe_failure, parse_rpc_diagnostics, parse_rpc_events, SDKSnapshotError
+from sdk_snapshot_adapter import classify_probe_failure, parse_rpc_diagnostics, parse_rpc_events, parse_session_diagnostics, SDKSnapshotError
 
 
 class FakeStdin:
@@ -93,6 +93,21 @@ class FailureClassificationTests(unittest.TestCase):
             b"SDK startup: 0\nResources: 0\nProfile session: 3\n"),
             "SDK_SESSION_FAILED")
 
+    def test_numeric_session_status_only(self):
+        self.assertEqual(parse_session_diagnostics(
+            b"SDK startup: 0\nProfile session: 12\n"), 12)
+        for bad in (
+            b"Profile session: 1\nProfile session: 2\n",
+            b"Profile session: 12 secret\n",
+            b"Profile session: -1\n",
+            b"Profile session: 99999999\n",
+            b"Profile session: True\n",
+            b"\xffProfile session: 8\n",
+        ):
+            with self.subTest(bad=bad):
+                self.assertIsNone(parse_session_diagnostics(bad))
+        self.assertIsNone(parse_session_diagnostics(b"SDK startup: 0\n"))
+
     def test_rpc_error(self):
         self.assertEqual(classify_probe_failure(
             b"SDK startup: 0\nProfile session: 0\n"
@@ -170,6 +185,23 @@ class FailureClassificationTests(unittest.TestCase):
                          "DIAG RPC45_EVENTS: 1000026\n")
         self.assertNotIn("private@example.com", output.getvalue())
         self.assertNotIn("sensitive", output.getvalue())
+
+    def test_session_diagnostic_prints_only_numeric_status(self):
+        payload = {"device_id": "123456789012", "identity": "private@example.com",
+                   "unlock_secret": "secret-value"}
+        error = SDKSnapshotError("SDK_SESSION_FAILED", session_status=12)
+        with patch.object(sys, "argv", ["live_once.py", "--diagnose"]), \
+             patch.object(live_once, "read_settings", return_value=payload), \
+             patch.object(live_once, "validate_private_profile"), \
+             patch.object(live_once, "PROBE", Mock(is_file=lambda: True)), \
+             patch.object(live_once, "read_once", new_callable=AsyncMock,
+                          side_effect=error), \
+             patch("sys.stdout", new_callable=io.StringIO) as output:
+            self.assertEqual(live_once.main(), 1)
+        self.assertIn("BLOCKED: SDK_SESSION_FAILED", output.getvalue())
+        self.assertIn("DIAG SESSION_STATUS: 12", output.getvalue())
+        self.assertNotIn("private@example.com", output.getvalue())
+        self.assertNotIn("secret-value", output.getvalue())
 
     def test_diagnostic_unknown_values(self):
         payload = {"device_id": "123456789012", "identity": "a", "unlock_secret": "b"}
