@@ -64,8 +64,7 @@ echo "===== DEV3 SOURCE BACKUP / ATOMIC SWAP ====="
 bash scripts/upgrade_remote_local_app_source_dev3.sh --apply "$ARCHIVE" "$SUMS"
 
 echo "===== DEV3 SUPERVISOR BACKUP / UPDATE ====="
-"${SSH[@]}" 'sh -s -- --execute-approved' <
-  scripts/update_haos_genvex_remote_dev3_with_backup_v1.sh
+"${SSH[@]}" 'sh -s -- --execute-approved' < scripts/update_haos_genvex_remote_dev3_with_backup_v1.sh
 
 echo "PASS: dev3 installed and stopped; no automatic Nabto polling started"
 echo "PASS: dev2 source backup retained; Supervisor backup requested"
