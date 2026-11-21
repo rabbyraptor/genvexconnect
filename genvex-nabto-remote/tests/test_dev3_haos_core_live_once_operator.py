@@ -140,6 +140,11 @@ class OperatorTests(unittest.TestCase):
         safe = Mock(stdout=io.BytesIO(b"BLOCKED: SDK_SESSION_FAILED\n"))
         self.assertEqual(op.classify_runtime_exit(safe).code,
                          "SDK_SESSION_FAILED")
+        served = Mock(returncode=0, stdout=io.BytesIO(
+            b"PASS: one RPC45 snapshot service expired and stopped\n"
+        ))
+        self.assertEqual(op.classify_runtime_exit(served).code,
+                         "RUNTIME_SERVED_BUT_CORE_WINDOW_MISSED")
         for output in (
             b"BLOCKED: SDK_SESSION_FAILED\nsecret=hunter2\n",
             b"BLOCKED: unknown-secret-code\n",
