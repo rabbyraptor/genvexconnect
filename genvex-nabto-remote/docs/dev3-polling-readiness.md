@@ -299,3 +299,33 @@ They demonstrate bounded cleanup behavior at the Python adapter level,
 but do not certify network reliability or native-QEMU termination on
 every hardware/platform variant. The explicit manual recovery experiment
 and all previous read-only constraints remain unchanged.
+
+## Bounded recovery reliability experiment (manual only)
+
+The HAOS SSH operator now also accepts
+`--recovery-trial-three`, which is intentionally distinct from
+`--trial-three` and `--trial-diagnose`. It performs exactly
+**three isolated initial read attempts**, at least 60 seconds apart.
+For each trial, and only when the first read fails with the exact
+`SDK_RPC45_FAILED` + return 26 + `(1000015,)` event signature, the
+existing recovery policy may issue **one additional** read after its
+own 60-second cooldown. Therefore a complete operator invocation
+can issue **at most six RPC45 reads** (three initial, three conditional),
+all serialized, with no background scheduling or daemon.
+
+Each complete trial is in a separate ephemeral Docker container, uses
+the stopped DEV2 App image, mounts the existing encrypted profile
+read-only and passes credentials only through stdin. After each trial
+the container is forcibly removed. The existing preflight runs before
+every trial; failures terminate or are counted, not bypassed. Ctrl-C
+aborts the sequence. Recovery status markers distinguish whether an
+eligible retry was taken and whether its final snapshot validated.
+The normal trial modes and the single `--recover-once` mode are
+unchanged.
+
+This is explicitly a **manual field experiment**: it must not be
+scheduled, wired into Home Assistant polling or triggered automatically.
+The offline CI checks validate the operator's strict count and call
+arguments, but do not establish live network reliability. No more
+than three initial attempts and six total SDK RPC45 operations may
+be performed by this command.
