@@ -136,6 +136,66 @@ class OperatorTests(unittest.TestCase):
         self.assertEqual(commands[-1][:3], ["docker", "rm", "-f"])
         self.assertIn("BLOCKED", output.getvalue())
 
+    def test_runtime_exit_reports_only_allowlisted_category(self):
+        safe = Mock(stdout=io.BytesIO(b"BLOCKED: SDK_SESSION_FAILED\\n"))
+        self.assertEqual(op.classify_runtime_exit(safe).code,
+                         "SDK_SESSION_FAILED")
+        for output in (
+            b"BLOCKED: SDK_SESSION_FAILED\\nsecret=hunter2\\n",
+            b"BLOCKED: unknown-secret-code\\n",
+            b"token=example-private-value\\n",
+            b"BLOCKED: SDK_SESSION_FAILED\\n" + b"z" * 600,
+            b"\\xff\\xfe\\n",
+        ):
+            with self.subTest(output_size=len(output)):
+                unsafe = Mock(stdout=io.BytesIO(output))
+                error = op.classify_runtime_exit(unsafe)
+                self.assertEqual(error.code,
+                                 "RUNTIME_EXITED_WITHOUT_SAFE_DIAGNOSTIC")
+                self.assertNotIn("secret", str(error))
+                self.assertNotIn("token=", str(error))
+
+    def test_http_probe_timeout_retries_without_restarting_sdk(self):
+        commands = []
+
+        class FakeProcess:
+            def __init__(self):
+                self.stdin = io.BytesIO()
+                self.stdout = io.BytesIO()
+            def poll(self): return None
+            def wait(self, timeout): return 0
+
+        child = FakeProcess()
+        def fake_run(args, **kwargs):
+            commands.append((args, kwargs))
+            if args[:3] == ["docker", "exec", "-i"]:
+                count = sum(c[0][:3] == ["docker", "exec", "-i"]
+                            for c in commands)
+                if count == 1:
+                    raise subprocess.TimeoutExpired(args, 14)
+                return Mock(returncode=0, stdout=PASS_LINE)
+            if args[:3] == ["docker", "rm", "-f"]:
+                return Mock(returncode=0, stdout=b"")
+            raise AssertionError(args)
+
+        with patch.object(op.os, "geteuid", return_value=0), \\
+             patch.object(op, "check_file"), \\
+             patch.object(op, "preflight", return_value="sha256:" + "a" * 64), \\
+             patch.object(op, "select_core_network", return_value="hassio"), \\
+             patch.object(op, "core_network_mode", return_value="host"), \\
+             patch.object(op, "prompt_settings",
+                          return_value=json.dumps(SETTINGS).encode() + b"\\n"), \\
+             patch.object(op, "private_address", return_value="172.30.33.77"), \\
+             patch.object(op, "run", side_effect=fake_run), \\
+             patch.object(op.subprocess, "Popen", return_value=child) as launch, \\
+             patch.object(op.time, "sleep"), \\
+             patch("sys.stdout", new_callable=io.StringIO):
+            self.assertEqual(op.operator(), 0)
+        launch.assert_called_once()
+        self.assertEqual(sum(c[0][:3] == ["docker", "exec", "-i"]
+                             for c in commands), 2)
+        self.assertEqual(commands[-1][0][:3], ["docker", "rm", "-f"])
+
 
 if __name__ == "__main__":
     unittest.main()
