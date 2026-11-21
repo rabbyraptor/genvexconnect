@@ -167,3 +167,37 @@ snapshot has so far only been served to a client in the **same**
 ephemeral container. The real two-container transport was verified
 with **fake** data on a separate CI machine. The next field step
 tests local HAOS network reachability (before any HA Core registration).
+
+## HAOS real Core-container private-network test (fake-only; operator step)
+
+A small host-side operator now exists at
+`scripts/haos_core_ipc_network_operator.py`. It does not require any
+Nabto identity or device secrets and makes **zero RPC45 calls**.
+
+- Locates the running `homeassistant` container and inspects its actual
+  Docker networks, selecting the Supervisor `hassio` bridge when
+  present or one unambiguous non-default local bridge.
+- Reuses the already built, locally pinned App image with a fake-only
+  `offline_ipc_network_smoke.py` server, attached temporarily to that
+  network with an unpredictable DNS alias. It publishes **no port**.
+  The source file is mounted read-only from a root-owned staging path.
+- Executes a read-only Python stdlib client **inside the running HA Core
+  container** using `docker exec -i homeassistant python3 -` without
+  changing any Home Assistant files, registry, integration or process.
+  The client checks real TCP/DNS resolution of the temporary alias,
+  rejects missing and wrong fake tokens (401), validates a synthetic
+  complete five-value response with the correct fake bearer token
+  (200), and rejects an unknown route (404).
+- Retries only local fake TCP readiness up to five times, never SDK
+  reads; immediately force-removes the temporary server container
+  on either success or failure.
+- Uses only synthetic readings/device identity and a test token
+  embedded in test source. No real credentials or physical gateway
+  interaction is involved.
+
+This test specifically isolates the previously unverified link from
+the **real HA Core container** to a private server on the **same
+Supervisor bridge**. The results will not be considered verified on
+HAOS until the operator runs this test and supplies its sanitized
+output. The existing real-Core and two-Docker-container CI tests
+remain complementary, not substitutes for this device-specific check.
