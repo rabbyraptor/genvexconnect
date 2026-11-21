@@ -86,14 +86,15 @@ def select_core_network() -> str:
     networks = (core.get("NetworkSettings") or {}).get("Networks") or {}
     allowed = [name for name in networks
                if name not in ("bridge", "host", "none")]
-    require(len(allowed) > 0, "No private Core Docker network")
-    # Prefer Supervisor's application bridge when present, otherwise
-    # require one unambiguous private Docker network.
-    if "hassio" in allowed:
+    if core.get("HostConfig", {}).get("NetworkMode") == "host":
         name = "hassio"
     else:
-        require(len(allowed) == 1, "Ambiguous private Core networks")
-        name = allowed[0]
+        require(len(allowed) > 0, "No private Core Docker network")
+        if "hassio" in allowed:
+            name = "hassio"
+        else:
+            require(len(allowed) == 1, "Ambiguous private Core networks")
+            name = allowed[0]
     check = run(["docker", "network", "inspect", name])
     require(check.returncode == 0, "Cannot inspect private Docker network")
     details = json.loads(check.stdout)
@@ -105,6 +106,14 @@ def select_core_network() -> str:
     return name
 
 
+def core_network_mode() -> str:
+    result = run(["docker", "inspect", "--type", "container", CORE_NAME])
+    require(result.returncode == 0, "Cannot inspect Home Assistant Core")
+    info = json.loads(result.stdout)
+    require(len(info) == 1, "Ambiguous Core container")
+    return info[0].get("HostConfig", {}).get("NetworkMode", "")
+
+
 def operator() -> int:
     require(os.geteuid() == 0, "Root access required")
     check_file(SOURCE.parent, 0o700, directory=True)
@@ -114,6 +123,7 @@ def operator() -> int:
     suffix = secrets.token_hex(5)
     name = "genvex-dev3-ipc-net-" + suffix
     alias = "genvex-dev3-ipc-" + suffix
+    core_host_network = core_network_mode() == "host"
     cmd = [
         "docker", "run", "-d", "--rm",
         "--name", name, "--network", network,
@@ -137,12 +147,22 @@ def operator() -> int:
         started = run(cmd)
         require(started.returncode == 0,
                 "Private IPC test container could not start")
+        target = alias
+        if core_host_network:
+            inspection = run(["docker", "inspect", "--type", "container", name])
+            require(inspection.returncode == 0, "Cannot inspect temporary IPC container")
+            info = json.loads(inspection.stdout)
+            require(len(info) == 1, "Ambiguous temporary IPC container")
+            target = ((info[0].get("NetworkSettings") or {}).get("Networks") or {}).get(network, {}).get("IPAddress", "")
+            import ipaddress
+            require(bool(target) and ipaddress.ip_address(target).is_private,
+                    "No private IPC container address")
         # Docker networking and container startup may take a moment. Retrying
         # only this fake TCP check cannot issue any Nabto requests.
         probe = None
         for attempt in range(5):
             probe = run(
-                ["docker", "exec", "-i", CORE_NAME, "python3", "-", alias],
+                ["docker", "exec", "-i", CORE_NAME, "python3", "-", target],
                 timeout=12, input=CLIENT.encode("utf-8"),
             )
             if probe.returncode == 0:
