@@ -37,6 +37,7 @@ import math
 import sys
 
 target = sys.argv[1]
+port = int(sys.argv[2]) if len(sys.argv) > 2 else 18275
 line = sys.stdin.buffer.readline(512)
 if len(line) > 511 or not line.endswith(b"\n") or sys.stdin.buffer.read(1):
     raise ValueError("Invalid bounded IPC input")
@@ -47,7 +48,7 @@ device = settings["device_id"]
 token = settings["ipc_token"]
 
 def check(auth, path, expected):
-    conn = HTTPConnection(target, 18275, timeout=3)
+    conn = HTTPConnection(target, port, timeout=3)
     try:
         headers = {"Accept": "application/json"}
         if auth is not None:
