@@ -1,4 +1,4 @@
-name: DEV3 single-shot RPC45 offline tests
+name: DEV3 read-only remote contracts
 
 on:
   push:
@@ -10,6 +10,9 @@ on:
       - 'genvex-nabto-remote/scripts/haos_live_once_operator.py'
       - 'genvex-nabto-remote/tests/test_live_once.py'
       - 'genvex-nabto-remote/tests/test_haos_live_once_operator.py'
+      - 'genvex-nabto-remote/tests/test_dev3_polling_state.py'
+      - 'experimental/home_assistant/custom_components/genvex_remote/**'
+      - 'experimental/home_assistant/tests/test_dev3_coordinator.py'
       - '.github/workflows/dev3-live-once.yml'
   workflow_dispatch:
 
@@ -31,6 +34,10 @@ jobs:
         with:
           python-version: '3.12'
       - name: Syntax check
-        run: python -m compileall -q runtime scripts/haos_live_once_operator.py tests/test_live_once.py tests/test_haos_live_once_operator.py
+        run: python -m compileall -q runtime scripts/haos_live_once_operator.py tests/test_live_once.py tests/test_haos_live_once_operator.py tests/test_dev3_polling_state.py ../experimental/home_assistant/custom_components/genvex_remote ../experimental/home_assistant/tests/test_dev3_coordinator.py
       - name: Test single-shot contract and operator launcher (no network credentials)
         run: python -m unittest discover -s tests -p 'test_*live_once*.py' -v
+      - name: Test atomic snapshot state and bounded polling (no SDK)
+        run: python -m unittest discover -s tests -p 'test_dev3_polling_state.py' -v
+      - name: Test HA coordinator unavailable and recovery (without HA Core)
+        run: python -m unittest discover -s ../experimental/home_assistant/tests -p 'test_dev3_coordinator.py' -v
