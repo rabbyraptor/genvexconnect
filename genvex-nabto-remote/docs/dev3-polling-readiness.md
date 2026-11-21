@@ -146,3 +146,30 @@ Next investigation should inspect legacy SDK error-code definitions and the
 numeric event codes already emitted by `classify_error()` in the isolated
 probe, while continuing to suppress raw SDK diagnostic JSON and secrets.
 Any additional live test needs explicit operator approval.
+
+## Legacy Nabto error-code source and redacted events
+
+Nabto's legacy TEN025 (Writing a Nabto API Client Application, appendix 7)
+lists **diagnostic event** `1000026 = CONNECT_TIMEOUT`, as well as
+`1000009 = CONNECTION_ERROR`, `1000021 = MICROSERVER_BUSY`, and other
+million-range codes. These are **not** the same namespace as the observed
+`nabtoRpcInvoke()` API return status **26**. The numeric coincidence must
+not be used to conclude that SDK status 26 means CONNECT_TIMEOUT. TEN025
+also directs readers to the `nabto_client_api.h` API status enum for
+function return codes; the matching installed legacy header has not been
+verified.
+
+The existing isolated probe already reduces any vendor diagnostic JSON to
+`('ERROR_JSON', [bounded integer event codes])` or
+`('NO_JSON_DIAGNOSTIC', [])`. DEV3 now extracts that *redacted* marker
+with a bounded, non-executing literal parser, and can print
+`DIAG RPC45_EVENTS: 1000026` (or `none`) only in opt-in
+`--diagnose` / `--trial-diagnose` mode. The parser rejects duplicated
+markers, duplicate/unsorted codes, non-integer values, oversized content
+and malformed input. No raw JSON or diagnostic strings are propagated.
+
+Reference: https://downloads.nabto.com/assets/docs/TEN025%20Writing%20a%20Nabto%20API%20client%20application.pdf
+
+The next approved field trial may distinguish a transport-level
+`CONNECT_TIMEOUT` event from an RPC failure without such an event.
+Until then, SDK status 26 remains an **unmapped API return code**.
