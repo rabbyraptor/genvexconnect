@@ -21,8 +21,15 @@ class PersistentSessionTrialContracts(unittest.TestCase):
         loop = next(n for n in ast.walk(main) if isinstance(n, ast.For) and
                     isinstance(n.iter, ast.Call) and isinstance(n.iter.func, ast.Name)
                     and n.iter.func.id == "range")
-        self.assertEqual(loop.iter.args[0].value, 5)
+        self.assertEqual(loop.iter.args[0].value, 8)
         self.assertTrue(any(n in ast.walk(loop) for n in invocations))
+
+    def test_bounded_followups_and_recovery_markers(self):
+        source = SOURCE.read_text()
+        self.assertIn('first_failure_at + 2', source)
+        self.assertIn('RPC45_POST_FAILURE_ATTEMPTS:', source)
+        self.assertIn('RPC45_RECOVERED_IN_SAME_SESSION:', source)
+        self.assertIn('return 0 if recovery_after_failure else 1', source)
 
     def test_only_five_allowed_addresses(self):
         tree = ast.parse(SOURCE.read_text())

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Opt-in read-only RPC45 five-request recovery trial in ONE legacy SDK session.
+"""Opt-in read-only RPC45 bounded post-failure recovery trial in ONE legacy SDK session.
 
 Run only as a separate x86_64/QEMU process with --settings-stdin.
 Accepts one JSON line containing identity/host/passphrase. No credentials or
@@ -106,6 +106,7 @@ def main() -> int:
     successful = 0
     status_summary = []
     recovery_after_failure = False
+    first_failure_at = None
     try:
         with tempfile.TemporaryDirectory(prefix="genvex-persistent-ab-") as folder:
             users = Path(folder) / "users"
@@ -139,7 +140,10 @@ def main() -> int:
             print("PROCESS_REUSE: ONE", flush=True)
             print("SESSION_OPEN_COUNT: 1", flush=True)
             print("SESSION_HANDLE_REUSED: YES", flush=True)
-            for index in range(5):
+            # Up to six scheduled attempts. Upon the first failure, always
+            # issue two additional attempts in this SAME session, bounded to
+            # eight total calls; no SDK/session restart occurs.
+            for index in range(8):
                 if index:
                     time.sleep(60)
                 response = P()
@@ -149,7 +153,9 @@ def main() -> int:
                 raw = take(response)
                 valid = status == 0 and valid_batch(raw)
                 successful += int(valid)
-                if valid and any(previous != 0 for previous in status_summary):
+                if not valid and first_failure_at is None:
+                    first_failure_at = index
+                elif valid and first_failure_at is not None:
                     recovery_after_failure = True
                 status_summary.append(status)
                 print(
@@ -158,11 +164,17 @@ def main() -> int:
                     f"session_reused={'first' if index == 0 else 'yes'}",
                     flush=True,
                 )
-            print(f"RPC45_SUCCESS_COUNT: {successful}/5", flush=True)
-            print(f"RPC45_FAILURE_COUNT: {5 - successful}", flush=True)
+                if (first_failure_at is not None and index >= first_failure_at + 2
+                        or first_failure_at is None and index == 5):
+                    break
+            attempts = len(status_summary)
+            print(f"RPC45_SUCCESS_COUNT: {successful}/{attempts}", flush=True)
+            print(f"RPC45_FAILURE_COUNT: {attempts - successful}", flush=True)
+            print(f"RPC45_FAILURE_OBSERVED: {first_failure_at is not None}", flush=True)
+            print(f"RPC45_POST_FAILURE_ATTEMPTS: {attempts - first_failure_at - 1 if first_failure_at is not None else 0}", flush=True)
             print(f"RPC45_RECOVERED_IN_SAME_SESSION: {recovery_after_failure}", flush=True)
             print("SESSION_OPEN_COUNT_FINAL: 1", flush=True)
-            return 0 if successful == 5 else 1
+            return 0 if recovery_after_failure else 1
     except Exception:
         print("TRIAL_EXCEPTION: SANITIZED", flush=True)
         return 4
