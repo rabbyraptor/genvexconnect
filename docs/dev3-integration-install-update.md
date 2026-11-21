@@ -67,10 +67,18 @@ does not modify Home Assistant's entity/config/device registries or the
 separate `genvex_connect` LAN component. Restart Home Assistant Core
 after the approved update so Python and translations reload.
 
-**The new upgrade procedure has not been performed on live HAOS yet.**
-The rollback feature is verified by simulated filesystem failures in
-offline tests, not by a live restoration of a broken installation.
-Future rollback must be an explicitly reviewed separate host action.
+**Live Gate K.1–K.8 evidence (2026-11-21):** An upgrade using the
+previous source commit `d7ad38a6` was actually applied to the operator's
+HAOS instance. It changed only `translations/da.json`, checked all eleven
+post-install file hashes against the source package and confirmed that
+all eleven backup file hashes matched the prior installation. The older
+script placed the backup inside `custom_components/`, causing a Core
+import failure. Moving that same backup to `/config/.genvex_remote-upgrade-backup`
+and restarting Core restored all five numeric sensors. The corrected
+backup-location code in commit `faffc01c` has **not itself been executed
+as an upgrade on live HAOS**; it is protected by offline regression tests.
+The backup has been retained. Future rollback remains a separately reviewed
+action; no rollback of the installed integration was performed.
 
 ## Post-install verification
 
@@ -97,11 +105,16 @@ After a successful source swap and Core restart, all five sensors remained
 unavailable. The App simultaneously returned authenticated HTTP 200 with
 five fresh values. Core logs contained `Unable to import component:
 No module named 'custom_components.'` immediately after startup. The
-hidden directory is a probable invalid integration-discovery candidate.
+hidden directory was the confirmed cause of this import failure: moving
+it out of the discovery tree and restarting Core restored all five sensors.
 
 **Correction:** keep rollback source at
 `/config/.genvex_remote-upgrade-backup`, outside Home Assistant's
 custom-component discovery tree. The new upgrade preflight refuses legacy
-and new backups until reviewed. The live remediation must move only the
-existing backup (without changing the installed component) and restart
-Core; successful sensor recovery must be independently verified.
+and new backups until reviewed. **Live remediation verified:** Gate K.8 moved the backup from
+`/config/custom_components/.genvex_remote-upgrade-backup` to
+`/config/.genvex_remote-upgrade-backup` and restarted Home Assistant Core.
+All five entity IDs retained the signature `2be9240972de0a9d` and all
+five sensors had numeric Recorder states only 15 seconds old. Their
+original names were Supply air, Outdoor air, Exhaust air, Extract air,
+and Humidity. Gate K.8 returned PASS.

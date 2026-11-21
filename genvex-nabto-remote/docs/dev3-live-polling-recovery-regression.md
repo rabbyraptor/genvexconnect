@@ -260,3 +260,33 @@ For future on-host freshness checks, inspect the runtime's
 `timestamp_utc` from an authenticated snapshot and, where available,
 Home Assistant's state `last_reported` / actual coordinator events,
 rather than infer a failed poll solely from Recorder `last_updated_ts`.
+
+## Gate K: integration source upgrade and recovery (2026-11-21)
+
+- **K.1 PASS:** installed `genvex_remote` version `0.1.0`, 11 files,
+  valid en/da translations, one enabled entry, five sensors, one device,
+  App version `0.1.0-dev3` started with manual boot, no pre-existing
+  upgrade backup; entity ID signature `2be9240972de0a9d`.
+- **K.2 PASS:** pinned source `d7ad38a6` successfully checked; only
+  `translations/da.json` differed from installed integration.
+- **K.3 PASS:** explicit upgrade executed; all 11 installed source files
+  and all 11 backup files hash-verified. No Core restart in this gate.
+- **K.4 REVIEW_REQUIRED:** Core restarted, App stayed started, names and
+  entity IDs stable, but five sensor states remained unavailable.
+- **K.5 PASS (diagnostic):** authenticated private HTTP returned 200,
+  complete five-value numeric snapshot, matching device ID, age 36 seconds;
+  five Recorder states still unavailable.
+- **K.6–K.7:** Core logs isolated startup failure at
+  `2026-11-21T20:52:33Z`: `Unable to import component: No module named
+  'custom_components.'`. Old update installer had stored hidden backup
+  inside `/config/custom_components`, causing the import failure.
+- **K.8 PASS:** moved old backup to `/config/.genvex_remote-upgrade-backup`
+  (outside integration discovery tree) and restarted Core. All five
+  sensors recovered numeric values with 15-second latest-state age,
+  translated English names unchanged, entity IDs unchanged.
+
+Installer fix `faffc01c` moves *future* backup directories outside
+`custom_components`; regression tests cover the backup location and
+rejection of the legacy hidden backup. The corrected upgrade writer has
+not yet been live exercised. The existing backup remains available; the
+30-minute/24-hour soak gates are still postponed.
