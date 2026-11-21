@@ -75,7 +75,15 @@ class NetworkPreflightTests(unittest.TestCase):
             1, "SENSITIVE_MARKER"
         )):
             _, output = self.output(probe.check_dns)
-        self.assertEqual(output.strip(), "INFO: APP_DNS_UNRESOLVED_OR_UNAVAILABLE")
+        self.assertEqual(output.strip(), "BLOCKED: APP_DNS_CORE_EXEC_UNAVAILABLE")
+
+    def test_dns_distinguishes_expected_absence_from_success(self):
+        for marker in ("INFO: APP_DNS_NOT_RESOLVED", "PASS: APP_DNS_RESOLVES"):
+            with self.subTest(marker=marker), patch.object(
+                probe, "command", return_value=(0, marker + "\\n")
+            ):
+                _, output = self.output(probe.check_dns)
+                self.assertEqual(output.strip(), marker)
 
     def test_main_fails_closed_on_metadata(self):
         with patch.object(probe.os, "geteuid", return_value=0), \
