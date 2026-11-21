@@ -22,19 +22,19 @@ class NetworkPreflightTests(unittest.TestCase):
 
     def test_expected_app_is_stopped_and_manual(self):
         with patch.object(probe, "command", return_value=(
-            0, '{"slug":"local_genvex_nabto_remote","boot":"manual_only",'
-               '"host_network":false,"state":"stopped"}'
+            0, '{"result":"ok","data":{"slug":"local_genvex_nabto_remote","boot":"manual",'
+               '"host_network":false,"state":"stopped"}}'
         )):
             result, output = self.output(probe.check_app_metadata)
         self.assertEqual(result, (True, True))
         self.assertIn("PASS: APP_METADATA_MANUAL_ONLY_PRIVATE_NETWORK", output)
 
     def test_rejects_auto_boot_and_host_network(self):
-        for boot, host in (("auto", False), ("manual_only", True)):
+        for boot, host in (("auto", False), ("manual", True)):
             with self.subTest(boot=boot, host=host), patch.object(
                 probe, "command", return_value=(0, (
-                    '{"slug":"local_genvex_nabto_remote","boot":"%s",'
-                    '"host_network":%s,"state":"stopped"}'
+                    '{"result":"ok","data":{"slug":"local_genvex_nabto_remote","boot":"%s",'
+                    '"host_network":%s,"state":"stopped"}}'
                     % (boot, str(host).lower())
                 )),
             ):
@@ -44,7 +44,7 @@ class NetworkPreflightTests(unittest.TestCase):
 
     def test_never_prints_raw_untrusted_output(self):
         with patch.object(probe, "command", return_value=(
-            0, '{"slug":"unknown","unlock_secret":"SENSITIVE_MARKER"}'
+            0, '{"result":"ok","data":{"slug":"unknown","unlock_secret":"SENSITIVE_MARKER"}}'
         )):
             _, output = self.output(probe.check_app_metadata)
         self.assertNotIn("SENSITIVE_MARKER", output)
