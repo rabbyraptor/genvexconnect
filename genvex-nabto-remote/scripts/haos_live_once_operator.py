@@ -184,12 +184,12 @@ def run_once(image, payload, *, show_values=False, diagnose=False,
         )
 
 
-def bounded_trial(image, payload, *, sleep=time.sleep, diagnose=False):
-    """Exactly three disposable reads, with no retries or persistent daemon.
+def bounded_trial(image, payload, *, sleep=time.sleep, diagnose=False,
+                  recover_once=False):
+    """Three isolated trials, optionally each with one eligible recovery.
 
-    Each attempt is independently isolated. Never print credentials or
-    vendor diagnostics; a failed read counts as failed and does not trigger
-    an immediate extra request.
+    No retries in ordinary or diagnostic trial modes. The explicit recovery
+    trial has at most six RPC45 calls in total and never runs unattended.
     """
     passed = 0
     for attempt in range(1, TRIAL_ATTEMPTS + 1):
@@ -197,6 +197,8 @@ def bounded_trial(image, payload, *, sleep=time.sleep, diagnose=False):
         try:
             if diagnose:
                 run_once(image, payload, diagnose=True)
+            elif recover_once:
+                run_once(image, payload, recover_once=True)
             else:
                 run_once(image, payload)
         except (RuntimeError, subprocess.TimeoutExpired, OSError):
@@ -213,21 +215,28 @@ def bounded_trial(image, payload, *, sleep=time.sleep, diagnose=False):
 def main():
     try:
         require(sys.argv[1:] in ([], ["--show-values"], ["--trial-three"],
-                                   ["--diagnose"], ["--trial-diagnose"], ["--recover-once"]),
+                                   ["--diagnose"], ["--trial-diagnose"], ["--recover-once"],
+                                   ["--recovery-trial-three"]),
                 "Unsupported display option")
         show_values = sys.argv[1:] == ["--show-values"]
-        trial = sys.argv[1:] in (["--trial-three"], ["--trial-diagnose"])
+        recovery_trial = sys.argv[1:] == ["--recovery-trial-three"]
+        trial = sys.argv[1:] in (["--trial-three"], ["--trial-diagnose"],
+                                 ["--recovery-trial-three"])
         diagnose = sys.argv[1:] in (["--diagnose"], ["--trial-diagnose"])
-        recover_once = sys.argv[1:] == ["--recover-once"]
+        recover_once = sys.argv[1:] in (["--recover-once"],
+                                        ["--recovery-trial-three"])
         image = preflight()
         print("PASS: DEV2 stopped; profile read-only; separate container selected")
-        if trial:
+        if recovery_trial:
+            print("RECOVERY TRIAL: three isolated initial read attempts, each at most one eligible retry after 60s; >=60s between trials; maximum six RPC45 calls; Ctrl-C aborts", flush=True)
+        elif trial:
             print("TRIAL: exactly three read-only RPC45 batches, >=60 s apart; Ctrl-C aborts", flush=True)
-        if recover_once:
+        elif recover_once:
             print("RECOVERY EXPERIMENT: one initial RPC45 read; at most one final read after 60s; Ctrl-C aborts", flush=True)
         payload = prompt_settings()
         if trial:
-            if not bounded_trial(image, payload, diagnose=diagnose):
+            if not bounded_trial(image, payload, diagnose=diagnose,
+                                 recover_once=recover_once):
                 print("BLOCKED: bounded trial had one or more failed reads", flush=True)
                 return 1
         else:
