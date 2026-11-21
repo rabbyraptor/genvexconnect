@@ -13,6 +13,7 @@ import json
 import os
 from pathlib import Path
 import secrets
+import select
 import subprocess
 import sys
 import time
@@ -45,10 +46,10 @@ class OperatorFailure(Exception):
         super().__init__(code)
 
 
-def classify_runtime_exit(proc) -> OperatorFailure:
+def classify_runtime_exit(proc, *, prior: bytes = b"") -> OperatorFailure:
     """Inspect only 512 bytes of fixed-category child stdout on exit."""
     try:
-        raw = proc.stdout.read(513) if proc.stdout is not None else b""
+        raw = prior + (proc.stdout.read(513) if proc.stdout is not None else b"")
         if len(raw) <= 512:
             messages = raw.decode("ascii", "strict").splitlines()
             if (proc.returncode == 0 and messages ==
@@ -140,6 +141,44 @@ print("PASS: one real Genvex RPC45 snapshot reached HA Core over private HTTP")
 """
 
 
+
+def wait_for_runtime_ready(proc, deadline: float) -> None:
+    """Read one fixed readiness marker after RPC45 completes, not SDK data.
+
+    Avoid repeatedly connecting to Core while the Nabto RPC is still active.
+    On immediate runtime failure, propagate only an allowlisted SDK category.
+    """
+    if proc.stdout is None:
+        raise OperatorFailure("RUNTIME_STDOUT_PIPE_MISSING")
+    pending = bytearray()
+    while time.monotonic() < deadline:
+        if proc.poll() is not None:
+            raise classify_runtime_exit(proc, prior=bytes(pending))
+        remaining = max(0.0, deadline - time.monotonic())
+        readable, _, _ = select.select(
+            [proc.stdout], [], [], min(1.0, remaining)
+        )
+        if not readable:
+            continue
+        fragment = os.read(proc.stdout.fileno(), 256)
+        if not fragment:
+            continue
+        pending.extend(fragment)
+        if len(pending) > 512:
+            raise OperatorFailure("RUNTIME_UNEXPECTED_OUTPUT")
+        if b"\n" not in pending:
+            continue
+        line, _, remainder = pending.partition(b"\n")
+        if line == b"IPC_READY" and not remainder:
+            return
+        if line.startswith(b"BLOCKED: ") and not remainder:
+            code = line[len(b"BLOCKED: "):].decode("ascii", "replace")
+            if code in CHILD_FAILURE_CODES:
+                raise OperatorFailure(code)
+        raise OperatorFailure("RUNTIME_UNEXPECTED_OUTPUT")
+    raise OperatorFailure("RPC45_OR_IPC_STARTUP_TIMEOUT")
+
+
 def private_address(name: str, network: str) -> str | None:
     inspected = run(["docker", "inspect", "--type", "container", name])
     if inspected.returncode != 0:
@@ -210,6 +249,8 @@ def operator() -> int:
             raise OperatorFailure("CONTAINER_START_OR_STDIN_FAILED") from None
         proc.stdin = None  # read after exit must not flush closed stdin
         deadline = time.monotonic() + MAX_WAIT_SECONDS
+        wait_for_runtime_ready(proc, deadline)
+        print("PASS: one RPC45 snapshot ready for private Core read", flush=True)
         target = None
         had_client_attempt = False
         client_timed_out = False
