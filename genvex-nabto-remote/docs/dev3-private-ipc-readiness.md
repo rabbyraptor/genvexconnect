@@ -1,7 +1,6 @@
 # DEV3 private IPC bridge — deployment gate
 
-**Status: source-only architecture review. No listener, App startup, or
-Home Assistant deployment is authorized by this document.**
+**Status: source-only architecture review. No live listener, App startup, or Home Assistant deployment is authorized by this document.**
 
 ## Proven offline contracts
 
@@ -70,8 +69,10 @@ equivalent to permission to start a listener.
 
 ## Non-goals at this stage
 
-This does not implement a socket listener, token enrollment/rotation,
-an unattended Nabto poller, or any production deployment. It establishes
+The existing codebase already contains a callable `SnapshotHTTPServer`
+(`polling_http_server.py`) and a polling runtime, but neither is active
+while the installed DEV2 App remains stopped. This phase does not enable
+that server, enroll/rotate tokens or deploy an unattended poller. It establishes
 which safeguards a later implementation must satisfy and preserves the
 existing evidence of intermittent SDK session-stage and RPC45 failures.
 
@@ -108,3 +109,34 @@ Supervisor network namespace, port reachability, per-install token
 lifecycle, App version separation and rollback. The initial
 authenticated socket test must be bounded, read-only and explicitly
 operator-approved. Persistent polling requires separate authorization.
+
+## Manual single-RPC45 IPC smoke test (operator-run, no installation)
+
+The practical test is now implemented as
+`runtime/ipc_once.py` and the existing
+`scripts/haos_live_once_operator.py --ipc-once` switch. It reuses the
+**known-good stopped DEV2 image solely as an ephemeral, manually
+started Docker test container**. It does not install a new Supervisor
+App or modify existing App options, the LAN integration, or private
+profile files.
+
+- Prompts for the same three Nabto values in the SSH TTY; passes them
+  via stdin to the container. They never enter argv/env/App options.
+- Calls `SDKSnapshotAdapter.poll_once()` **exactly once** (85-second
+  SDK deadline, 110-second Docker deadline) and requires a valid complete
+  five-sensor snapshot.
+- Generates a random temporary bearer token **inside the container**,
+  starts the existing minimal `SnapshotHTTPServer` on
+  `127.0.0.1:0` **inside that container only**, and makes three local
+  TCP requests: missing token -> 401, valid token -> 200 with the
+  validated snapshot, then after clearing the in-memory snapshot ->
+  503. No host ports or Supervisor service endpoints are published.
+- Stops the listener, clears the snapshot, exits the container and
+  runs the operator's force-remove cleanup. No unattended polling,
+  retries, read/write controls or persistent changes.
+
+The command is a useful intermediate between fake-data tests and
+future internal App-to-HA networking. It demonstrates an actual Nabto
+read and actual local HTTP requests in the same isolated runtime, but
+it **does not** establish HA Core-to-App connectivity across the
+Supervisor network. That will be a separate later deployment task.
