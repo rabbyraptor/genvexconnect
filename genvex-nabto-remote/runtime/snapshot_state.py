@@ -29,12 +29,20 @@ class SnapshotState:
             self._generation += 1
             try:
                 result = await self._poller.poll_once()
-                parse_snapshot(result, expected_device_id=self._poller.device_id)
+                readings = parse_snapshot(result, expected_device_id=self._poller.device_id)
             except asyncio.CancelledError:
                 raise
             except Exception:
                 return False
-            self._snapshot = result
+            # Keep an owned, schema-projected copy; a reader must not be able
+            # to mutate a previously accepted snapshot after validation.
+            self._snapshot = {
+                "schema_version": 1,
+                "device_id": self._poller.device_id,
+                "timestamp_utc": result["timestamp_utc"],
+                "health": "ok",
+                "values": dict(readings),
+            }
             return True
 
     def invalidate(self) -> None:
