@@ -122,6 +122,7 @@ class OperatorTests(unittest.TestCase):
         self.assertIn("--read-only", docker_args)
         self.assertIn("--network", docker_args)
         self.assertIn("hassio", docker_args)
+        self.assertTrue(any("src=/tmp/genvex-dev3-once/recovery_policy.py," in arg and "dst=/opt/genvex-remote/runtime/recovery_policy.py,readonly" in arg for arg in docker_args))
         self.assertEqual(commands[-1][0][:3], ["docker", "rm", "-f"])
         for command, kwargs in commands:
             rendered = repr(command)
