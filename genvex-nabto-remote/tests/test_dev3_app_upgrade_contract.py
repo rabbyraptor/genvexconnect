@@ -15,6 +15,7 @@ PACKAGE = ROOT / "scripts/package_remote_diagnostic_app.py"
 SRC_SWAP = ROOT / "scripts/upgrade_remote_local_app_source_dev3.sh"
 READ_GATE = ROOT / "scripts/audit_haos_dev3_source_transaction_preflight_v1.sh"
 SUPERVISOR = ROOT / "scripts/update_haos_genvex_remote_dev3_with_backup_v1.sh"
+DECK = ROOT / "scripts/upgrade_genvex_remote_dev3_from_deck.sh"
 spec = importlib.util.spec_from_file_location("dev3_packager", PACKAGE)
 packager = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(packager)
@@ -61,7 +62,7 @@ class Dev3AppUpgradeContractTests(unittest.TestCase):
         )
 
     def test_upgrade_scripts_shell_syntax(self):
-        for script in (SRC_SWAP, READ_GATE, SUPERVISOR):
+        for script in (SRC_SWAP, READ_GATE, SUPERVISOR, DECK):
             check = subprocess.run(["bash", "-n", str(script)],
                                    capture_output=True, text=True)
             self.assertEqual(check.returncode, 0, str(script) + check.stderr)
@@ -113,6 +114,15 @@ class Dev3AppUpgradeContractTests(unittest.TestCase):
         result = self.run_source("--apply")
         self.assertNotEqual(result.returncode, 0)
         self.assertFalse(self.calls.exists())
+
+    def test_deck_launcher_stops_dev2_and_never_starts_dev3(self):
+        source = DECK.read_text()
+        self.assertIn('ha apps stop local_genvex_nabto_remote', source)
+        self.assertIn('upgrade_remote_local_app_source_dev3.sh --preflight', source)
+        self.assertIn('upgrade_remote_local_app_source_dev3.sh --apply', source)
+        self.assertIn('update_haos_genvex_remote_dev3_with_backup_v1.sh', source)
+        self.assertNotIn('ha apps start', source)
+        self.assertNotIn('/apps/data', source)
 
     def test_supervisor_update_is_opt_in_backup_enabled_and_no_start(self):
         content = SUPERVISOR.read_text()
