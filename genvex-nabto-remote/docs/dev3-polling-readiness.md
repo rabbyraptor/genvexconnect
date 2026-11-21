@@ -126,3 +126,23 @@ SDK timeouts, retry logic, credentials, QEMU architecture, gateway requests
 or persistent service behavior. `--diagnose` is also available for a
 single isolated read, but an intermittent failure may not reproduce.
 Only stage/status/timing markers should be shared.
+
+## Second field trial: SDK status 26
+
+Operator-reported `--trial-diagnose` yielded PASS / FAIL / PASS. The
+failed second read returned `SDK_RPC45_FAILED`, native SDK status **26**,
+and an RPC invocation duration of **14291 ms**. This is **not** the adapter's
+85-second timeout, and a subsequent independent invocation succeeded.
+There is not enough evidence to assign a specific Nabto meaning to 26:
+no authoritative legacy SDK error-code mapping has yet been verified.
+Do not equate 26 with a particular network, authorization or gateway cause.
+
+Two consecutive three-attempt trials each succeeded twice, with failures
+at different positions. This is evidence of intermittent RPC-level failure,
+not a reliable estimate of long-run success probability. Do not start the
+persistent App or infer that increasing the 85-second timeout will help.
+
+Next investigation should inspect legacy SDK error-code definitions and the
+numeric event codes already emitted by `classify_error()` in the isolated
+probe, while continuing to suppress raw SDK diagnostic JSON and secrets.
+Any additional live test needs explicit operator approval.
