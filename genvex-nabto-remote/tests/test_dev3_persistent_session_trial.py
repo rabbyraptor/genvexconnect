@@ -21,7 +21,7 @@ class PersistentSessionTrialContracts(unittest.TestCase):
         loop = next(n for n in ast.walk(main) if isinstance(n, ast.For) and
                     isinstance(n.iter, ast.Call) and isinstance(n.iter.func, ast.Name)
                     and n.iter.func.id == "range")
-        self.assertEqual(loop.iter.args[0].value, 3)
+        self.assertEqual(loop.iter.args[0].value, 5)
         self.assertTrue(any(n in ast.walk(loop) for n in invocations))
 
     def test_only_five_allowed_addresses(self):
