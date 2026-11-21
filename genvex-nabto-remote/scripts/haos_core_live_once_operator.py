@@ -51,6 +51,9 @@ def classify_runtime_exit(proc) -> OperatorFailure:
         raw = proc.stdout.read(513) if proc.stdout is not None else b""
         if len(raw) <= 512:
             messages = raw.decode("ascii", "strict").splitlines()
+            if (proc.returncode == 0 and messages ==
+                    ["PASS: one RPC45 snapshot service expired and stopped"]):
+                return OperatorFailure("RUNTIME_SERVED_BUT_CORE_WINDOW_MISSED")
             for code in CHILD_FAILURE_CODES:
                 if messages == ["BLOCKED: " + code]:
                     return OperatorFailure(code)
@@ -200,8 +203,11 @@ def operator() -> int:
             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
         )
         require(proc.stdin is not None, "No disposable runtime stdin")
-        proc.stdin.write(payload)
-        proc.stdin.close()
+        try:
+            proc.stdin.write(payload)
+            proc.stdin.close()
+        except (BrokenPipeError, OSError):
+            raise OperatorFailure("CONTAINER_START_OR_STDIN_FAILED") from None
         proc.stdin = None  # read after exit must not flush closed stdin
         deadline = time.monotonic() + MAX_WAIT_SECONDS
         target = None
