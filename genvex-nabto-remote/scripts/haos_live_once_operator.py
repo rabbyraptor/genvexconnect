@@ -16,6 +16,7 @@ import secrets
 import stat
 import subprocess
 import sys
+import time
 
 APP = "local_genvex_nabto_remote"
 PROFILE = Path("/mnt/data/supervisor/apps/data") / APP / "profile"
@@ -23,6 +24,8 @@ RUNNER = Path("/tmp/genvex-dev3-once/live_once.py")
 ADAPTER = Path("/tmp/genvex-dev3-once/sdk_snapshot_adapter.py")
 IMAGE_CONTAINER = "app_" + APP
 LIMIT = 110
+TRIAL_ATTEMPTS = 3
+TRIAL_GAP_SECONDS = 60
 
 
 def require(condition, message):
@@ -169,15 +172,46 @@ def run_once(image, payload, *, show_values=False):
         )
 
 
+def bounded_trial(image, payload, *, sleep=time.sleep):
+    """Exactly three disposable reads, with no retries or persistent daemon.
+
+    Each attempt is independently isolated. Never print credentials or
+    vendor diagnostics; a failed read counts as failed and does not trigger
+    an immediate extra request.
+    """
+    passed = 0
+    for attempt in range(1, TRIAL_ATTEMPTS + 1):
+        require(preflight() == image, "App or image changed during trial")
+        try:
+            run_once(image, payload)
+        except (RuntimeError, subprocess.TimeoutExpired, OSError):
+            print(f"TRIAL {attempt}/{TRIAL_ATTEMPTS}: FAILED", flush=True)
+        else:
+            passed += 1
+            print(f"TRIAL {attempt}/{TRIAL_ATTEMPTS}: PASS", flush=True)
+        if attempt < TRIAL_ATTEMPTS:
+            sleep(TRIAL_GAP_SECONDS)
+    print(f"TRIAL SUMMARY: {passed}/{TRIAL_ATTEMPTS} validated", flush=True)
+    return passed == TRIAL_ATTEMPTS
+
+
 def main():
     try:
-        require(sys.argv[1:] in ([], ["--show-values"]),
+        require(sys.argv[1:] in ([], ["--show-values"], ["--trial-three"]),
                 "Unsupported display option")
         show_values = sys.argv[1:] == ["--show-values"]
+        trial = sys.argv[1:] == ["--trial-three"]
         image = preflight()
         print("PASS: DEV2 stopped; profile read-only; separate container selected")
+        if trial:
+            print("TRIAL: exactly three read-only RPC45 batches, >=60 s apart; Ctrl-C aborts", flush=True)
         payload = prompt_settings()
-        run_once(image, payload, show_values=show_values)
+        if trial:
+            if not bounded_trial(image, payload):
+                print("BLOCKED: bounded trial had one or more failed reads", flush=True)
+                return 1
+        else:
+            run_once(image, payload, show_values=show_values)
         print("PASS: isolated container exited; DEV2 remained untouched")
         return 0
     except (Exception, KeyboardInterrupt):
