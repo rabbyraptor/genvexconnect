@@ -469,3 +469,42 @@ the test setup; it is not a verified deployed-integrations bug.
 Before deployment, test the actual config-entry setup/teardown and
 device registry relationship in an isolated test environment. The
 Supervisor runtime transport and unattended polling remain disabled.
+
+## Full config-entry and in-memory IPC contract: verified in real Core
+
+An isolated Python 3.14 / Home Assistant Core 2026.11.2 GitHub Actions
+runner now verifies the **actual integration config-entry lifecycle**,
+not just direct coordinator or state-machine calls:
+
+- `hass.config_entries.async_setup` loads the custom integration,
+  forwards its sensor platform and registers exactly five sensor
+  entities associated with **one device** in the real HA entity and
+  device registries.
+- A finite injected snapshot reader produces the expected sequence
+  success → all five unavailable on `RuntimeUnavailable` → recovery.
+  The real config entry unload succeeds, cleans up the coordinator,
+  and leaves no *available* sensor state.
+- The real `AuthenticatedSnapshotReader`, rather than a mocked
+  reader, is exercised inside this config entry against a fake
+  in-memory HTTP session. It sends a pinned URL with bearer token,
+  refuses redirects, marks all five sensors unavailable on HTTP 401,
+  and recovers when the next response is valid. No private error body
+  or token is published into entity state.
+- A second in-memory test connects both sides of our current **real
+  pure-Python** IPC contract: the runtime's `handle_read_request`
+  and `ipc_auth` alongside the HA HTTP reader and sensor entities.
+  It verifies 200 → 503 (missing runtime snapshot) → 401 (mismatched
+  bearer token) → 200, and corresponding HA availability recovery.
+
+The dedicated real-Core workflow passed on test revision
+`ab1ad4509b12b5723e9e9cb740d0da4aba4c91c7`. The
+separate DEV3 contracts, HAOS candidate, formatting and hassfest
+workflows also passed. The repository's general **HACS validation**
+still has unrelated repository-configuration failures (missing
+required topics and Issues disabled); those checks are not evidence
+of a regression in the remote integration.
+
+**These are offline simulations and internal logic tests, not live
+App-to-HA IPC.** No network server or socket listener exists in this
+candidate; secure IPC token provisioning and network binding must be
+reviewed before installation. See `docs/dev3-private-ipc-readiness.md`.
