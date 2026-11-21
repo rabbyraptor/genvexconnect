@@ -1,3 +1,5 @@
+> **Archived evidence (21 November 2026).** This is a dated investigation or completed milestone, not the current operating instructions. See [current status](../STATUS.md).
+
 # ARM64 HAOS runtime verification and next remote connection gate
 
 Verified by user on HAOS Raspberry Pi 4 (2026-11-20):

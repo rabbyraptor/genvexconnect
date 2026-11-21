@@ -1,3 +1,5 @@
+> **Archived evidence (21 November 2026).** This is a dated investigation or completed milestone, not the current operating instructions. See [current status](../STATUS.md).
+
 # Genvex Remote App: safe post-diagnostic update design
 
 Status: **planning only**. No update, source replacement, credential import or

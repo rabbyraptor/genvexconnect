@@ -1,3 +1,5 @@
+> **Archived evidence (21 November 2026).** This is a dated investigation or completed milestone, not the current operating instructions. See [current status](../STATUS.md).
+
 # Phase 1 — source-grounded read-only Optima 270 sensor validation
 
 Date: 2026-11-19  
@@ -6,7 +8,7 @@ Branch: `remote-nabto-connection`
 
 ## Baseline and success criterion
 
-The project already independently verified SDK 4.9.11 remote `ping.json` / ID 17 on x86_64 and on HAOS ARM64/QEMU, and a first single-sensor `candidate_read_datapoints.json` **RPC ID 45** on Steam Deck. The latter returned `raw=367`, decoded `6.7 °C` for the supply-air sensor (obj=0, address=20). Official Genvex Connect iOS app showed `Supply air: 6.70 °C` in a user-provided screenshot. See [verified facts](remote-nabto-verified-facts.md).
+The project already independently verified SDK 4.9.11 remote `ping.json` / ID 17 on x86_64 and on HAOS ARM64/QEMU, and a first single-sensor `candidate_read_datapoints.json` **RPC ID 45** on Steam Deck. The latter returned `raw=367`, decoded `6.7 °C` for the supply-air sensor (obj=0, address=20). Official Genvex Connect iOS app showed `Supply air: 6.70 °C` in a user-provided screenshot. See [verified facts](../remote-nabto-verified-facts.md).
 
 The next milestone is **read-only, address-specific multi-sensor coverage**, without yet using a multi-element RPC batch or any control/write operation. Each sensor is requested separately to isolate errors. A later distinct milestone will test batching only after individual reads have been validated.
 
@@ -26,9 +28,9 @@ App readings are **historical snapshots**, not exact expected values at future t
 
 ## Artifacts
 
-- [`scripts/probe_remote_sensors_phase1.py`](../scripts/probe_remote_sensors_phase1.py): five individual RPC 45 calls **maximum**, with known addresses only; aborts at first failed RPC/decoding error. Uses the pre-existing x86_64 SDK and encrypted test profile. Suppresses account, host, key, passphrase, raw JSON and full URLs.
-- [`tests/test_remote_sensors_phase1.py`](../tests/test_remote_sensors_phase1.py): static offline checks for the five addresses, single read-only RPC ID 45, and list/response types.
-- Earlier one-sensor working reference: [`scripts/probe_remote_datapoint45_readonly.py`](../scripts/probe_remote_datapoint45_readonly.py).
+- [`scripts/probe_remote_sensors_phase1.py`](../../scripts/probe_remote_sensors_phase1.py): five individual RPC 45 calls **maximum**, with known addresses only; aborts at first failed RPC/decoding error. Uses the pre-existing x86_64 SDK and encrypted test profile. Suppresses account, host, key, passphrase, raw JSON and full URLs.
+- [`tests/test_remote_sensors_phase1.py`](../../tests/test_remote_sensors_phase1.py): static offline checks for the five addresses, single read-only RPC ID 45, and list/response types.
+- Earlier one-sensor working reference: [`scripts/probe_remote_datapoint45_readonly.py`](../../scripts/probe_remote_datapoint45_readonly.py).
 
 Before committing the plan, a separate locally constructed phase-1 prototype passed **six offline tests** for URL JSON, five-address mapping, XML shape, normal/invalid responses and sanitized error events. The user has subsequently executed the committed phase-1 test file successfully on the authorized device; results are documented below. These prototype tests are not a substitute for executing the repo's static test suite and the live gateway probe.
 
@@ -80,7 +82,7 @@ Earlier official iOS screenshot at **22:33** reported supply 6.70 °C, outdoor 0
 
 ## Phase 1B: successful five-element batch
 
-The newly prepared [`scripts/probe_remote_sensors_batch_phase1b.py`](../scripts/probe_remote_sensors_batch_phase1b.py) performs **one** authorized, read-only RPC 45 request containing five list entries in exactly the source-documented order `20,21,22,23,26`, with one `obj=0` per entry and trailer 1. The proposed response schema is the same list of signed 16-bit values already verified in single-element form. The probe verifies that the response list contains **exactly five** values, then associates each response position to its requested address. It does not send writes, scan addresses, or log sensitive account/device data; failure yields a nonzero exit code. Static checks: [`tests/test_remote_sensor_batch_phase1b.py`](../tests/test_remote_sensor_batch_phase1b.py).
+The newly prepared [`scripts/probe_remote_sensors_batch_phase1b.py`](../../scripts/probe_remote_sensors_batch_phase1b.py) performs **one** authorized, read-only RPC 45 request containing five list entries in exactly the source-documented order `20,21,22,23,26`, with one `obj=0` per entry and trailer 1. The proposed response schema is the same list of signed 16-bit values already verified in single-element form. The probe verifies that the response list contains **exactly five** values, then associates each response position to its requested address. It does not send writes, scan addresses, or log sensitive account/device data; failure yields a nonzero exit code. Static checks: [`tests/test_remote_sensor_batch_phase1b.py`](../../tests/test_remote_sensor_batch_phase1b.py).
 
 **UPDATED AFTER USER TEST:** batch capability is now verified for exactly these five addresses and this request order; other sizes, permutations and HAOS/QEMU execution are untested.
 

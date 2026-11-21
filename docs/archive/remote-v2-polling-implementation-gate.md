@@ -1,3 +1,5 @@
+> **Archived evidence (21 November 2026).** This is a dated investigation or completed milestone, not the current operating instructions. See [current status](../STATUS.md).
+
 # Optima 270 remote v2 — isolated polling implementation gate
 
 **Date:** 2026-11-20. **Status:** source committed; new tests still require an observed PASS.

@@ -1,53 +1,73 @@
-# Genvex Connect
+# Genvex Connect — Home Assistant integration
 
-> **Remote Nabto 4 research (experimental):** A standalone Linux x86_64 client, **and an isolated Raspberry Pi HAOS ARM64 test app running the x86_64 client through QEMU**, have successfully used a Nabto CA-signed RSA-1024 identity and Nabto 4 SDK 4.9.11 to invoke the gateway's remote `ping.json` RPC. A separate Linux x86_64 test additionally **succeeded in a real read-only controller datapoint RPC (ID 45)** using a source-reconstructed XML interface; the first raw sensor value was decoded, with independent physical validation still pending. This is **not yet** remote support in the Home Assistant integration or a native Linux ARM64 client. See the [verified facts manifest](docs/remote-nabto-verified-facts.md) and [research index](docs/README.md). The working local UDP integration remains unchanged.
-![installation_badge](https://img.shields.io/badge/dynamic/json?color=41BDF5&logo=home-assistant&label=integration%20usage&suffix=%20installs&cacheSeconds=15600&url=https://analytics.home-assistant.io/custom_integrations.json&query=$.genvex_connect.total)
+Home Assistant support for **Genvex Connect and Nilan gateways**, including controllers such as Genvex Optima 270. This repository contains two distinct development tracks:
 
-This component integrates Genvex Connect and Nilan Gateway devices directly into Home Assistant.
-It uses the [GenvexNabto](https://github.com/superrob/genvexnabto) library, which manages local communication with the devices. For more technical details about the project, refer to that repository.
+- **LAN integration (existing):** `custom_components/genvex_connect/` uses [GenvexNabto](https://github.com/superrob/genvexnabto) for direct **local UDP / Micro Nabto** communication. This is the established HACS integration.
+- **Remote integration (experimental):** a separate HAOS App and Home Assistant integration prototype use the legacy Nabto 4/Micro SDK through QEMU on ARM64 to make authenticated remote read-only RPCs. **This is not a released remote feature of the LAN integration.**
 
-To use this integration, an official gateway is required. This can be either a Genvex Connect gateway or a Nilan gateway. Newer Genvex Optima devices come with a built-in gateway on the mainboard and only require an Ethernet connection.
+[![Home Assistant installs](https://img.shields.io/badge/dynamic/json?color=41BDF5&logo=home-assistant&label=integration%20usage&suffix=%20installs&cacheSeconds=15600&url=https://analytics.home-assistant.io/custom_integrations.json&query=$.genvex_connect.total)](https://github.com/rabbyraptor/genvexconnect)
 
-### Supported controller models
-|Controller         | Gateway required     | Supported       | Tested  |
-|------------------:|:---------------------:|:---------------:|:------:|
-|Optima 250         | Yes, internet gateway | ✅              | ✅     |
-|Optima 251         | Yes, internet gateway | ✅              | ✅     |
-|Optima 260         | Yes, internet gateway | ✅              |        |
-|Optima 270         | Built in              | ✅              | ✅     |
-|Optima 301         | Yes, internet gateway | ✅              | ✅     |
-|Optima 312         | Yes, internet gateway | ✅              | ✅     |
-|Optima 314         | Built in              | ✅              |        |
-|Nilan CTS400       | Yes, nilan gateway    | ✅              | ✅     |
-|Nilan CTS602       | Yes, nilan gateway    | ✅              | ✅     |
-|Nilan CTS602 Light | Yes, nilan gateway    | ✅              | ✅     |
-|Nilan CTS602 Geo   | Yes, nilan gateway    | ✅              |        |
+## Current status — 21 November 2026
 
-If you have one of the controllers not currently listed as tested, please report if the integration works as expected.
+| Capability | Status |
+| --- | --- |
+| Existing LAN component | Implemented; local gateway discovery and setup using the email configured in the official app |
+| Remote read-only RPC45, five Optima 270 sensors | **Live verified** on x86_64 and HAOS ARM64/QEMU |
+| Remote seven-address v2 read | **Live verified on Steam Deck**; not yet a deployed seven-sensor HAOS service |
+| Persistent legacy SDK adapter (DEV3) | **21 November operator test PASS:** three successive 5-value RPC45 reads, same reused worker; 10,504 / 40 / 34 ms; shutdown and restart checks PASS |
+| Separate HAOS Remote App | Development App `local_genvex_nabto_remote`; last verified installed version `0.1.0-dev2` on 20 November |
+| Remote HA dashboard/entities and automatic user onboarding | **Experimental scaffold only; not released or end-to-end validated** |
+| Remote control/write commands | Not supported or verified |
 
-## Installation (HACS)
+See **[current engineering status](docs/STATUS.md)** for verified evidence, limitations, and next gates, and [documentation index](docs/README.md) for architecture/research.
 
-The preferred method to install is to use HACS. The repository is part of the default list.
-Go to HACS -> Integrations, search for Genvex Connect and then install.
-Restart your Home Assistant instance to complete installation.
+## Supported controllers (existing LAN integration)
 
-## Installation (No HACS)
+| Controller | Gateway | Previously reported tested |
+| --- | --- | --- |
+| Optima 250 / 251 | External internet gateway | Yes |
+| Optima 260 | External internet gateway | Not recorded |
+| Optima 270 | Built in | Yes |
+| Optima 301 / 312 | External internet gateway | Yes |
+| Optima 314 | Built in | Not recorded |
+| Nilan CTS400 / CTS602 / CTS602 Light | Nilan gateway | Yes |
+| Nilan CTS602 Geo | Nilan gateway | Not recorded |
 
-If you don't have/want HACS installed, you will need to manually install the integration
+The table describes existing **LAN integration** support, not remote interoperability or newly verified tests.
 
-1. Using the tool of choice open the directory (folder) for your HA configuration (where you find `configuration.yaml`).
-2. Drag the `custom_components` folder into your HA configuration folder.
-3. Restart Home Assistant
+## Install the existing LAN integration
 
-## Setup
-To setup the integration, go into "Configuration" -> "Integrations" and press on the "+" button. Find Genvex Connect from the list.
-The integration should search for your device and let you choose which one to use. You then need to provide it with the same email as used in the Genvex Connect app. This is case sensitive. 
-Then if all goes well, your device should be added and working in Home Assistant.
+**HACS:** Open HACS, search for **Genvex Connect**, install the integration, and restart Home Assistant. Alternatively copy `custom_components/genvex_connect` into your HA `config/custom_components/` directory and restart HA.
 
-## A little note to Genvex/Nilan
-I understand that you have the ability to remotely update your devices, and that closing local connections is straightforward. However, please use this power responsibly.
-The local communication requires the email associated with the app as the password, making misuse highly unlikely. The capabilities are on par with, or even more limited than direct Modbus connections.
-This should not be considered a security concern. It also enhances the value of your Gateway solutions for the end user.
+**Configure:** Open **Settings → Devices & services → Add integration → Genvex Connect**. Select a discovered gateway and enter the email registered in the official Genvex Connect app (case sensitive). The integration authenticates on the **local network**.
 
-# Obligatory statement
-The contributors are not responsible for any damages resulting from the use of this integration. No warranty is provided.
+**Remote experimental track:** Do **not** install the development App or `experimental/home_assistant` expecting plug-and-play remote devices; see [remote installation readiness](docs/remote-install-readiness.md) and [remote App notes](genvex-nabto-remote/DOCS.md).
+
+## Repository map
+
+| Path | Purpose |
+| --- | --- |
+| [`custom_components/genvex_connect/`](custom_components/genvex_connect/) | Existing LAN HACS integration |
+| [`experimental/genvex_remote/`](experimental/genvex_remote/) | Remote transport, sensor models, IPC and offline tests |
+| [`experimental/home_assistant/`](experimental/home_assistant/) | Separate, experimental remote Home Assistant integration |
+| [`genvex-nabto-remote/`](genvex-nabto-remote/) | Separate ARM64 HAOS development App |
+| [`haos-apps/`](haos-apps/) | Earlier isolated HAOS runtime test artifacts |
+| [`docs/`](docs/README.md) | Current docs, evidence and research archive |
+| [`scripts/`](scripts/README.md) | Current test/development entry points and [historical scripts](scripts/archive/README.md) |
+
+## Developer checks
+
+From the repository root:
+
+```sh
+python3 -m unittest discover -s experimental/genvex_remote -p 'test_*.py'
+python3 -m unittest discover -s experimental/home_assistant/tests -p 'test_*.py'
+python3 -m unittest discover -s genvex-nabto-remote/tests -p 'test_*.py'
+python3 -m compileall -q experimental/genvex_remote experimental/home_assistant genvex-nabto-remote/runtime
+```
+
+These are source/offline checks; they do not open a live Nabto session. Additional HAOS runners are listed in [scripts/README.md](scripts/README.md).
+
+## License
+
+[GPL-3.0](LICENSE). Proprietary Nabto 4 SDK redistribution/licensing for an experimental Remote App remains a separate unresolved release requirement. All use is provided without warranty.

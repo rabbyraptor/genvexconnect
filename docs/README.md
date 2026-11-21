@@ -1,35 +1,32 @@
-# Genvex Remote — active documentation
+# Documentation index
 
-**Verified on HAOS:** SDK 4.9.11 via QEMU, live read-only RPC 45 batch (5 sensors) and native ARM64 certificate tooling. Earlier **51/51** offline tests passed on 2026-11-20; later suites and F2.5 mount checks are documented in [verified facts](remote-nabto-verified-facts.md) and the [F2 design](remote-phase-f2-private-profile-design.md). The isolated 2A catalog has subsequently passed **GitHub Actions** offline tests on two dependency versions; those tests are not a live HAOS/HA Core acceptance test. No functioning HA UI remote integration exists yet.
+**Current status:** [Remote Nabto development status — 21 November 2026](STATUS.md). The [verified facts/evidence ledger](remote-nabto-verified-facts.md) contains dated experiments, and the [archive](archive/README.md) preserves superseded plans and historical investigations.
 
-## Current engineering sources
+## Current references
 
-| Document | Role |
+| Document | Scope |
 | --- | --- |
-| [Verified facts](remote-nabto-verified-facts.md) | Authoritative observed results and remaining limitations |
-| [Architecture maintenance roadmap](architecture-maintenance-plan.md) | Approved 2A–5C priorities, isolation rules, stage gates and progress |
-| [2B device discovery investigation](remote-device-discovery-2b.md) | Metadata vs known-address RPC45 batch vs unverified capability enumeration |
-| [Optima 270 Nabto-læsekommandoer (dansk)](optima270-nabto-read-command-reference-da.md) | Komplet kildebaseret tabel: RPC17/42/45, 17 datapunkter, 12 setpunkter, oversættelser og verifikationsstatus |
-| [2B: Testmatrix for udvidelse til 17 datapunkter](remote-optima270-rpc45-expansion-testmatrix.md) | Prioriterede 12 kildebaserede kandidater, preview, sikkerhed og live-gates |
-| [2A typed sensor catalog](remote-sensor-catalog-2a.md) | Five-source-verified Optima 270 readings, compatibility tests, future type gates |
-| [UI and certificate architecture](remote-ha-ui-onboarding-architecture.md) | No-terminal setup design |
-| [First five HA entities](remote-ha-entity-plan.md) | Read-only sensors and runtime bridge plan |
-| [Resource catalogue](remote-nabto-resources.md) | Vendor documentation, protocol references and relevant GitHub repositories |
-| [Runtime IPC security](remote-runtime-ipc-security.md) | Internal App-to-HA authentication, host-network exposure and production bridge design |
-| [Reconstructed read-only RPC 45](reconstructed-readonly-query45-2026-11-19.md) | Proven query structure and tested addresses |
-| [Sensor phase-one validation](remote-phase1-sensor-validation-2026-11-19.md) | Remote single and batched read evidence |
-| [Archived research](archive/README.md) | 17 historical documents, traces, hypotheses and prior investigations |
+| [Status and next gates](STATUS.md) | Canonical current status, DEV3 worker test and outstanding work |
+| [Installation readiness](remote-install-readiness.md) | Living deployment readiness and distinction between LAN and Remote |
+| [Architecture/maintenance roadmap](architecture-maintenance-plan.md) | Workstreams 2A–5C; read with latest status |
+| [UI onboarding architecture](remote-ha-ui-onboarding-architecture.md) | Intended separate HA integration + App onboarding |
+| [IPC security design](remote-runtime-ipc-security.md) | Internal snapshot contract and authentication considerations |
+| [HA sensor/entity plan](remote-ha-entity-plan.md) | Initial five entity mapping and scaffolds |
+| [Optima 270 read command reference (DA)](optima270-nabto-read-command-reference-da.md) | Read-only command and datapoint reference |
+| [RPC45 expansion matrix](remote-optima270-rpc45-expansion-testmatrix.md) | Source-defined candidates, test gates, v2 experiments |
+| [2A typed sensor catalog](remote-sensor-catalog-2a.md) | Source-grounded model and compatibility |
+| [2B device discovery](remote-device-discovery-2b.md) | Known address batches vs gateway/capability discovery |
+| [Nabto resource catalogue](remote-nabto-resources.md) | Upstream/vendor documentation and attribution |
+| [Verified facts ledger](remote-nabto-verified-facts.md) | Detailed chronological results, including old baselines |
 
-## Development code
+## Development entry points
 
-- [Isolated Home Assistant UI/sensor scaffold (not installed)](../experimental/home_assistant/README.md)
-- [Offline typed Optima 270 capability catalog (2A)](../experimental/genvex_remote/capability_catalog.py) and [synthetic/compatibility tests](../experimental/genvex_remote/test_capability_catalog.py)
-- [Verified-only RPC45 request plan](../experimental/genvex_remote/verified_read_plan.py), [12 source-only candidates](../experimental/genvex_remote/optima270_source_only.py), and [inert single-candidate CLI preview](../scripts/probe_optima270_single_source_candidate.py) (no live call by default)
-- [Serial read-only RPC 45 polling worker](../experimental/genvex_remote/polling_worker.py)
-- [Single HAOS offline validation script](../scripts/run_haos_remote_dev_tests.sh)
-- [Two-container disposable IPC test](../scripts/run_haos_ipc_two_container_test.sh) (fake sensor values and private test network only)
-- [Offline Python certificate/enrollment and sensor code](../experimental/genvex_remote/enrollment_service.py)
-- [Automated native HAOS offline test runner](../scripts/run_haos_offline_enrollment_tests.sh)
-- [Isolated HAOS runtime App](../haos-apps/genvex-nabto-runtime-test/DOCS.md)
+- [Active scripts and archived versions](../scripts/README.md)
+- [Experimental remote runtime](../experimental/genvex_remote/)
+- [Separate HA integration scaffold](../experimental/home_assistant/README.md)
+- [Experimental HAOS App](../genvex-nabto-remote/DOCS.md)
+- [Earlier isolated HAOS runtime](../haos-apps/genvex-nabto-runtime-test/DOCS.md)
 
-The LAN `genvex_connect` component has not been changed. Never treat experimental remote writes as verified.
+## Historical material
+
+See [docs/archive/README.md](archive/README.md). Historical plans and recorded gates are **not** current installation instructions. Dates and "next steps" in archived files describe their original context.

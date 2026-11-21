@@ -1,3 +1,5 @@
+> **Archived evidence (21 November 2026).** This is a dated investigation or completed milestone, not the current operating instructions. See [current status](../STATUS.md).
+
 # Optima 270 — seven-address snapshot v2 live verification
 
 **Observed:** 2026-11-20 (user-supplied Steam Deck console output).  
