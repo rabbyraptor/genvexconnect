@@ -75,6 +75,32 @@ class TransactionTests(unittest.TestCase):
         self.assertGreater(len(names), 23)
         self.assertIn("genvex_nabto_remote/runtime/persistent_sdk_adapter.py", names)
 
+    def test_python_without_zlib_uses_system_gzip_for_validation_and_unpack(self):
+        from unittest.mock import patch
+
+        original = tarfile.open
+
+        def zlib_missing(*args, **kwargs):
+            mode = args[1] if len(args) > 1 else kwargs.get("mode", "r")
+            if mode == "r:gz":
+                raise tarfile.CompressionError("zlib module is not available")
+            return original(*args, **kwargs)
+
+        with patch.object(tx.tarfile, "open", side_effect=zlib_missing):
+            names = tx.verify_archive(self.archive, self.sha)
+            extracted = tx.unpack(
+                self.archive, names, self.root / "uncompressed-extract"
+            )
+        self.assertEqual(len(names), len(FILES))
+        self.assertEqual(
+            (extracted / "runtime/persistent_rpc45_worker.py").read_bytes(),
+            FILES["runtime/persistent_rpc45_worker.py"],
+        )
+        self.assertEqual(
+            (extracted / "config.yaml").read_bytes(),
+            FILES["config.yaml"],
+        )
+
     def test_rejects_tampered_archive(self):
         with self.archive.open("ab") as stream:
             stream.write(b"extra")
