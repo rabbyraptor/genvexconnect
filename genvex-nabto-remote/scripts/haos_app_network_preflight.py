@@ -120,22 +120,33 @@ def check_app_container() -> None:
 
 
 def check_dns() -> None:
-    # Running Core's independent python3 -c process uses only stdlib
-    # getaddrinfo. No connection, no HTTP, no Nabto and no config mutation.
+    # A stopped App often has no live Supervisor DNS record. Distinguish
+    # that normal state from a failed Core exec or an unexpected resolver
+    # error, without exposing IPs, resolver diagnostics or Docker output.
     script = (
         "import socket,sys;"
         "name=sys.argv[1];"
-        "try_dns=lambda:socket.getaddrinfo(name,18275,type=socket.SOCK_STREAM);"
-        "addresses=try_dns();"
-        "print('PASS: APP_DNS_RESOLVES' if addresses else 'INFO: APP_DNS_UNRESOLVED')"
+        "status='INFO: APP_DNS_NOT_RESOLVED';"
+        "\ntry:\n"
+        " result=socket.getaddrinfo(name,18275,type=socket.SOCK_STREAM)\n"
+        " status='PASS: APP_DNS_RESOLVES' if result else status\n"
+        "except socket.gaierror:\n pass\n"
+        "except Exception:\n status='BLOCKED: APP_DNS_QUERY_FAILED'\n"
+        "print(status)"
     )
     status, output = command(
         "docker", "exec", CORE_CONTAINER, "python3", "-c", script, EXPECTED_HOST,
     )
-    if status == 0 and output.strip() == "PASS: APP_DNS_RESOLVES":
-        print("PASS: APP_DNS_RESOLVES")
+    marker = output.strip()
+    allowed = {
+        "PASS: APP_DNS_RESOLVES",
+        "INFO: APP_DNS_NOT_RESOLVED",
+        "BLOCKED: APP_DNS_QUERY_FAILED",
+    }
+    if status != 0 or marker not in allowed:
+        print("BLOCKED: APP_DNS_CORE_EXEC_UNAVAILABLE")
     else:
-        print("INFO: APP_DNS_UNRESOLVED_OR_UNAVAILABLE")
+        print(marker)
 
 
 def main() -> int:
