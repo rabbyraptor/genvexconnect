@@ -97,6 +97,35 @@ for a memory-leak or long-duration reliability claim. Next inspect bounded
 SDK child lifecycle and perform an extended passive soak; a real SDK
 connection-failure/recovery test is still pending.
 
+## Actual HAOS SDK process lifecycle sampling: PASSED (operator, 2026-11-21)
+
+The operator collected eight read-only `docker top` samples 20 seconds
+apart, while DEV3 continued normal polling:
+
+```text
+SAMPLE_1: processes=8 zombies=0
+SAMPLE_2: processes=8 zombies=0
+SAMPLE_3: processes=8 zombies=0
+SAMPLE_4: processes=9 zombies=0
+SAMPLE_5: processes=8 zombies=0
+SAMPLE_6: processes=8 zombies=0
+SAMPLE_7: processes=8 zombies=0
+SAMPLE_8: processes=8 zombies=0
+PROCESS_MIN: 8
+PROCESS_MAX: 9
+PROCESS_FIRST: 8
+PROCESS_LAST: 8
+MAX_ZOMBIES: 0
+UNIQUE_PROCESSES_OBSERVED: 9
+PROCESS_LIFECYCLE_RESULT: PASS
+PROCESS_GATE_EXIT_CODE: 0
+```
+
+No zombie processes or cumulative process-count growth were observed.
+One transient additional process is compatible with the polling SDK/QEMU
+child, but its executable identity was not determined. This is
+short-duration process sampling, not proof of leak-free operation.
+
 ## Correct interpretation of the operator's Recorder evidence
 
 The operator's real Home Assistant Recorder contained five numeric
