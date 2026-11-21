@@ -119,7 +119,7 @@ async def test_actual_hass_states_success_unavailable_recovery(hass):
     await hass.async_block_till_done()
     assert all(hass.states.get(entity_id).state != STATE_UNAVAILABLE
                for entity_id in entity_ids)
-    assert hass.states.get(entities[4].entity_id).state == "67"
+    assert hass.states.get(entities[4].entity_id).state == "67.0"
     assert reader.async_fetch_snapshot.await_count == 3
 
 
