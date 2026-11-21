@@ -58,9 +58,13 @@ def info() -> dict:
 
 
 def is_app_running() -> bool:
-    payload = json.loads(run([
-        "docker", "inspect", CONTAINER, "--format", "{{json .}}",
-    ], timeout=40))
+    result = subprocess.run(
+        ["docker", "inspect", CONTAINER, "--format", "{{json .}}"],
+        capture_output=True, text=True, timeout=40,
+    )
+    if result.returncode:
+        return False
+    payload = json.loads(result.stdout)
     return payload["State"]["Running"] is True
 
 
