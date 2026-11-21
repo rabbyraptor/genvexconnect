@@ -22,8 +22,10 @@ APP = "local_genvex_nabto_remote"
 PROFILE = Path("/mnt/data/supervisor/apps/data") / APP / "profile"
 RUNNER = Path("/tmp/genvex-dev3-once/live_once.py")
 ADAPTER = Path("/tmp/genvex-dev3-once/sdk_snapshot_adapter.py")
+RECOVERY = Path("/tmp/genvex-dev3-once/recovery_policy.py")
 IMAGE_CONTAINER = "app_" + APP
 LIMIT = 110
+RECOVERY_LIMIT = 260
 TRIAL_ATTEMPTS = 3
 TRIAL_GAP_SECONDS = 60
 
@@ -118,6 +120,7 @@ def preflight():
     check_file(RUNNER.parent, 0o700, directory=True)
     check_file(RUNNER, 0o600)
     check_file(ADAPTER, 0o600)
+    check_file(RECOVERY, 0o600)
     return checked_image()
 
 
@@ -138,7 +141,8 @@ def prompt_settings():
     ).encode() + b"\n"
 
 
-def run_once(image, payload, *, show_values=False, diagnose=False):
+def run_once(image, payload, *, show_values=False, diagnose=False,
+             recover_once=False):
     name = "genvex-rpc45-once-" + secrets.token_hex(6)
     cmd = [
         "docker", "run", "--rm", "-i",
@@ -156,6 +160,8 @@ def run_once(image, payload, *, show_values=False, diagnose=False):
         f"type=bind,src={RUNNER},dst=/opt/genvex-remote/runtime/live_once.py,readonly",
         "--mount",
         f"type=bind,src={ADAPTER},dst=/opt/genvex-remote/runtime/sdk_snapshot_adapter.py,readonly",
+        "--mount",
+        f"type=bind,src={RECOVERY},dst=/opt/genvex-remote/runtime/recovery_policy.py,readonly",
         "--entrypoint", "/usr/bin/python3",
         image, "/opt/genvex-remote/runtime/live_once.py",
     ]
@@ -163,8 +169,12 @@ def run_once(image, payload, *, show_values=False, diagnose=False):
         cmd.append("--show-values")
     if diagnose:
         cmd.append("--diagnose")
+    if recover_once:
+        cmd.append("--recover-once")
     try:
-        done = subprocess.run(cmd, input=payload, timeout=LIMIT, check=False)
+        done = subprocess.run(cmd, input=payload,
+                              timeout=RECOVERY_LIMIT if recover_once else LIMIT,
+                              check=False)
         require(done.returncode == 0, "Single-shot container reported failure")
     finally:
         # A killed Docker CLI can leave its detached child alive: force cleanup.
@@ -203,22 +213,26 @@ def bounded_trial(image, payload, *, sleep=time.sleep, diagnose=False):
 def main():
     try:
         require(sys.argv[1:] in ([], ["--show-values"], ["--trial-three"],
-                                   ["--diagnose"], ["--trial-diagnose"]),
+                                   ["--diagnose"], ["--trial-diagnose"], ["--recover-once"]),
                 "Unsupported display option")
         show_values = sys.argv[1:] == ["--show-values"]
         trial = sys.argv[1:] in (["--trial-three"], ["--trial-diagnose"])
         diagnose = sys.argv[1:] in (["--diagnose"], ["--trial-diagnose"])
+        recover_once = sys.argv[1:] == ["--recover-once"]
         image = preflight()
         print("PASS: DEV2 stopped; profile read-only; separate container selected")
         if trial:
             print("TRIAL: exactly three read-only RPC45 batches, >=60 s apart; Ctrl-C aborts", flush=True)
+        if recover_once:
+            print("RECOVERY EXPERIMENT: one initial RPC45 read; at most one final read after 60s; Ctrl-C aborts", flush=True)
         payload = prompt_settings()
         if trial:
             if not bounded_trial(image, payload, diagnose=diagnose):
                 print("BLOCKED: bounded trial had one or more failed reads", flush=True)
                 return 1
         else:
-            run_once(image, payload, show_values=show_values, diagnose=diagnose)
+            run_once(image, payload, show_values=show_values, diagnose=diagnose,
+                     recover_once=recover_once)
         print("PASS: isolated container exited; DEV2 remained untouched")
         return 0
     except (Exception, KeyboardInterrupt):
