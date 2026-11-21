@@ -17,6 +17,7 @@ on:
       - 'genvex-nabto-remote/tests/test_dev3_recovery_subprocess.py'
       - 'genvex-nabto-remote/tests/test_dev3_process_safety.py'
       - 'genvex-nabto-remote/tests/test_dev3_persistent_adapter.py'
+      - 'genvex-nabto-remote/tests/test_dev4_mode_switch.py'
       - 'genvex-nabto-remote/tests/test_dev3_persistent_live_operator.py'
       - 'genvex-nabto-remote/tests/test_dev3_real_loopback_ipc.py'
       - 'genvex-nabto-remote/tests/test_dev3_ipc_once.py'
@@ -73,6 +74,8 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_dev3_persistent_adapter.py' -v
       - name: Syntax check pinned persistent HAOS operator shell
         run: bash -n scripts/run_haos_persistent_gate_from_deck.sh
+      - name: Test opt-in persistent App mode and legacy default (no SDK)
+        run: python -m unittest discover -s tests -p 'test_dev4_mode_switch.py' -v
       - name: Test bounded persistent adapter live operator (fake-only)
         run: python -m unittest discover -s tests -p 'test_dev3_persistent_live_operator.py' -v
       - name: Test actual local TCP snapshot HTTP listener (no SDK)
