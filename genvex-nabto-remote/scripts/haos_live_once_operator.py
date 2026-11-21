@@ -135,7 +135,7 @@ def prompt_settings():
     ).encode() + b"\n"
 
 
-def run_once(image, payload):
+def run_once(image, payload, *, show_values=False):
     name = "genvex-rpc45-once-" + secrets.token_hex(6)
     cmd = [
         "docker", "run", "--rm", "-i",
@@ -156,6 +156,8 @@ def run_once(image, payload):
         "--entrypoint", "/usr/bin/python3",
         image, "/opt/genvex-remote/runtime/live_once.py",
     ]
+    if show_values:
+        cmd.append("--show-values")
     try:
         done = subprocess.run(cmd, input=payload, timeout=LIMIT, check=False)
         require(done.returncode == 0, "Single-shot container reported failure")
@@ -169,10 +171,13 @@ def run_once(image, payload):
 
 def main():
     try:
+        require(sys.argv[1:] in ([], ["--show-values"]),
+                "Unsupported display option")
+        show_values = sys.argv[1:] == ["--show-values"]
         image = preflight()
         print("PASS: DEV2 stopped; profile read-only; separate container selected")
         payload = prompt_settings()
-        run_once(image, payload)
+        run_once(image, payload, show_values=show_values)
         print("PASS: isolated container exited; DEV2 remained untouched")
         return 0
     except (Exception, KeyboardInterrupt):
