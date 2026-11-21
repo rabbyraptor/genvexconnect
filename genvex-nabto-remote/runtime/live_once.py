@@ -104,6 +104,8 @@ def main() -> int:
             elapsed = exc.elapsed_ms if exc.elapsed_ms is not None else "unknown"
             print(f"DIAG RPC45_STATUS: {status}", flush=True)
             print(f"DIAG RPC45_ELAPSED_MS: {elapsed}", flush=True)
+            events = ",".join(str(v) for v in exc.rpc_events) if exc.rpc_events else "none"
+            print(f"DIAG RPC45_EVENTS: {events}", flush=True)
         return 1
     except Exception:
         print("BLOCKED: SNAPSHOT_OR_ADAPTER_INVALID", flush=True)
