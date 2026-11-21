@@ -128,10 +128,27 @@ except Exception:
 def read_reviewed_sources() -> dict[str, str]:
     base.check_file(STAGING, 0o700, directory=True)
     base.check_file(COMPONENT, 0o700, directory=True)
-    if {entry.name for entry in COMPONENT.iterdir()} != {
-        name + ".py" for name in MODULES
-    }:
+    # python3 -m py_compile creates __pycache__ alongside the five
+    # reviewed source files. Ignore only that inert directory; never load
+    # bytecode and still reject all unexpected source files or symlinks.
+    expected = {name + ".py" for name in MODULES}
+    entries = {entry.name: entry for entry in COMPONENT.iterdir()}
+    extra = set(entries) - expected
+    if extra == {"__pycache__"}:
+        cache = entries["__pycache__"]
+        owner = COMPONENT.stat().st_uid
+        info = cache.lstat()
+        import stat
+        if (
+            not stat.S_ISDIR(info.st_mode)
+            or info.st_uid != owner
+            or info.st_mode & 0o022
+        ):
+            raise ValueError("Unsafe compiled-bytecode directory")
+    elif extra:
         raise ValueError("Unexpected staged HA source names")
+    if not expected.issubset(entries):
+        raise ValueError("Missing reviewed HA module")
     result: dict[str, str] = {}
     total = 0
     for name in MODULES:
