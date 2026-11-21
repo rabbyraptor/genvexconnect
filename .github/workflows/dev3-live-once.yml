@@ -22,6 +22,7 @@ on:
       - 'genvex-nabto-remote/tests/test_dev4_upgrade_transaction.py'
       - 'genvex-nabto-remote/tests/test_dev4_post_install.py'
       - 'scripts/dev4_post_install_verify.py'
+      - 'scripts/run_dev4_post_install_from_deck.sh'
       - 'scripts/dev4_upgrade_transaction.py'
       - 'scripts/run_dev4_upgrade_from_deck.sh'
       - 'scripts/dev4_source_baseline_preflight.py'
@@ -83,6 +84,8 @@ jobs:
         run: bash -n scripts/run_haos_persistent_gate_from_deck.sh
       - name: Syntax check DEV4 source and Supervisor upgrade launcher
         run: bash -n ../scripts/run_dev4_upgrade_from_deck.sh
+      - name: Syntax check DEV4 P5 host verification launcher
+        run: bash -n ../scripts/run_dev4_post_install_from_deck.sh
       - name: Test DEV4 backup and installed App metadata verification (fake-only)
         run: python -m unittest discover -s tests -p 'test_dev4_post_install.py' -v
       - name: Verify DEV4 source swap and Supervisor backup transaction (fake-only)
