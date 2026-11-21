@@ -68,3 +68,31 @@ inside an installed HA Core version. Neither suite talks to the gateway.
 
 No production installation or unattended periodic polling is authorized by
 this branch.
+
+## Explicit bounded reliability trial (not continuous polling)
+
+For an operator-approved HAOS field test, the staged
+`haos_live_once_operator.py` supports `--trial-three`. This **never** starts
+the Supervisor-managed App or a background polling service. It prompts once
+for the private credentials and attempts exactly three independent,
+read-only RPC45 batches using the same read-only isolated Docker profile.
+There are 60 seconds **after each completed attempt** before the next starts
+(no catch-up bursts, zero hidden retries). Each attempt has the existing
+110-second Docker CLI deadline and per-attempt force-remove cleanup.
+
+- Before *every* attempt, the launcher verifies the DEV2 App is stopped/manual,
+  confirms empty credential options, and rechecks the pinned image and
+  private profile permissions. If any gate changes, the trial aborts.
+- An individual failed attempt is counted; it does not trigger an immediate
+  retry. The trial continues to the next scheduled attempt (unless interrupted
+  or preflight fails).
+- The only extra host output is numbered PASS/FAILED attempts and the aggregate
+  `TRIAL SUMMARY: n/3 validated`. No raw SDK output, identity, ID or values
+  are recorded.
+- Abort immediately with Ctrl-C; no daemon continues running.
+- All three successes are required for an exit status of zero. Intermittent
+  failures are evidence for further SDK/session recovery work, not grounds for
+  enabling persistent App polling.
+
+The trial takes several minutes, must be run interactively by the authorized
+operator, and is **not** started by installing or importing the module.
