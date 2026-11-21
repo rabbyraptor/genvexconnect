@@ -232,3 +232,51 @@ formatting and real HA Core entity CI checks passed at
 `45f5b0a5de5c6a5af9ee7ae051953b28d5c69b19`.
 The generic repository HACS validation workflow remains unrelated
 to this DEV3 runtime acceptance gate.
+
+## One real RPC45 -> private IPC -> actual Core container (prepared, not yet run)
+
+The next operator-driven integration test has now been implemented:
+
+- `runtime/ipc_core_live_once.py` receives the same local-TTY Nabto
+  credentials **and a per-run random 256-bit IPC token over stdin**.
+  It makes exactly **one** SDKSnapshotAdapter.poll_once() call, validates
+  the complete five-sensor result, and starts the existing authenticated
+  SnapshotHTTPServer on port 18275 of the isolated container for a
+  maximum of 60 seconds after the read. It has **no SDK retry or
+  background poller** and clears the snapshot when the service exits.
+- `scripts/haos_core_live_once_operator.py` uses the same existing
+  pinned local image, read-only profile mount and mandatory profile/
+  image preflight, but attaches its temporary disposable container to
+  the previously verified HAOS `hassio` Docker bridge. It does not
+  publish any host port or install anything.
+- On the observed `homeassistant` host-network configuration, the
+  operator discovers the temporary container's actual private bridge
+  IP address. Inside **the running HA Core container**, it invokes
+  Python stdlib `http.client` over the actual private TCP link, using
+  a single token and device ID delivered by stdin, checking 401 for
+  absent/wrong tokens, 200 with complete *real* RPC45 readings and
+  a fresh timestamp, and 404 for an unknown route. Sensor values are
+  deliberately never printed.
+- The operator retries only the read-only Core-side TCP probe while
+  waiting for the **single** SDK read to complete, with a 112-second
+  overall deadline. In a `finally` block it force-removes the
+  exact disposable container and waits for the Docker CLI to exit.
+  Neither Nabto secrets nor the IPC token appear in Docker argv/env,
+  Supervisor App options, Home Assistant storage or Docker logs.
+- This runs a real private HTTP transaction from the Core container,
+  but does **not** create HA sensor entities yet. The existing isolated
+  real-Core configuration-entry tests cover those entity transitions
+  separately.
+
+Bundled runtime source mirrors
+`experimental/genvex_remote/ipc_core_live_once.py`; no App
+entrypoint or HA integration startup is wired to this one-shot module.
+The CI gate includes mock-SDK single-flight/cleanup tests and the
+**actual** stdlib Core client against a real local authenticated TCP
+listener with a synthetic snapshot. At revision
+`d24ee7e27c20936c3fe59f3d0a73ef99dba29687`, the DEV3
+read-only remote contracts workflow `44892646302` passed.
+
+**The remaining on-device step requires the operator to stage the
+two new files and run the one-shot SSH command.** Never describe the
+full live link as passed until that sanitized output has been seen.
