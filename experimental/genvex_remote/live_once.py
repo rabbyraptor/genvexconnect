@@ -13,6 +13,7 @@ import sys
 from pathlib import Path
 
 from app_bootstrap import validate_private_profile
+from recovery_policy import read_with_one_recovery
 from sdk_snapshot_adapter import SDKSnapshotAdapter, SDKSnapshotError
 from sensor_model import SENSORS, remote_hostname
 from snapshot_contract import parse_snapshot
@@ -52,7 +53,8 @@ def format_readings(values: dict[str, float]) -> tuple[str, ...]:
     )
 
 
-async def read_once(settings: dict, *, show_values: bool = False) -> None:
+async def read_once(settings: dict, *, show_values: bool = False,
+                    recover_once: bool = False) -> None:
     adapter = SDKSnapshotAdapter(
         device_id=settings["device_id"],
         identity=settings["identity"],
@@ -61,7 +63,15 @@ async def read_once(settings: dict, *, show_values: bool = False) -> None:
         probe_file=str(PROBE),
         timeout_seconds=85,
     )
-    result = await adapter.poll_once()
+    if recover_once:
+        async def cooldown(seconds: float) -> None:
+            # The policy only invokes this callback for the exact allowlisted
+            # SDK code + event; no raw SDK output is exposed.
+            print("RECOVERY: eligible RPC45 event; waiting 60 seconds before final attempt", flush=True)
+            await asyncio.sleep(seconds)
+        result = await read_with_one_recovery(adapter.poll_once, sleep=cooldown)
+    else:
+        result = await adapter.poll_once()
     readings = parse_snapshot(result, expected_device_id=settings["device_id"])
     lines = format_readings(readings) if show_values else ()
     # Credentials, hostname, device ID and raw SDK output never reach stdout.
@@ -75,10 +85,12 @@ async def read_once(settings: dict, *, show_values: bool = False) -> None:
 
 def main() -> int:
     try:
-        if sys.argv[1:] not in ([], ["--show-values"], ["--diagnose"]):
+        if sys.argv[1:] not in ([], ["--show-values"], ["--diagnose"],
+                                 ["--recover-once"]):
             raise ValueError("Unsupported display option")
         show_values = sys.argv[1:] == ["--show-values"]
         diagnose = sys.argv[1:] == ["--diagnose"]
+        recover_once = sys.argv[1:] == ["--recover-once"]
         settings = read_settings()
     except Exception:
         print("BLOCKED: INPUT_INVALID", flush=True)
@@ -92,7 +104,8 @@ def main() -> int:
         print("BLOCKED: PROBE_MISSING", flush=True)
         return 1
     try:
-        asyncio.run(read_once(settings, show_values=show_values))
+        asyncio.run(read_once(settings, show_values=show_values,
+                              recover_once=recover_once))
         return 0
     except SDKSnapshotError as exc:
         # Strictly allowlisted code, not an exception message from SDK/QEMU.
