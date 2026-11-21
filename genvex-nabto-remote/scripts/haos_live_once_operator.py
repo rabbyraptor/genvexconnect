@@ -23,6 +23,7 @@ PROFILE = Path("/mnt/data/supervisor/apps/data") / APP / "profile"
 RUNNER = Path("/tmp/genvex-dev3-once/live_once.py")
 ADAPTER = Path("/tmp/genvex-dev3-once/sdk_snapshot_adapter.py")
 RECOVERY = Path("/tmp/genvex-dev3-once/recovery_policy.py")
+IPC_ONCE = Path("/tmp/genvex-dev3-once/ipc_once.py")
 IMAGE_CONTAINER = "app_" + APP
 LIMIT = 110
 RECOVERY_LIMIT = 260
@@ -109,7 +110,7 @@ def checked_image():
     return image_id
 
 
-def preflight():
+def preflight(*, ipc_once=False):
     require(os.geteuid() == 0, "Root access required")
     check_file(PROFILE, 0o700, directory=True)
     require({p.name for p in PROFILE.iterdir()} == {
@@ -121,6 +122,8 @@ def preflight():
     check_file(RUNNER, 0o600)
     check_file(ADAPTER, 0o600)
     check_file(RECOVERY, 0o600)
+    if ipc_once:
+        check_file(IPC_ONCE, 0o600)
     return checked_image()
 
 
@@ -142,7 +145,7 @@ def prompt_settings():
 
 
 def run_once(image, payload, *, show_values=False, diagnose=False,
-             recover_once=False):
+             recover_once=False, ipc_once=False):
     name = "genvex-rpc45-once-" + secrets.token_hex(6)
     cmd = [
         "docker", "run", "--rm", "-i",
@@ -163,8 +166,15 @@ def run_once(image, payload, *, show_values=False, diagnose=False,
         "--mount",
         f"type=bind,src={RECOVERY},dst=/opt/genvex-remote/runtime/recovery_policy.py,readonly",
         "--entrypoint", "/usr/bin/python3",
-        image, "/opt/genvex-remote/runtime/live_once.py",
+        image, "/opt/genvex-remote/runtime/ipc_once.py" if ipc_once
+        else "/opt/genvex-remote/runtime/live_once.py",
     ]
+    if ipc_once:
+        position = cmd.index("--entrypoint")
+        cmd[position:position] = [
+            "--mount",
+            f"type=bind,src={IPC_ONCE},dst=/opt/genvex-remote/runtime/ipc_once.py,readonly",
+        ]
     if show_values:
         cmd.append("--show-values")
     if diagnose:
@@ -216,7 +226,7 @@ def main():
     try:
         require(sys.argv[1:] in ([], ["--show-values"], ["--trial-three"],
                                    ["--diagnose"], ["--trial-diagnose"], ["--recover-once"],
-                                   ["--recovery-trial-three"]),
+                                   ["--recovery-trial-three"], ["--ipc-once"]),
                 "Unsupported display option")
         show_values = sys.argv[1:] == ["--show-values"]
         recovery_trial = sys.argv[1:] == ["--recovery-trial-three"]
@@ -225,8 +235,11 @@ def main():
         diagnose = sys.argv[1:] in (["--diagnose"], ["--trial-diagnose"])
         recover_once = sys.argv[1:] in (["--recover-once"],
                                         ["--recovery-trial-three"])
-        image = preflight()
+        ipc_once = sys.argv[1:] == ["--ipc-once"]
+        image = preflight(ipc_once=ipc_once)
         print("PASS: DEV2 stopped; profile read-only; separate container selected")
+        if ipc_once:
+            print("IPC ONCE: exactly one RPC45 read, then container-loopback HTTP authentication smoke test; no polling", flush=True)
         if recovery_trial:
             print("RECOVERY TRIAL: three isolated initial read attempts, each at most one eligible retry after 60s; >=60s between trials; maximum six RPC45 calls; Ctrl-C aborts", flush=True)
         elif trial:
@@ -241,7 +254,7 @@ def main():
                 return 1
         else:
             run_once(image, payload, show_values=show_values, diagnose=diagnose,
-                     recover_once=recover_once)
+                     recover_once=recover_once, ipc_once=ipc_once)
         print("PASS: isolated container exited; DEV2 remained untouched")
         return 0
     except (Exception, KeyboardInterrupt):
