@@ -203,6 +203,38 @@ class LauncherTests(unittest.TestCase):
         self.assertEqual(kwargs["input"], payload)
         self.assertEqual(calls[1][0][1:3], ["rm", "-f"])
 
+    def test_explicit_recovery_trial_is_three_bounded_invocations(self):
+        image = "sha256:" + "a" * 64
+        sleeps = []
+        with patch.object(launcher, "preflight", return_value=image) as preflight, \
+             patch.object(launcher, "run_once") as run_once, \
+             patch("sys.stdout", new_callable=io.StringIO) as output:
+            self.assertTrue(launcher.bounded_trial(
+                image, b"private", sleep=sleeps.append, recover_once=True
+            ))
+        self.assertEqual(preflight.call_count, 3)
+        self.assertEqual(run_once.call_count, 3)
+        self.assertTrue(all(c.kwargs == {"recover_once": True}
+                            for c in run_once.call_args_list))
+        self.assertEqual(sleeps, [60, 60])
+        self.assertIn("TRIAL SUMMARY: 3/3 validated", output.getvalue())
+        self.assertNotIn("private", output.getvalue())
+
+    def test_recovery_trial_failed_read_does_not_add_host_retry(self):
+        image = "sha256:" + "a" * 64
+        sleeps = []
+        with patch.object(launcher, "preflight", return_value=image), \
+             patch.object(launcher, "run_once",
+                          side_effect=[RuntimeError("secret"), None, None]) as run_once, \
+             patch("sys.stdout", new_callable=io.StringIO) as output:
+            self.assertFalse(launcher.bounded_trial(
+                image, b"private", sleep=sleeps.append, recover_once=True
+            ))
+        self.assertEqual(run_once.call_count, 3)
+        self.assertEqual(sleeps, [60, 60])
+        self.assertIn("TRIAL SUMMARY: 2/3 validated", output.getvalue())
+        self.assertNotIn("secret", output.getvalue())
+
     def test_diagnostic_trial_keeps_exact_three_attempts(self):
         image = "sha256:" + "a" * 64
         sleeps = []
