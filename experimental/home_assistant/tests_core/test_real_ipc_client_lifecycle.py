@@ -7,6 +7,7 @@ sensor platform, entity registry and state machine.
 from __future__ import annotations
 
 import json
+from functools import partial
 from pathlib import Path
 from shutil import copytree
 from unittest.mock import patch
@@ -72,7 +73,9 @@ def response(snapshot, *, status=200):
 async def test_actual_authenticated_ipc_client_config_entry_lifecycle(hass, enable_custom_integrations):
     """One authorized read, one 401, then recovery using real Core entities."""
     target = Path(hass.config.path("custom_components", DOMAIN))
-    await hass.async_add_executor_job(copytree, COMPONENT, target)
+    await hass.async_add_executor_job(
+        partial(copytree, COMPONENT, target, dirs_exist_ok=True)
+    )
 
     # All responses are local Python objects. No real HTTP request occurs.
     session = FakeSession([
