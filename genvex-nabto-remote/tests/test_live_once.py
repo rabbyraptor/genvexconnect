@@ -274,9 +274,67 @@ class SingleReadTests(unittest.IsolatedAsyncioTestCase):
             await live_once.read_once(settings, recover_once=True)
         self.assertEqual(fake.poll_once.await_count, 2)
         self.assertIn("RECOVERY: eligible RPC45 event", output.getvalue())
+        self.assertEqual(output.getvalue().count("RECOVERY_RESULT: SUCCESS"), 1)
         self.assertIn("PASS: one read-only RPC45 snapshot validated", output.getvalue())
         self.assertNotIn("private@example.com", output.getvalue())
         self.assertNotIn("hidden", output.getvalue())
+
+    async def test_manual_recovery_second_error_explicitly_fails(self):
+        settings = {"device_id": "123456789012", "identity": "secret@example.com",
+                    "unlock_secret": "secret-value"}
+        fake = AsyncMock()
+        fake.poll_once.side_effect = [
+            SDKSnapshotError("SDK_RPC45_FAILED", rpc_status=26,
+                             rpc_events=(1000015,)),
+            SDKSnapshotError("SDK_RPC45_FAILED", rpc_status=26,
+                             rpc_events=(1000015,)),
+        ]
+        async def no_delay(_):
+            return None
+        with patch.object(live_once, "SDKSnapshotAdapter", return_value=fake), \
+             patch.object(live_once.asyncio, "sleep", new=no_delay), \
+             patch("sys.stdout", new_callable=io.StringIO) as output:
+            with self.assertRaises(SDKSnapshotError):
+                await live_once.read_once(settings, recover_once=True)
+        self.assertEqual(fake.poll_once.await_count, 2)
+        self.assertIn("RECOVERY_RESULT: FAILED", output.getvalue())
+        self.assertNotIn("RECOVERY_RESULT: SUCCESS", output.getvalue())
+        self.assertNotIn("secret", output.getvalue())
+
+    async def test_recovery_invalid_final_snapshot_never_reports_success(self):
+        settings = {"device_id": "123456789012", "identity": "a",
+                    "unlock_secret": "b"}
+        fake = AsyncMock()
+        fake.poll_once.side_effect = [
+            SDKSnapshotError("SDK_RPC45_FAILED", rpc_status=26,
+                             rpc_events=(1000015,)),
+            {"not": "valid"},
+        ]
+        async def no_delay(_):
+            return None
+        with patch.object(live_once, "SDKSnapshotAdapter", return_value=fake), \
+             patch.object(live_once.asyncio, "sleep", new=no_delay), \
+             patch.object(live_once, "parse_snapshot",
+                          side_effect=ValueError("secret-in-error")), \
+             patch("sys.stdout", new_callable=io.StringIO) as output:
+            with self.assertRaises(ValueError):
+                await live_once.read_once(settings, recover_once=True)
+        self.assertEqual(fake.poll_once.await_count, 2)
+        self.assertIn("RECOVERY_RESULT: FAILED", output.getvalue())
+        self.assertNotIn("PASS:", output.getvalue())
+        self.assertNotIn("secret-in-error", output.getvalue())
+
+    async def test_normal_success_does_not_claim_recovery(self):
+        settings = {"device_id": "123456789012", "identity": "a",
+                    "unlock_secret": "b"}
+        fake = AsyncMock()
+        fake.poll_once.return_value = {"schema_version": 1}
+        with patch.object(live_once, "SDKSnapshotAdapter", return_value=fake), \
+             patch.object(live_once, "parse_snapshot", return_value={}), \
+             patch("sys.stdout", new_callable=io.StringIO) as output:
+            await live_once.read_once(settings, recover_once=True)
+        self.assertEqual(fake.poll_once.await_count, 1)
+        self.assertNotIn("RECOVERY_RESULT:", output.getvalue())
 
     async def test_manual_recovery_does_not_retry_unrelated_error(self):
         settings = {"device_id": "123456789012", "identity": "x",
