@@ -30,6 +30,47 @@ Home Assistant's UI availability transition, OS process supervision,
 automatic App restart or SDK resource leaks. A live fault-injection
 exercise requires its own reviewed procedure and operator action.
 
+## Actual HAOS App stop/start recovery: PASSED (operator, 2026-11-21)
+
+The operator ran DEV3 Gate E.2 against the installed real HAOS App
+`local_genvex_nabto_remote` version `0.1.0-dev3`, configured for manual
+boot and live polling. The test read the five `genvex_remote` entities'
+latest recorded states through the local Home Assistant Recorder database.
+Exact observed markers:
+
+```text
+APP_STATE: started
+BASELINE_NUMERIC: 5
+BASELINE: PASS
+APP_STOP: REQUESTED
+APP_STOP: PASS
+HA_ALL_UNAVAILABLE: PASS
+APP_RESTART: REQUESTED
+APP_RESTART: PASS
+HA_ALL_RECOVERED: PASS
+GATE_E2_RESULT: PASS
+GATE_E2_EXIT_CODE: 0
+```
+
+This verifies five numeric Recorder states before stopping the installed App,
+all five recorded as `unavailable` during the outage, and all five returning
+to numeric states after the App was started again. No integration reinstall or
+config-entry reload was part of the test. The App restart was initiated by
+the operator's bounded test script, **not by a demonstrated automatic
+Supervisor restart**.
+
+**Scope:** This is real App stop/start recovery observed in Recorder. It does
+not by itself prove current in-memory HA state at every instant, physical
+Nabto connection loss while the App remains running, an SDK subprocess
+failure/recovery under unattended polling, or long-term CPU/memory stability.
+Do not treat it as a live SDK fault-injection test.
+
+The first version of the Gate E script aborted before touching the App because
+the minimal HAOS host Python lacked `sqlite3`; a second run failed its
+aggregated baseline gate. A separate read-only Gate E.1 then verified five
+numeric states and a started App. The corrected Gate E.2 completed with
+the PASS markers above.
+
 ## Correct interpretation of the operator's Recorder evidence
 
 The operator's real Home Assistant Recorder contained five numeric
