@@ -179,6 +179,23 @@ class LauncherTests(unittest.TestCase):
         self.assertNotIn("credential-stays-on-stdin", " ".join(cmd))
         self.assertEqual(calls[1][0][1:3], ["rm", "-f"])
 
+    def test_ipc_once_mounts_only_explicit_runner_and_limits_to_one_call(self):
+        calls = []
+        def fake_run(argv, **kwargs):
+            calls.append((argv, kwargs))
+            return Mock(returncode=0)
+        payload = b"identity-and-passphrase-only-via-stdin"
+        with patch.object(launcher.subprocess, "run", side_effect=fake_run):
+            launcher.run_once("sha256:" + "a" * 64, payload, ipc_once=True)
+        cmd, kwargs = calls[0]
+        self.assertEqual(cmd[-1], "/opt/genvex-remote/runtime/ipc_once.py")
+        self.assertIn("ipc_once.py,readonly", " ".join(cmd))
+        self.assertEqual(cmd[cmd.index("--network") + 1], "bridge")
+        self.assertEqual(kwargs["timeout"], 110)
+        self.assertEqual(kwargs["input"], payload)
+        self.assertNotIn("identity-and-passphrase-only-via-stdin", " ".join(cmd))
+        self.assertEqual(calls[1][0][1:3], ["rm", "-f"])
+
     def test_normal_timeout_and_flags_unchanged(self):
         calls = []
         def fake_run(argv, **kwargs):
