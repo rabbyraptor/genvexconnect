@@ -101,6 +101,10 @@ class TransactionTests(unittest.TestCase):
             FILES["config.yaml"],
         )
 
+        # The HAOS fallback must rely only on system tar, not on any
+        # external gzip executable that is absent from the HAOS host.
+        self.assertNotIn("_system_gzip_bytes", tx.open_source_archive.__code__.co_names)
+
     def test_rejects_tampered_archive(self):
         with self.archive.open("ab") as stream:
             stream.write(b"extra")
