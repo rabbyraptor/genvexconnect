@@ -118,12 +118,12 @@ class FakeHostTransactionTests(TransactionTests):
         if command[:3] == ["ha", "apps", "stop"]:
             self.state["state"] = "stopped"
             return ""
+        if command == ["ha", "apps", "update", "--help"]:
+            return "--backup"
         if command[:3] == ["ha", "apps", "update"]:
             self.state["version"] = "0.1.0-dev4"
             self.state["update_available"] = False
             return ""
-        if command == ["ha", "apps", "update", "--help"]:
-            return "--backup"
         if command == ["ha", "store", "reload"]:
             self.state["version_latest"] = "0.1.0-dev4"
             self.state["update_available"] = True
