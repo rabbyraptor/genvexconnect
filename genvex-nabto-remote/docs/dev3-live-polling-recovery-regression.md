@@ -167,6 +167,46 @@ A separate fault-injection trial must distinguish SDK session recovery from
 the IPC reconnection behavior. No direct evidence about use of
 `api.lscontrol.dk:4160` was collected in this test.
 
+## Actual HAOS Core restart/maintenance Gate I.1–I.2: PASSED (operator, 2026-11-21)
+
+Read-only preflight Gate I.1 confirmed one enabled `genvex_remote`
+config entry, five registered entities, one device, and integration version
+`0.1.0`. The sorted entity-ID signature was
+`2be9240972de0a9d`.
+
+With operator approval, Gate I.2 ran `ha core restart` on the actual
+HAOS installation. The test compared Home Assistant Core container identity
+and start time before and after, and independently compared the DEV3 App
+container identity/start time, entity IDs, registries and latest Recorder
+states after the Core restart. Operator output:
+
+```text
+BASELINE: PASS
+ENTITY_ID_SIGNATURE: 2be9240972de0a9d
+CORE_RESTART: REQUESTED
+CORE_RESTART_COMMAND: PASS
+CORE_RESTART_OBSERVED: PASS
+CORE_RUNNING: PASS
+DEV3_APP_UNCHANGED: PASS
+ENTITY_IDS_UNCHANGED: PASS
+INTEGRATION_REGISTRIES: PASS
+RECORDED_NUMERIC_SENSORS: 5 /5
+RECORDER_RECOVERY: PASS
+GATE_I2_RESULT: PASS
+GATE_I2_EXIT_CODE: 0
+```
+
+This verifies that Home Assistant Core restarted, the DEV3 container retained
+the same identity/start time, the single enabled config entry and five
+sensor entity IDs remained registered, and Recorder showed five numeric
+values after the restart. The test did not directly query Home Assistant's
+in-memory state machine or prove an independently fresh RPC45 poll
+following Core restart; those remain distinct, optional checks.
+
+The 30-minute Gate H and 24-hour passive stability soak are postponed
+by operator request, not passed. No unattended-long-duration reliability
+claim is made.
+
 ## Correct interpretation of the operator's Recorder evidence
 
 The operator's real Home Assistant Recorder contained five numeric
