@@ -71,6 +71,30 @@ async def test_config_entry_setup_runtime_failure_recovery_and_unload(hass, enab
         ids = [item.entity_id for item in entity_entries]
         assert all(hass.states.get(entity_id) is not None for entity_id in ids)
 
+        # Exercise real HA translation application, not merely JSON parity.
+        # Entity IDs may be generated once and remain stable across renames.
+        assert hass.config.language == "en"
+        expected_names = {
+            "supply_air": "Supply air",
+            "outdoor_air": "Outdoor air",
+            "exhaust_air": "Exhaust air",
+            "extract_air": "Extract air",
+            "humidity": "Humidity",
+        }
+        for item in entity_entries:
+            key = next(
+                key for key in expected_names
+                if item.unique_id.endswith("_" + key)
+            )
+            expected = expected_names[key]
+            assert item.name is None
+            assert item.original_name == expected, (key, item.original_name)
+            state = hass.states.get(item.entity_id)
+            assert state is not None
+            assert state.attributes.get("friendly_name") == (
+                "Genvex Connect Remote " + expected
+            ), (key, state.attributes.get("friendly_name"))
+
         devices = dr.async_get(hass)
         registered = dr.async_entries_for_config_entry(devices, entry.entry_id)
         assert len(registered) == 1
