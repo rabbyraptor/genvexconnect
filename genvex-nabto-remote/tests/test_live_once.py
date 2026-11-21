@@ -77,6 +77,14 @@ class SettingsTests(unittest.TestCase):
             self.assertNotIn("sensitive", output.getvalue())
             self.assertNotIn("private@example.com", output.getvalue())
 
+    def test_reject_extra_cli_flags_without_reading_secrets(self):
+        with patch.object(sys, "argv", ["live_once.py", "--show-values", "--debug"]), \
+             patch.object(live_once, "read_settings") as read_settings, \
+             patch("sys.stdout", new_callable=io.StringIO) as output:
+            self.assertEqual(live_once.main(), 1)
+            read_settings.assert_not_called()
+            self.assertEqual(output.getvalue(), "BLOCKED: INPUT_INVALID\\n")
+
 
 class FailureClassificationTests(unittest.TestCase):
     def test_sdk_session_error(self):
@@ -169,6 +177,18 @@ class SingleReadTests(unittest.IsolatedAsyncioTestCase):
             await live_once.read_once(settings)
         self.assertNotIn("VALUE ", output.getvalue())
         self.assertNotIn("READINGS_BEGIN", output.getvalue())
+        fake.poll_once.assert_awaited_once()
+
+    async def test_incomplete_formatted_values_never_claim_success(self):
+        settings = {"device_id": "123456789012", "identity": "a", "unlock_secret": "b"}
+        fake = AsyncMock()
+        fake.poll_once.return_value = {"health": "ok"}
+        with patch.object(live_once, "SDKSnapshotAdapter", return_value=fake), \
+             patch.object(live_once, "parse_snapshot", return_value={"supply_air": 19.7}), \
+             patch("sys.stdout", new_callable=io.StringIO) as output:
+            with self.assertRaises(KeyError):
+                await live_once.read_once(settings, show_values=True)
+        self.assertEqual(output.getvalue(), "")
         fake.poll_once.assert_awaited_once()
 
 
