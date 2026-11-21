@@ -10,7 +10,7 @@ if [[ $# -ne 1 || ( "$1" != "--apply" && "$1" != "--preflight" ) ]]; then
   exit 2
 fi
 MODE="$1"
-SOURCE_COMMIT="e113cf8ef036a91f50d82acfccd871d8f9223ee9"
+SOURCE_COMMIT="7d848a8910893c45d096ce22404549b5b571dd8b"
 HOST="root@rabbyshome.duckdns.org"
 PORT=22222
 WORK="$(mktemp -d /tmp/genvex-dev4-upgrade.XXXXXX)"
