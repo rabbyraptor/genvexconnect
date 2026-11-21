@@ -1,0 +1,41 @@
+name: DEV3 isolated real Home Assistant Core entity contract
+
+on:
+  push:
+    branches:
+      - feature/dev3-live-once
+    paths:
+      - 'experimental/home_assistant/custom_components/genvex_remote/**'
+      - 'experimental/home_assistant/tests_core/**'
+      - '.github/workflows/dev3-real-ha-core.yml'
+  pull_request:
+    paths:
+      - 'experimental/home_assistant/custom_components/genvex_remote/**'
+      - 'experimental/home_assistant/tests_core/**'
+      - '.github/workflows/dev3-real-ha-core.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  real-core-offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: experimental/home_assistant
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Install pinned Home Assistant Core test harness
+        run: |
+          python -m pip install --disable-pip-version-check \
+            'homeassistant==2026.11.2' 'pytest-homeassistant==2026.11.2'
+      - name: Test real HA Core coordinator + five sensors (no Nabto)
+        run: |
+          python -m pytest -q tests_core/test_real_core_availability.py
