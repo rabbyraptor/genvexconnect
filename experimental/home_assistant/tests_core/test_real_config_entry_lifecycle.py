@@ -21,7 +21,7 @@ from pytest_homeassistant.common import MockConfigEntry
 from custom_components.genvex_remote.const import (
     CONF_DEVICE_ID, CONF_RUNTIME_ENDPOINT, CONF_RUNTIME_TOKEN, DOMAIN, SENSORS,
 )
-from custom_components.genvex_remote.runtime_client import EXPECTED_APP_ENDPOINT
+from custom_components.genvex_remote.runtime_client import EXPECTED_APP_ENDPOINT, RuntimeUnavailable
 from test_real_core_availability import DEVICE, make_snapshot
 
 COMPONENT = Path(__file__).resolve().parents[1] / "custom_components" / DOMAIN
@@ -36,7 +36,7 @@ async def test_config_entry_setup_runtime_failure_recovery_and_unload(hass, enab
     reader = SimpleNamespace(async_fetch_snapshot=AsyncMock(side_effect=[
         make_snapshot(),
         make_snapshot(humidity=67.0),
-        Exception("private-transport-details"),
+        RuntimeUnavailable("private-transport-details"),
         make_snapshot(humidity=68.0),
     ]))
     entry = MockConfigEntry(
