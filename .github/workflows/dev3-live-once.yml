@@ -16,6 +16,7 @@ on:
       - 'genvex-nabto-remote/tests/test_dev3_recovery_subprocess.py'
       - 'genvex-nabto-remote/tests/test_dev3_process_safety.py'
       - 'genvex-nabto-remote/tests/test_dev3_persistent_adapter.py'
+      - 'genvex-nabto-remote/tests/test_dev3_persistent_live_operator.py'
       - 'genvex-nabto-remote/tests/test_dev3_real_loopback_ipc.py'
       - 'genvex-nabto-remote/tests/test_dev3_ipc_once.py'
       - 'genvex-nabto-remote/scripts/haos_core_ipc_network_operator.py'
@@ -69,6 +70,8 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_dev3_process_safety.py' -v
       - name: Test persistent Nabto worker lifecycle and recovery (fake SDK/subprocess only)
         run: python -m unittest discover -s tests -p 'test_dev3_persistent_adapter.py' -v
+      - name: Test bounded persistent adapter live operator (fake-only)
+        run: python -m unittest discover -s tests -p 'test_dev3_persistent_live_operator.py' -v
       - name: Test actual local TCP snapshot HTTP listener (no SDK)
         run: python -m unittest discover -s tests -p 'test_dev3_real_loopback_ipc.py' -v
       - name: Test single-RPC private IPC operator smoke contract (no SDK)
