@@ -84,50 +84,101 @@ def require_old_state(*, stopped: bool) -> dict:
     return metadata
 
 
-def _system_gzip_bytes(path: Path) -> bytes:
-    """Decompress with system gzip when host Python lacks zlib.
+def _system_tar_bytes(path: Path) -> bytes:
+    """Rebuild an uncompressed, regular-files-only tar using host tar -z.
 
-    HAOS host can read .tar.gz using its system tar despite a minimal
-    Python build missing zlib. Keep a strict expansion cap and do not
-    print decompressed source or external tool diagnostics.
+    Minimal HAOS host Python has no zlib, and the host has no separate
+    gzip executable. The available system tar *does* understand .tar.gz.
+    Validate the listing (paths, types, duplicates) before extraction,
+    then strictly limit extracted file sizes and total payload bytes.
     """
-    last_error = "GZIP_DECOMPRESS_UNAVAILABLE"
-    for command in (["gzip", "-dc", str(path)],
-                    ["busybox", "gzip", "-dc", str(path)]):
+    import tempfile
+
+    def tar_run(arguments: list[str]) -> subprocess.CompletedProcess:
         try:
-            proc = subprocess.Popen(
-                command, stdin=subprocess.DEVNULL,
-                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+            return subprocess.run(
+                ["tar", *arguments],
+                stdin=subprocess.DEVNULL, capture_output=True,
+                timeout=45,
             )
-        except FileNotFoundError:
-            continue
+        except (OSError, subprocess.TimeoutExpired):
+            raise UpgradeBlocked("SYSTEM_TAR_UNAVAILABLE") from None
+
+    listing = tar_run(["-tzf", str(path)])
+    verbose = tar_run(["-tvzf", str(path)])
+    if listing.returncode or verbose.returncode:
+        raise UpgradeBlocked("SYSTEM_TAR_LIST_FAILED")
+    # A packager-produced archive contains a small number of regular files.
+    if len(listing.stdout) > 16_384 or len(verbose.stdout) > 32_768:
+        raise UpgradeBlocked("SYSTEM_TAR_LIST_TOO_LARGE")
+    names = listing.stdout.splitlines()
+    metadata = verbose.stdout.splitlines()
+    if not 8 <= len(names) <= 100 or len(names) != len(metadata):
+        raise UpgradeBlocked("SYSTEM_TAR_LIST_INVALID")
+
+    allowed = set()
+    for raw, detail in zip(names, metadata):
         try:
-            assert proc.stdout is not None
-            data = proc.stdout.read(4_194_305)
-            if len(data) > 4_194_304:
-                raise UpgradeBlocked("ARCHIVE_EXPANSION_LIMIT")
-            proc.wait(timeout=30)
-            if proc.returncode == 0:
-                return data
-            last_error = "GZIP_DECOMPRESS_FAILED"
-        except subprocess.TimeoutExpired:
-            last_error = "GZIP_DECOMPRESS_TIMEOUT"
-        finally:
-            if proc.poll() is None:
-                proc.kill()
-            proc.wait()
-            if proc.stdout is not None:
-                proc.stdout.close()
-    raise UpgradeBlocked(last_error)
+            name = raw.decode("ascii")
+        except UnicodeDecodeError:
+            raise UpgradeBlocked("SYSTEM_TAR_NAME_INVALID") from None
+        parts = PurePosixPath(name).parts
+        if (not detail.startswith(b"-") or len(name) > 160
+                or ".." in parts or name in allowed
+                or not (len(parts) == 2
+                        and parts[0] == "genvex_nabto_remote"
+                        and parts[1] in {"Dockerfile", "config.yaml", "run.sh"}
+                        or len(parts) == 3
+                        and parts[:2] == ("genvex_nabto_remote", "runtime")
+                        and parts[2].endswith(".py")
+                        and not parts[2].startswith("."))):
+            raise UpgradeBlocked("SYSTEM_TAR_ENTRY_INVALID")
+        allowed.add(name)
+
+    with tempfile.TemporaryDirectory(prefix=".dev4-tar-", dir=path.parent) as folder:
+        extracted = tar_run(["-xzf", str(path), "-C", folder])
+        if extracted.returncode:
+            raise UpgradeBlocked("SYSTEM_TAR_EXTRACT_FAILED")
+        root = Path(folder)
+        regular = set()
+        total = 0
+        for item in root.rglob("*"):
+            rel = item.relative_to(root).as_posix()
+            if item.is_symlink():
+                raise UpgradeBlocked("SYSTEM_TAR_LINK_REJECTED")
+            if item.is_dir():
+                if rel not in ("genvex_nabto_remote",
+                               "genvex_nabto_remote/runtime"):
+                    raise UpgradeBlocked("SYSTEM_TAR_DIRECTORY_REJECTED")
+                continue
+            if not item.is_file() or rel not in allowed:
+                raise UpgradeBlocked("SYSTEM_TAR_UNEXPECTED_FILE")
+            size = item.stat().st_size
+            total += size
+            if size > 100_000 or total > MAX_TOTAL_BYTES:
+                raise UpgradeBlocked("SYSTEM_TAR_SIZE_LIMIT")
+            regular.add(rel)
+        if regular != allowed:
+            raise UpgradeBlocked("SYSTEM_TAR_CONTENT_MISMATCH")
+
+        stream = io.BytesIO()
+        with tarfile.open(fileobj=stream, mode="w:") as plain:
+            for name in sorted(allowed):
+                content = (root / name).read_bytes()
+                item = tarfile.TarInfo(name)
+                item.size = len(content)
+                item.mode = 0o755 if name.endswith("/run.sh") else 0o644
+                plain.addfile(item, io.BytesIO(content))
+        return stream.getvalue()
 
 
 def open_source_archive(path: Path) -> tarfile.TarFile:
-    """Use Python gzip if available, otherwise system gzip + raw tar."""
+    """Read gzip normally or use host tar and validate before reconstruction."""
     try:
         return tarfile.open(path, "r:gz")
     except tarfile.CompressionError:
-        uncompressed = _system_gzip_bytes(path)
-        return tarfile.open(fileobj=io.BytesIO(uncompressed), mode="r:")
+        plain = _system_tar_bytes(path)
+        return tarfile.open(fileobj=io.BytesIO(plain), mode="r:")
 
 
 def verify_archive(archive_file: Path, expected_sha: str) -> tuple[str, ...]:
