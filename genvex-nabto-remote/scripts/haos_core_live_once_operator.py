@@ -25,6 +25,39 @@ from haos_core_ipc_network_operator import (select_core_network,
 SOURCE = Path("/tmp/genvex-dev3-once/ipc_core_live_once.py")
 CORE = "homeassistant"
 MAX_WAIT_SECONDS = 112
+# Runtime stdout is never forwarded. Only these literal, non-sensitive
+# diagnostic markers are permitted to reach the operator terminal.
+CHILD_FAILURE_CODES = frozenset({
+    "INPUT_OR_PROFILE_INVALID", "INVALID_ARGUMENTS",
+    "IPC_CORE_LIVE_ONCE_FAILED", "SDK_PROCESS_FAILURE",
+    "SDK_TIMEOUT", "SDK_STARTUP_FAILED", "SDK_RESOURCES_FAILED",
+    "SDK_SESSION_FAILED", "SDK_XML_FAILED", "SDK_RPC45_FAILED",
+    "SDK_RESPONSE_INVALID", "SDK_CLOSE_FAILED", "SDK_EARLY_EXIT",
+    "SDK_SNAPSHOT_INVALID",
+})
+
+
+class OperatorFailure(Exception):
+    """Fixed category only; never store arbitrary Docker or SDK output."""
+
+    def __init__(self, code: str):
+        self.code = code
+        super().__init__(code)
+
+
+def classify_runtime_exit(proc) -> OperatorFailure:
+    """Inspect only 512 bytes of fixed-category child stdout on exit."""
+    try:
+        raw = proc.stdout.read(513) if proc.stdout is not None else b""
+        if len(raw) <= 512:
+            messages = raw.decode("ascii", "strict").splitlines()
+            for code in CHILD_FAILURE_CODES:
+                if messages == ["BLOCKED: " + code]:
+                    return OperatorFailure(code)
+    except (OSError, UnicodeError, AttributeError):
+        pass
+    return OperatorFailure("RUNTIME_EXITED_WITHOUT_SAFE_DIAGNOSTIC")
+
 
 # Executed using python3 -c in the running HA Core container. No SDK or
 # credentials appear in argv/env. The short-lived bearer token and exact
@@ -164,24 +197,33 @@ def operator() -> int:
     try:
         proc = subprocess.Popen(
             cmd, stdin=subprocess.PIPE,
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
         )
         require(proc.stdin is not None, "No disposable runtime stdin")
         proc.stdin.write(payload)
         proc.stdin.close()
+        proc.stdin = None  # read after exit must not flush closed stdin
         deadline = time.monotonic() + MAX_WAIT_SECONDS
         target = None
+        had_client_attempt = False
+        client_timed_out = False
         while time.monotonic() < deadline:
             if proc.poll() is not None:
-                raise RuntimeError("Single RPC45 runtime exited before Core read")
+                raise classify_runtime_exit(proc)
             if target is None:
                 target = private_address(name, "hassio")
             if target is not None:
-                result = run(
-                    ["docker", "exec", "-i", CORE, "python3", "-c",
-                     CORE_CLIENT, target],
-                    timeout=7, input=core_payload,
-                )
+                had_client_attempt = True
+                try:
+                    result = run(
+                        ["docker", "exec", "-i", CORE, "python3", "-c",
+                         CORE_CLIENT, target],
+                        timeout=14, input=core_payload,
+                    )
+                except subprocess.TimeoutExpired:
+                    # An unresponsive Core HTTP request is not an SDK retry.
+                    client_timed_out = True
+                    continue
                 if result.returncode == 0:
                     require(result.stdout.strip() ==
                             b"PASS: one real Genvex RPC45 snapshot reached HA Core over private HTTP",
@@ -189,7 +231,15 @@ def operator() -> int:
                     print(result.stdout.decode("ascii").strip(), flush=True)
                     return 0
             time.sleep(2)
-        raise RuntimeError("Single RPC45 -> Core IPC deadline exceeded")
+        if proc.poll() is not None:
+            raise classify_runtime_exit(proc)
+        if target is None:
+            raise OperatorFailure("PRIVATE_BRIDGE_ADDRESS_NOT_FOUND")
+        if client_timed_out:
+            raise OperatorFailure("CORE_HTTP_PROBE_TIMEOUT")
+        if had_client_attempt:
+            raise OperatorFailure("CORE_HTTP_SNAPSHOT_NOT_VALIDATED")
+        raise OperatorFailure("CORE_READ_NOT_ATTEMPTED")
     finally:
         # docker run -i can outlive its CLI; remove the exact random-name
         # container even after user cancellation or a transport timeout.
@@ -208,10 +258,12 @@ def main() -> int:
         return 1
     try:
         return operator()
+    except OperatorFailure as error:
+        print("BLOCKED: " + error.code, flush=True)
+        return 1
     except (KeyboardInterrupt, Exception):
-        # Do not leak SDK output, Docker logs, tokens or credentials.
-        print("BLOCKED: real Core IPC test incomplete; no readings disclosed",
-              flush=True)
+        # Do not reflect exception details, stdout/stderr, or credentials.
+        print("BLOCKED: OPERATOR_PROCESS_FAILURE", flush=True)
         return 1
 
 
