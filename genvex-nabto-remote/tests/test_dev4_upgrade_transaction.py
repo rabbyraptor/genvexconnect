@@ -58,6 +58,23 @@ class TransactionTests(unittest.TestCase):
         names = tx.verify_archive(self.archive, self.sha)
         self.assertEqual(len(names), len(FILES))
 
+    def test_real_packaged_dev4_source_archive_is_accepted(self):
+        import importlib.util
+        from unittest.mock import patch
+
+        filename = Path(__file__).resolve().parents[2] / "scripts/package_remote_diagnostic_app.py"
+        spec = importlib.util.spec_from_file_location("dev4_source_packager", filename)
+        packager = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(packager)
+        with patch.object(packager, "DEST", self.root), patch.object(
+            packager, "ARCHIVE", self.root / "real-dev4-source.tar.gz"
+        ):
+            real_archive = packager.create_archive()
+        checksum = hashlib.sha256(real_archive.read_bytes()).hexdigest()
+        names = tx.verify_archive(real_archive, checksum)
+        self.assertGreater(len(names), 23)
+        self.assertIn("genvex_nabto_remote/runtime/persistent_sdk_adapter.py", names)
+
     def test_rejects_tampered_archive(self):
         with self.archive.open("ab") as stream:
             stream.write(b"extra")
