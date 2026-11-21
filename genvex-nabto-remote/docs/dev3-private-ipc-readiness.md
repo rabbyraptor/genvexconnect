@@ -323,3 +323,51 @@ The user needs to **stage both** the revised
 `runtime/ipc_core_live_once.py` and
 `scripts/haos_core_live_once_operator.py` for the next attempt.
 The previous revision is not informative enough to retry.
+
+## Combined live HAOS Core IPC gate: PASSED (operator, 2026-11-21)
+
+The operator re-staged the corrected host launcher (including the
+`recovery_policy.py` bind mount), then performed one manually authorized
+real-device test from an interactive SSH TTY. The exact successful
+terminal evidence was:
+
+```text
+LIVE CORE ONCE: one RPC45 -> validated private HTTP -> Core read; no polling
+PASS: one RPC45 snapshot ready for private Core read
+PASS: one real Genvex RPC45 snapshot reached HA Core over private HTTP
+```
+
+This is the **first successful combined live end-to-end network test**
+on the operator's actual HAOS host: physical Genvex Optima 270 via
+legacy Micro Nabto SDK/QEMU -> exactly one validated read-only RPC45
+snapshot -> temporary authenticated HTTP server bound inside a
+disposable container on the private `hassio` bridge -> HTTP client
+executed within the **running** `homeassistant` Core container.
+The Core client verified missing and wrong bearer token return 401,
+a correct token returns 200 with a fresh complete five-reading
+snapshot, and an unknown path returns 404. No sensor values, device
+ID, identity, key or token were printed.
+
+This **does not** prove the permanent Home Assistant integration has
+registered live entities. The Core-side client was a temporary
+`python3 -c` stdlib probe, not the custom component coordinator.
+No config entries, device registry, entity registry, App options,
+network ports, or polling settings were changed. The disposable
+container was force-removed by the launcher; the DEV2 App remained
+stopped/manual. This proves live network transport and schema, not
+unattended operational stability or production security.
+
+Before the successful run, the initial launcher hid the actual
+runtime startup error; a safe offline import test showed that
+`live_once` and `ipc_core_live_once` could not import because
+`recovery_policy.py` was missing from the disposable container's
+bind mounts. The launcher was fixed in
+`10883fbfdfe9b1428a1984f87912617d65861e74`; the operator
+confirmed `PASS: missing dependency mount corrected` and the
+subsequent live run passed.
+
+**Next development gate:** create a reversible, nonpersistent
+live-Core entity integration test using the actual HA coordinator,
+snapshot reader and five sensor entities against this already
+validated private network bridge. The user must separately authorize
+any installation of a persistent App/integration or automatic polling.
