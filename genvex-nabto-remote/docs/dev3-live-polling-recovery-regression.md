@@ -207,6 +207,45 @@ The 30-minute Gate H and 24-hour passive stability soak are postponed
 by operator request, not passed. No unattended-long-duration reliability
 claim is made.
 
+## HA entity naming and translation Gate J: PASSED (operator, 2026-11-21)
+
+Home Assistant Core `2026.11.1`, with configured language `en`, initially
+showed generic device-class names (`Temperature` / `Humidity`) for the
+five existing `genvex_remote` sensors. Both `strings.json` and
+`translations/da.json` were installed, but `translations/en.json` was
+missing. Commit `a3090e50572afc65fadf4630064e32688ab58f87` supplied
+`translations/en.json` and a file-level regression test.
+
+After installing the English translation file and restarting Home Assistant
+Core, a first Recorder-based naming test showed stale generic
+`original_name` values and reported `REVIEW_REQUIRED`. Subsequent
+operator checks confirmed that Core `loader.async_setup(hass)` and
+`async_get_translations` returned **all five correct English and all five
+correct Danish entity translations**, including key
+`component.genvex_remote.entity.sensor.supply_air.name`:
+
+- en: Supply air, Outdoor air, Exhaust air, Extract air, Humidity
+- da: Indblæsning, Udeluft, Afkast, Udsugning, Luftfugtighed
+
+A later read-only query of the latest Home Assistant Recorder states and
+entity registry verified that **all five names had updated**:
+
+| Sensor key | Registry original_name | Recorder friendly_name |
+| --- | --- | --- |
+| supply_air | Supply air | Genvex Connect Remote Supply air |
+| outdoor_air | Outdoor air | Genvex Connect Remote Outdoor air |
+| exhaust_air | Exhaust air | Genvex Connect Remote Exhaust air |
+| extract_air | Extract air | Genvex Connect Remote Extract air |
+| humidity | Humidity | Genvex Connect Remote Humidity |
+
+All five entity registry `name` overrides were `None`; the same five
+registered entity IDs were preserved in earlier post-restart checks
+(signature `2be9240972de0a9d`). English display names are expected
+because the installation language is `en`. Danish lookup passed in the
+loader but display-name switching to Danish was **not** exercised live.
+This closes the English naming/translation regression without manually
+renaming entities. The original earlier Gate J check was premature.
+
 ## Correct interpretation of the operator's Recorder evidence
 
 The operator's real Home Assistant Recorder contained five numeric
