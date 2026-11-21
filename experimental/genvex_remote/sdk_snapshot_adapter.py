@@ -41,14 +41,36 @@ class SDKSnapshotError(Exception):
         "SDK_EARLY_EXIT", "SDK_SNAPSHOT_INVALID",
     })
 
-    def __init__(self, code="SDK_PROCESS_FAILURE", *, rpc_status=None, elapsed_ms=None, rpc_events=None):
+    def __init__(self, code="SDK_PROCESS_FAILURE", *, rpc_status=None, elapsed_ms=None, rpc_events=None,
+                 session_status=None):
         self.code = code if code in self.ALLOWED else "SDK_PROCESS_FAILURE"
         # Only bounded integers extracted from exact SDK stage markers are
         # allowed to reach the optional operator diagnostic view.
+        self.session_status = (session_status if type(session_status) is int
+                               and 0 <= session_status <= 100000 else None)
         self.rpc_status = rpc_status if type(rpc_status) is int and 0 <= rpc_status <= 100000 else None
         self.elapsed_ms = elapsed_ms if type(elapsed_ms) is int and 0 <= elapsed_ms <= 120000 else None
         self.rpc_events = tuple(rpc_events) if isinstance(rpc_events, tuple) and len(rpc_events) <= 8 and all(type(v) is int and 0 <= v <= 10000000 for v in rpc_events) else ()
         super().__init__(self.code)
+
+
+def parse_session_diagnostics(output: bytes) -> int | None:
+    """Allow exactly one bounded numeric SDK session return code, no raw text."""
+    if len(output) > _MAX_PROBE_OUTPUT_BYTES:
+        return None
+    try:
+        lines = output.decode("utf-8", "strict").splitlines()
+    except UnicodeError:
+        return None
+    matches = [line[len("Profile session:"):].strip()
+               for line in lines if line.startswith("Profile session:")]
+    if len(matches) != 1:
+        return None
+    value = matches[0]
+    if not value or len(value) > 8 or not value.isascii() or not value.isdecimal():
+        return None
+    status = int(value)
+    return status if status <= 100000 else None
 
 
 def parse_rpc_diagnostics(output: bytes) -> tuple[int | None, int | None]:
@@ -235,6 +257,7 @@ class SDKSnapshotAdapter:
                         rpc_status=rpc_status,
                         elapsed_ms=elapsed_ms,
                         rpc_events=parse_rpc_events(out),
+                        session_status=parse_session_diagnostics(out),
                     )
                 return parse_probe_output(out, device_id=self.device_id)
             except asyncio.CancelledError:
