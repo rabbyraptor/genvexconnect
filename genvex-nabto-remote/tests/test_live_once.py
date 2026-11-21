@@ -66,7 +66,8 @@ class SettingsTests(unittest.TestCase):
     def test_safe_sdk_failure_code(self):
         payload = {"device_id": "123456789012", "identity": "private@example.com",
                    "unlock_secret": "sensitive"}
-        with patch.object(live_once, "read_settings", return_value=payload), \
+        with patch.object(sys, "argv", ["live_once.py"]), \
+             patch.object(live_once, "read_settings", return_value=payload), \
              patch.object(live_once, "validate_private_profile"), \
              patch.object(live_once, "PROBE", Mock(is_file=lambda: True)), \
              patch.object(live_once, "read_once", new_callable=AsyncMock,
