@@ -256,6 +256,42 @@ class SingleReadTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("READINGS_BEGIN", output.getvalue())
         fake.poll_once.assert_awaited_once()
 
+    async def test_manual_recovery_resolves_only_one_validated_snapshot(self):
+        settings = {"device_id": "123456789012", "identity": "private@example.com",
+                    "unlock_secret": "hidden"}
+        fake = AsyncMock()
+        fake.poll_once.side_effect = [
+            SDKSnapshotError("SDK_RPC45_FAILED", rpc_status=26,
+                             rpc_events=(1000015,)),
+            {"schema_version": 1},
+        ]
+        async def no_delay(_):
+            return None
+        with patch.object(live_once, "SDKSnapshotAdapter", return_value=fake), \
+             patch.object(live_once.asyncio, "sleep", new=no_delay), \
+             patch.object(live_once, "parse_snapshot", return_value={}), \
+             patch("sys.stdout", new_callable=io.StringIO) as output:
+            await live_once.read_once(settings, recover_once=True)
+        self.assertEqual(fake.poll_once.await_count, 2)
+        self.assertIn("RECOVERY: eligible RPC45 event", output.getvalue())
+        self.assertIn("PASS: one read-only RPC45 snapshot validated", output.getvalue())
+        self.assertNotIn("private@example.com", output.getvalue())
+        self.assertNotIn("hidden", output.getvalue())
+
+    async def test_manual_recovery_does_not_retry_unrelated_error(self):
+        settings = {"device_id": "123456789012", "identity": "x",
+                    "unlock_secret": "y"}
+        fake = AsyncMock()
+        fake.poll_once.side_effect = SDKSnapshotError(
+            "SDK_RPC45_FAILED", rpc_status=26, rpc_events=(1000026,)
+        )
+        with patch.object(live_once, "SDKSnapshotAdapter", return_value=fake), \
+             patch("sys.stdout", new_callable=io.StringIO) as output:
+            with self.assertRaises(SDKSnapshotError):
+                await live_once.read_once(settings, recover_once=True)
+        self.assertEqual(fake.poll_once.await_count, 1)
+        self.assertEqual(output.getvalue(), "")
+
     async def test_incomplete_formatted_values_never_claim_success(self):
         settings = {"device_id": "123456789012", "identity": "a", "unlock_secret": "b"}
         fake = AsyncMock()
