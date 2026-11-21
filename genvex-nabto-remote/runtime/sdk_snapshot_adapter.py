@@ -7,6 +7,7 @@ enrollment path, persistent credential manager or production App yet.
 from __future__ import annotations
 
 import asyncio
+import ast
 import json
 from pathlib import Path
 
@@ -40,12 +41,13 @@ class SDKSnapshotError(Exception):
         "SDK_EARLY_EXIT", "SDK_SNAPSHOT_INVALID",
     })
 
-    def __init__(self, code="SDK_PROCESS_FAILURE", *, rpc_status=None, elapsed_ms=None):
+    def __init__(self, code="SDK_PROCESS_FAILURE", *, rpc_status=None, elapsed_ms=None, rpc_events=None):
         self.code = code if code in self.ALLOWED else "SDK_PROCESS_FAILURE"
         # Only bounded integers extracted from exact SDK stage markers are
         # allowed to reach the optional operator diagnostic view.
         self.rpc_status = rpc_status if type(rpc_status) is int and 0 <= rpc_status <= 100000 else None
         self.elapsed_ms = elapsed_ms if type(elapsed_ms) is int and 0 <= elapsed_ms <= 120000 else None
+        self.rpc_events = tuple(rpc_events) if isinstance(rpc_events, tuple) and len(rpc_events) <= 8 and all(type(v) is int and 0 <= v <= 10000000 for v in rpc_events) else ()
         super().__init__(self.code)
 
 
@@ -69,6 +71,36 @@ def parse_rpc_diagnostics(output: bytes) -> tuple[int | None, int | None]:
         return value if value <= limit else None
 
     return number("Batch RPC status:", 100000), number("RPC elapsed_ms:", 120000)
+
+
+
+def parse_rpc_events(output: bytes) -> tuple[int, ...]:
+    """Allowlist numeric codes from the probe's already-redacted diagnostic.
+
+    This is *not* the original vendor JSON. The probe emits only
+    ('ERROR_JSON', [integer codes]) or ('NO_JSON_DIAGNOSTIC', []).
+    """
+    if len(output) > _MAX_PROBE_OUTPUT_BYTES:
+        return ()
+    try:
+        lines = output.decode("utf-8", "strict").splitlines()
+    except UnicodeError:
+        return ()
+    markers = [line[len("Diagnostic: "):] for line in lines
+               if line.startswith("Diagnostic: ")]
+    if len(markers) != 1 or len(markers[0]) > 160:
+        return ()
+    try:
+        kind, codes = ast.literal_eval(markers[0])
+    except (ValueError, SyntaxError, TypeError, MemoryError, RecursionError):
+        return ()
+    if kind != "ERROR_JSON" or type(codes) is not list or len(codes) > 8:
+        return ()
+    if any(type(v) is not int or not 0 <= v <= 10000000 for v in codes):
+        return ()
+    if codes != sorted(set(codes)):
+        return ()
+    return tuple(codes)
 
 
 def classify_probe_failure(output: bytes) -> str:
@@ -202,6 +234,7 @@ class SDKSnapshotAdapter:
                         classify_probe_failure(out),
                         rpc_status=rpc_status,
                         elapsed_ms=elapsed_ms,
+                        rpc_events=parse_rpc_events(out),
                     )
                 return parse_probe_output(out, device_id=self.device_id)
             except asyncio.CancelledError:
