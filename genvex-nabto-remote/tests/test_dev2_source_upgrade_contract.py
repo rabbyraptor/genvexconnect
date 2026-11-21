@@ -4,6 +4,7 @@ from __future__ import annotations
 import importlib.util
 import hashlib
 import os
+import shutil
 from pathlib import Path
 import subprocess
 import tarfile
@@ -27,7 +28,17 @@ class Dev2UpgradeContractTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         self.artifacts = self.root / "dist"
         self.artifacts.mkdir()
+        # Historical dev1 -> dev2 tests retain an isolated dev2 fixture.
+        # The actual App source has advanced to the dev3 candidate.
+        self.legacy_source = self.root / "legacy-dev2-source"
+        shutil.copytree(packager.SOURCE, self.legacy_source)
+        manifest = self.legacy_source / "config.yaml"
+        manifest.write_text(
+            manifest.read_text().replace('version: "0.1.0-dev3"',
+                                         'version: "0.1.0-dev2"')
+        )
         with (
+            patch.object(packager, "SOURCE", self.legacy_source),
             patch.object(packager, "DEST", self.artifacts),
             patch.object(
                 packager, "ARCHIVE",

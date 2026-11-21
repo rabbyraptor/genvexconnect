@@ -1,5 +1,18 @@
 # Genvex Remote — experimental HAOS App (Nabto Micro 4)
 
+> **Development update — 21 November 2026:** The installed
+> `0.1.0-dev2` App was started in live read-only mode on HAOS. The
+> private HTTP endpoint resolves from Home Assistant and correctly rejects
+> unauthenticated requests, but authenticated snapshot reads returned HTTP 503.
+> One direct DEV2 SDK attempt raised `SDKSnapshotError: SDK read failed`;
+> this revision hides the specific SDK stage. The separate `feature/dev3-live-once`
+> branch now packages the enhanced SDK failure classification as a **new**
+> `0.1.0-dev3` App candidate. DEV3 has passed offline tests and a native
+> ARM64 container-image build, but has **not** been deployed or live-tested
+> against the user's gateway. Run the explicit, stop-before-update operator
+> script `scripts/upgrade_genvex_remote_dev3_from_deck.sh` only when authorized.
+> The App remains manual boot and is not automatically started after update.
+
 **Status (operator-verified 21 November 2026):** The separately managed App
 `local_genvex_nabto_remote` was updated to `0.1.0-dev2` on HAOS with
 `ha apps update local_genvex_nabto_remote --backup`. The installed App
@@ -16,7 +29,7 @@ legacy x86_64 Nabto SDK under QEMU. In live mode, the App publishes snapshots
 on its dedicated private App network, at port `18275`; its HTTP endpoint is
 `/v1/snapshot` and it requires a private IPC bearer token. The App exposes
 no host-published port, uses `host_network: false`, and does not implement
-control RPC. **The live polling path has not been activated in this App.**
+control RPC. **In the installed DEV2 App, live polling has been started, but no valid snapshot has been confirmed.**
 
 ## Startup modes (not interchangeable)
 
@@ -40,16 +53,17 @@ control RPC. **The live polling path has not been activated in this App.**
   Secure enrollment/migration is a separate unfinished and approval-gated
   task. Password-marked Supervisor options are not hardware-backed vaults.
 
-## Next approval boundary
+## Next approval boundary (updated)
 
-Offline tests for diagnostic bootstrap, IPC isolation and synthetic-only
-responses already exist. The installed `dev2` App must stay stopped while
-static/runtime-readiness checks are performed. An on-HAOS diagnostic start
-requires **separate explicit approval**, a fresh preflight that establishes
-empty credentials and no private profile/token without printing any of their
-values, a tight time/cleanup plan, and verification that the App ends stopped.
-Do not run live Nabto, migrate profiles, modify the working LAN integration,
-or treat synthetic values as real sensor readings.
+The DEV3 candidate is prepared for an explicitly operator-run source-only
+swap followed by a backup-enabled Supervisor App update. The update script
+stops DEV2 first, verifies the installed DEV2 source hashes, retains its old
+source as a separate backup, reloads the local App catalog and requests one
+Supervisor update with `--backup`. It does not read/copy the private PEMs,
+change Supervisor options, touch the existing LAN integration or start DEV3.
+After installation the App must be explicitly started before a new read-only
+SDK diagnosis. The successful ARM64 CI build alone does not prove Nabto
+connectivity.
 
 Known gaps: secure profile onboarding, production distribution of the separate
 HA integration, live SDK/remote runtime validation, private App-to-Core DNS,

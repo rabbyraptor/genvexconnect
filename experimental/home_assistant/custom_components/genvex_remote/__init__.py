@@ -21,7 +21,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         token=entry.data[CONF_RUNTIME_TOKEN],
     )
     coordinator = GenvexRemoteCoordinator(
-        hass, entry.data[CONF_DEVICE_ID], reader,
+        hass, entry.data[CONF_DEVICE_ID], reader, config_entry=entry,
     )
     await coordinator.async_config_entry_first_refresh()
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator

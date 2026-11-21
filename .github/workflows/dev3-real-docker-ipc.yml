@@ -1,0 +1,73 @@
+name: DEV3 real private Docker IPC networking (fake-only)
+
+on:
+  push:
+    branches: [feature/dev3-live-once]
+    paths:
+      - 'genvex-nabto-remote/runtime/offline_ipc_network_smoke.py'
+      - 'genvex-nabto-remote/runtime/polling_http_server.py'
+      - 'genvex-nabto-remote/runtime/snapshot_api.py'
+      - 'genvex-nabto-remote/runtime/snapshot_contract.py'
+      - 'genvex-nabto-remote/runtime/sensor_model.py'
+      - 'genvex-nabto-remote/runtime/ipc_auth.py'
+      - '.github/workflows/dev3-real-docker-ipc.yml'
+  pull_request:
+    paths:
+      - 'genvex-nabto-remote/runtime/offline_ipc_network_smoke.py'
+      - 'genvex-nabto-remote/runtime/polling_http_server.py'
+      - 'genvex-nabto-remote/runtime/snapshot_api.py'
+      - 'genvex-nabto-remote/runtime/snapshot_contract.py'
+      - 'genvex-nabto-remote/runtime/sensor_model.py'
+      - 'genvex-nabto-remote/runtime/ipc_auth.py'
+      - '.github/workflows/dev3-real-docker-ipc.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fake-only-real-network:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Exercise two isolated containers on real private network
+        shell: bash
+        run: |
+          set -euo pipefail
+          network="genvex-ipc-ci-$GITHUB_RUN_ID"
+          server="genvex-ipc-server-$GITHUB_RUN_ID"
+          cleanup() {
+            docker rm -f "$server" >/dev/null 2>&1 || true
+            docker network rm "$network" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+          docker network create --internal --driver bridge "$network"
+          docker run -d --rm \
+            --name "$server" --network "$network" \
+            --network-alias genvex-ci-runtime \
+            --read-only --cap-drop ALL \
+            --security-opt no-new-privileges \
+            --tmpfs /tmp:rw,nosuid,nodev,size=16m \
+            --mount "type=bind,src=$PWD/genvex-nabto-remote/runtime,dst=/opt/runtime,readonly" \
+            --workdir /opt/runtime \
+            --entrypoint python3 python:3.12-slim \
+            offline_ipc_network_smoke.py serve available
+          # A real second container reaches only the isolated named
+          # network; no published host ports, SDK or external traffic.
+          for attempt in 1 2 3 4 5; do
+            if docker run --rm \
+              --network "$network" --read-only --cap-drop ALL \
+              --security-opt no-new-privileges \
+              --mount "type=bind,src=$PWD/genvex-nabto-remote/runtime,dst=/opt/runtime,readonly" \
+              --workdir /opt/runtime --entrypoint python3 \
+              python:3.12-slim offline_ipc_network_smoke.py \
+              check genvex-ci-runtime available; then
+              echo "PASS: two-container private IPC authentication and validated snapshot"
+              exit 0
+            fi
+            sleep 1
+          done
+          exit 1
