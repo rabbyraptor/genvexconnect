@@ -198,3 +198,40 @@ The current fail-closed snapshot/coordinator semantics are unchanged:
 known failed reads invalidate published data; no stale values may
 be represented as fresh. Any future integration into a real worker
 requires a separate design review and field-test authorization.
+
+## Manual recovery-only field-test candidate
+
+The offline-tested recovery policy is now wired **only** to the explicit
+`--recover-once` option of the disposable single-shot test runner and
+the HAOS SSH operator. The normal one-shot, `--diagnose`,
+`--show-values`, `--trial-three`, and `--trial-diagnose` modes retain
+their prior behavior; there is no combined three-trial/recovery flag.
+
+To run the operator's experiment after staging the *matching pinned*
+`live_once.py`, `sdk_snapshot_adapter.py`, `recovery_policy.py`, and
+`haos_live_once_operator.py` to the existing root-owned directory:
+
+```sh
+ssh -tt -p 22222 root@rabbyshome.duckdns.org \
+  python3 /tmp/genvex-dev3-once/haos_live_once_operator.py --recover-once
+```
+
+The operator still checks the DEV2 App is stopped/manual, verifies the
+exact local image and private profile, passes credentials via stdin, binds
+the profile and staged code read-only, and deletes the disposable Docker
+container on exit. The single-shot runner creates an entirely fresh
+SDK/QEMU subprocess for each request.
+
+There is **one initial RPC45 read and at most one conditional final
+read**. Only `SDK_RPC45_FAILED` + return `26` + exact diagnostic
+`(1000015,)` triggers a 60-second delay and one further attempt.
+Other failures stop immediately. The ordinary container deadline is
+still 110 seconds; only this opted-in recovery experiment has a
+260-second host deadline, allowing two independently bounded 85-second
+SDK calls and the 60-second cooldown. Ctrl-C aborts the experiment.
+No raw diagnostics, credentials or values are shown by default.
+No HAOS App or LAN integration is modified.
+
+This is a **candidate**; despite passing SDK-free tests it has not yet
+demonstrated a successful live recovery. Do not turn on unattended
+polling until a separate reliability review.
