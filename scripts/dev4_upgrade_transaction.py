@@ -193,14 +193,20 @@ def diagnose_archive(archive_file: Path, expected_sha: str) -> None:
         print("ARCHIVE_DIAGNOSTIC_COMPLETE")
         return
     try:
-        with open_source_archive(archive_file) as tf:
-            members = tf.getmembers()
-            print("PYTHON_TAR_GZIP: PASS")
-            print("PYTHON_TAR_MEMBERS:", len(members))
-            manifest = tf.extractfile("genvex_nabto_remote/config.yaml")
-            print("PYTHON_MANIFEST_ACCESS:", "PASS" if manifest and manifest.read() else "FAIL")
+        with tarfile.open(archive_file, "r:gz") as tf:
+            print("PYTHON_TAR_GZIP:", "PASS")
+            print("PYTHON_TAR_MEMBERS:", len(tf.getmembers()))
     except Exception as exc:
         print("PYTHON_TAR_GZIP:", "FAIL_" + type(exc).__name__)
+    try:
+        with open_source_archive(archive_file) as tf:
+            members = tf.getmembers()
+            print("ARCHIVE_READER_FALLBACK: PASS")
+            print("FALLBACK_TAR_MEMBERS:", len(members))
+            manifest = tf.extractfile("genvex_nabto_remote/config.yaml")
+            print("FALLBACK_MANIFEST_ACCESS:", "PASS" if manifest and manifest.read() else "FAIL")
+    except Exception as exc:
+        print("ARCHIVE_READER_FALLBACK:", "FAIL_" + type(exc).__name__)
     try:
         check = subprocess.run(
             ["tar", "-tzf", str(archive_file)],
