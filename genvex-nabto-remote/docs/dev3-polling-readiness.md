@@ -415,3 +415,25 @@ contract, **not** a fully registered entity-state-machine integration
 or an installed Supervisor app. Even a green workflow cannot authorize
 continuous Nabto polling. The workflow must report a passing result
 before treating this as verified against Home Assistant Core.
+
+## Real Home Assistant Core gate: verified
+
+The separate GitHub Actions workflow `DEV3 isolated real Home
+Assistant Core entity contract` now passes with pinned
+`homeassistant==2026.11.2`, `pytest-homeassistant==2026.11.2`
+and Python 3.14. After the initial test-fixture error,
+`pytest-asyncio` was set to `asyncio_mode=auto` and both
+Core-backed tests passed in the isolated GitHub runner.
+
+The tests instantiate the genuine `DataUpdateCoordinator`,
+`CoordinatorEntity` and our five sensor classes. A fake reader
+provides a finite success -> session-style transport failure -> success
+sequence and an incomplete-snapshot sequence. The test checks the
+real Core properties `last_update_success`, `available` and
+`native_value` for all five sensors, without enabling any network
+or Nabto SDK. This verifies the **Core coordinator/entity contract**.
+It does not test actual entity registration/state-machine persistence,
+the installed HAOS App, Supervisor IPC or a real live polling session.
+
+Keep the existing LAN integration and DEV2 installation untouched.
+Persistent polling remains explicitly unauthorized.
