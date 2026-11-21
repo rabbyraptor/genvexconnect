@@ -138,7 +138,7 @@ def prompt_settings():
     ).encode() + b"\n"
 
 
-def run_once(image, payload, *, show_values=False):
+def run_once(image, payload, *, show_values=False, diagnose=False):
     name = "genvex-rpc45-once-" + secrets.token_hex(6)
     cmd = [
         "docker", "run", "--rm", "-i",
@@ -161,6 +161,8 @@ def run_once(image, payload, *, show_values=False):
     ]
     if show_values:
         cmd.append("--show-values")
+    if diagnose:
+        cmd.append("--diagnose")
     try:
         done = subprocess.run(cmd, input=payload, timeout=LIMIT, check=False)
         require(done.returncode == 0, "Single-shot container reported failure")
@@ -172,7 +174,7 @@ def run_once(image, payload, *, show_values=False):
         )
 
 
-def bounded_trial(image, payload, *, sleep=time.sleep):
+def bounded_trial(image, payload, *, sleep=time.sleep, diagnose=False):
     """Exactly three disposable reads, with no retries or persistent daemon.
 
     Each attempt is independently isolated. Never print credentials or
@@ -183,7 +185,10 @@ def bounded_trial(image, payload, *, sleep=time.sleep):
     for attempt in range(1, TRIAL_ATTEMPTS + 1):
         require(preflight() == image, "App or image changed during trial")
         try:
-            run_once(image, payload)
+            if diagnose:
+                run_once(image, payload, diagnose=True)
+            else:
+                run_once(image, payload)
         except (RuntimeError, subprocess.TimeoutExpired, OSError):
             print(f"TRIAL {attempt}/{TRIAL_ATTEMPTS}: FAILED", flush=True)
         else:
@@ -197,21 +202,23 @@ def bounded_trial(image, payload, *, sleep=time.sleep):
 
 def main():
     try:
-        require(sys.argv[1:] in ([], ["--show-values"], ["--trial-three"]),
+        require(sys.argv[1:] in ([], ["--show-values"], ["--trial-three"],
+                                   ["--diagnose"], ["--trial-diagnose"]),
                 "Unsupported display option")
         show_values = sys.argv[1:] == ["--show-values"]
-        trial = sys.argv[1:] == ["--trial-three"]
+        trial = sys.argv[1:] in (["--trial-three"], ["--trial-diagnose"])
+        diagnose = sys.argv[1:] in (["--diagnose"], ["--trial-diagnose"])
         image = preflight()
         print("PASS: DEV2 stopped; profile read-only; separate container selected")
         if trial:
             print("TRIAL: exactly three read-only RPC45 batches, >=60 s apart; Ctrl-C aborts", flush=True)
         payload = prompt_settings()
         if trial:
-            if not bounded_trial(image, payload):
+            if not bounded_trial(image, payload, diagnose=diagnose):
                 print("BLOCKED: bounded trial had one or more failed reads", flush=True)
                 return 1
         else:
-            run_once(image, payload, show_values=show_values)
+            run_once(image, payload, show_values=show_values, diagnose=diagnose)
         print("PASS: isolated container exited; DEV2 remained untouched")
         return 0
     except (Exception, KeyboardInterrupt):
