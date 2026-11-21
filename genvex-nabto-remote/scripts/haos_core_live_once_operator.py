@@ -245,6 +245,8 @@ def operator() -> int:
         "--mount",
         "type=bind,src=/tmp/genvex-dev3-once/sdk_snapshot_adapter.py,dst=/opt/genvex-remote/runtime/sdk_snapshot_adapter.py,readonly",
         "--mount",
+        "type=bind,src=/tmp/genvex-dev3-once/recovery_policy.py,dst=/opt/genvex-remote/runtime/recovery_policy.py,readonly",
+        "--mount",
         f"type=bind,src={SOURCE},dst=/opt/genvex-remote/runtime/ipc_core_live_once.py,readonly",
         "--entrypoint", "/usr/bin/python3", image,
         "/opt/genvex-remote/runtime/ipc_core_live_once.py",
