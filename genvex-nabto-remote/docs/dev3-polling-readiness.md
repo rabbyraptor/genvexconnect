@@ -390,3 +390,28 @@ are represented by intentionally small HA stubs. The tests do not
 start HAOS, enable polling or modify the installed LAN integration.
 Actual Core entity-registry/state-machine behavior still requires a
 separately approved test in an isolated HA environment.
+
+## Isolated Home Assistant Core integration-test gate
+
+An additional, **separate** GitHub Actions workflow,
+`.github/workflows/dev3-real-ha-core.yml`, uses Python 3.14 and
+pins `homeassistant==2026.11.2` and
+`pytest-homeassistant==2026.11.2`. It is deliberately distinct from
+the fast Python 3.12 mock-based contracts and from any HAOS deployment.
+
+The real-Core test module lives at
+`experimental/home_assistant/tests_core/test_real_core_availability.py`.
+It constructs the **actual** Home Assistant
+`DataUpdateCoordinator`/`CoordinatorEntity` classes together with
+our remote coordinator and sensor source. The only injected component
+is an offline snapshot reader with a fixed finite sequence; there are
+no Nabto SDK calls, external network sockets, host credentials or real
+device values. It covers success -> runtime unavailable -> valid
+recovery for all five sensor objects, plus failure on incomplete
+snapshots.
+
+The initial gate validates Core's coordinator/entity availability
+contract, **not** a fully registered entity-state-machine integration
+or an installed Supervisor app. Even a green workflow cannot authorize
+continuous Nabto polling. The workflow must report a passing result
+before treating this as verified against Home Assistant Core.
