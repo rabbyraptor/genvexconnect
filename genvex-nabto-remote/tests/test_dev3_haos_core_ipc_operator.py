@@ -139,7 +139,7 @@ class CoreIPCTests(unittest.TestCase):
     def test_host_core_uses_container_private_ip(self):
         commands = []
         success = (b"PASS: HA Core container reached authenticated private IPC;"
-                   b" 401/200/404\\n")
+                   b" 401/200/404\n")
         def runner(args, **kwargs):
             commands.append(args)
             if args[:3] == ["docker", "run", "-d"]:
