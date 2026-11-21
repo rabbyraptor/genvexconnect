@@ -55,6 +55,27 @@ class OperatorTests(unittest.TestCase):
         finally:
             service.stop()
 
+    def test_core_probe_reports_only_fixed_snapshot_failure_stage(self):
+        """Actual TCP server is unavailable; client must not print details."""
+        service = SnapshotHTTPServer(
+            bind_host="127.0.0.1", port=0, device_id=DEVICE,
+            token=TOKEN, snapshot_provider=lambda: None,
+        )
+        try:
+            service.start()
+            payload = json.dumps({"device_id": DEVICE, "ipc_token": TOKEN}).encode() + b"\n"
+            proc = subprocess.run(
+                [sys.executable, "-c", op.CORE_CLIENT, "127.0.0.1",
+                 str(service._server.server_address[1])],
+                input=payload, capture_output=True, timeout=12, check=False,
+            )
+            self.assertEqual(proc.returncode, 2)
+            self.assertEqual(proc.stdout, b"CORE_PROBE_FAILED:LIVE_SNAPSHOT\n")
+            self.assertNotIn(TOKEN.encode(), proc.stdout + proc.stderr)
+            self.assertNotIn(DEVICE.encode(), proc.stdout + proc.stderr)
+        finally:
+            service.stop()
+
     def test_live_operator_keeps_secrets_out_of_docker_and_core_argv(self):
         commands = []
         pipe = io.BytesIO()
