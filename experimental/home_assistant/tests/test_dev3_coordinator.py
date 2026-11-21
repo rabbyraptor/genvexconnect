@@ -104,6 +104,7 @@ class CoordinatorContractTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(str(caught.exception),
                          "Genvex remote readings are unavailable")
         self.assertNotIn("sensitive", str(caught.exception))
+        self.assertTrue(caught.exception.__suppress_context__)
 
     async def test_stale_snapshot_rejected(self):
         reader = types.SimpleNamespace(
