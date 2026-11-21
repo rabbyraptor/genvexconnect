@@ -124,6 +124,45 @@ class LauncherTests(unittest.TestCase):
             launcher.run_once("sha256:" + "a" * 64, b"fake\\n")
         self.assertNotIn("--show-values", calls[0])
 
+    def test_bounded_trial_three_attempts_and_two_gaps(self):
+        image = "sha256:" + "a" * 64
+        sleeps = []
+        with patch.object(launcher, "preflight", return_value=image) as preflight, \
+             patch.object(launcher, "run_once") as run_once, \
+             patch("sys.stdout", new_callable=io.StringIO) as output:
+            self.assertTrue(launcher.bounded_trial(
+                image, b"secret-only-via-stdin", sleep=sleeps.append
+            ))
+        self.assertEqual(preflight.call_count, 3)
+        self.assertEqual(run_once.call_count, 3)
+        self.assertEqual(sleeps, [60, 60])
+        self.assertIn("TRIAL SUMMARY: 3/3 validated", output.getvalue())
+        self.assertNotIn("secret-only-via-stdin", output.getvalue())
+
+    def test_bounded_trial_reports_partial_success_without_retries(self):
+        image = "sha256:" + "a" * 64
+        sleeps = []
+        with patch.object(launcher, "preflight", return_value=image), \
+             patch.object(launcher, "run_once",
+                          side_effect=[None, RuntimeError("no connection"), None]) as probe, \
+             patch("sys.stdout", new_callable=io.StringIO) as output:
+            self.assertFalse(launcher.bounded_trial(image, b"private", sleep=sleeps.append))
+        self.assertEqual(probe.call_count, 3)
+        self.assertEqual(sleeps, [60, 60])
+        self.assertIn("TRIAL 2/3: FAILED", output.getvalue())
+        self.assertIn("TRIAL SUMMARY: 2/3 validated", output.getvalue())
+        self.assertNotIn("no connection", output.getvalue())
+        self.assertNotIn("private", output.getvalue())
+
+    def test_bounded_trial_aborts_on_changed_app_state(self):
+        image = "sha256:" + "a" * 64
+        other = "sha256:" + "b" * 64
+        with patch.object(launcher, "preflight", side_effect=[image, other]), \
+             patch.object(launcher, "run_once") as probe:
+            with self.assertRaises(RuntimeError):
+                launcher.bounded_trial(image, b"private", sleep=lambda _: None)
+        probe.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()
