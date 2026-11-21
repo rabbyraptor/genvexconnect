@@ -109,6 +109,7 @@ class CoreIPCTests(unittest.TestCase):
              patch.object(op, "check_file"), \
              patch.object(op, "checked_image", return_value="sha256:" + "a" * 64), \
              patch.object(op, "select_core_network", return_value="hassio"), \
+             patch.object(op, "core_network_mode", return_value="bridge"), \
              patch.object(op, "run", side_effect=runner), \
              patch.object(op.time, "sleep"), \
              patch.object(sys, "argv", ["haos_core_ipc_network_operator.py"]), \
