@@ -140,3 +140,30 @@ future internal App-to-HA networking. It demonstrates an actual Nabto
 read and actual local HTTP requests in the same isolated runtime, but
 it **does not** establish HA Core-to-App connectivity across the
 Supervisor network. That will be a separate later deployment task.
+
+## Operator live success and private Docker network regression
+
+The operator ran `--ipc-once` on HAOS and confirmed:
+`PASS: one RPC45 snapshot validated; private loopback IPC 401/200/503
+verified`, followed by successful isolated container removal and DEV2
+remaining stopped. This validates the physical-device -> vendor SDK/QEMU
+-> RPC45 -> five-value snapshot -> container-local authenticated HTTP
+pipeline. There was exactly one live read and no polling.
+
+A separate **real Docker networking** workflow
+`.github/workflows/dev3-real-docker-ipc.yml` subsequently passed:
+GitHub Actions run `44851772005`. It launches one temporary
+`python:3.12-slim` HTTP server container and one independently
+isolated client container on a Docker **`--internal`** bridge with a
+DNS name, synthetic device ID, fake token and fake sensor readings.
+The client tests real TCP across container network namespaces,
+including missing/wrong tokens returning 401 and the correct token
+returning a complete validated 200 snapshot. No host port is
+published; both the test container and network are destroyed.
+
+**Scope:** These are *two complementary tests*, not the same live
+end-to-end network transaction. On the user's HAOS the actual Nabto
+snapshot has so far only been served to a client in the **same**
+ephemeral container. The real two-container transport was verified
+with **fake** data on a separate CI machine. The next field step
+tests local HAOS network reachability (before any HA Core registration).
