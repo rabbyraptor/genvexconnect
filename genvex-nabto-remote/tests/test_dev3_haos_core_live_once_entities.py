@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import io
+import py_compile
+import shutil
 from pathlib import Path
 import sys
 import tempfile
@@ -47,7 +49,22 @@ class EntityProbeOperatorTests(unittest.TestCase):
                 result = op.read_reviewed_sources()
                 self.assertEqual(set(result), set(op.MODULES))
                 self.assertEqual(check.call_count, 2 + len(op.MODULES))
+                # Reproduce the operator's actual staging command:
+                # python3 -m py_compile .../ha_component/*.py
+                py_compile.compile(str(component / "const.py"), doraise=True)
+                cache = component / "__pycache__"
+                self.assertTrue(cache.is_dir())
+                self.assertEqual(set(op.read_reviewed_sources()), set(op.MODULES))
+
                 (component / "extra.py").write_text("pass\n")
+                with self.assertRaises(ValueError):
+                    op.read_reviewed_sources()
+                (component / "extra.py").unlink()
+
+                # Compiled bytecode must never be trusted if someone
+                # swaps its cache directory for a symlink.
+                shutil.rmtree(cache)
+                cache.symlink_to(stage, target_is_directory=True)
                 with self.assertRaises(ValueError):
                     op.read_reviewed_sources()
 
