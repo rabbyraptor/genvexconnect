@@ -99,6 +99,31 @@ class LauncherTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "ambiguous"):
                 launcher.checked_image()
 
+    def test_show_values_flag_contains_no_credentials(self):
+        calls = []
+        def fake_run(argv, **kwargs):
+            calls.append((argv, kwargs))
+            return Mock(returncode=0)
+        payload = b'{"device_id":"123456789012","identity":"hidden@example.com","unlock_secret":"private"}\\n'
+        with patch.object(launcher.subprocess, "run", side_effect=fake_run):
+            launcher.run_once("sha256:" + "a" * 64, payload, show_values=True)
+        cmd, kw = calls[0]
+        self.assertEqual(cmd[-1], "--show-values")
+        self.assertEqual(cmd.count("--show-values"), 1)
+        self.assertNotIn("hidden@example.com", " ".join(cmd))
+        self.assertNotIn("private", " ".join(cmd))
+        self.assertEqual(kw["input"], payload)
+        self.assertEqual(calls[1][0][1:3], ["rm", "-f"])
+
+    def test_default_display_is_opt_in(self):
+        calls = []
+        def fake_run(argv, **kwargs):
+            calls.append(argv)
+            return Mock(returncode=0)
+        with patch.object(launcher.subprocess, "run", side_effect=fake_run):
+            launcher.run_once("sha256:" + "a" * 64, b"fake\\n")
+        self.assertNotIn("--show-values", calls[0])
+
 
 if __name__ == "__main__":
     unittest.main()
