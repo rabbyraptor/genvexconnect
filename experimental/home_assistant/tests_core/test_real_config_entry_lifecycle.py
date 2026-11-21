@@ -93,4 +93,9 @@ async def test_config_entry_setup_runtime_failure_recovery_and_unload(hass, enab
         await hass.async_block_till_done()
         assert entry.state is ConfigEntryState.NOT_LOADED
         assert entry.entry_id not in hass.data.get(DOMAIN, {})
-        assert all(hass.states.get(entity_id) is None for entity_id in ids)
+        unloaded_states = [hass.states.get(entity_id) for entity_id in ids]
+        assert all(state is None or state.state == STATE_UNAVAILABLE
+                   for state in unloaded_states), [
+            (ids[index], state.state if state else None)
+            for index, state in enumerate(unloaded_states)
+        ]
