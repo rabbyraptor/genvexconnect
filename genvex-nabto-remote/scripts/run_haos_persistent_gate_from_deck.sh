@@ -13,7 +13,7 @@ fi
 TARGET="$1"
 PORT="$2"
 APP="app_local_genvex_nabto_remote"
-COMMIT="bfa1629782061415d3c1ca29b332e82d1015f56e"
+COMMIT="29cfc151faeb048dfd2401460b32e02fed2db851"
 BASE="https://raw.githubusercontent.com/rabbyraptor/genvexconnect/$COMMIT/genvex-nabto-remote/runtime"
 WORK="$(mktemp -d /tmp/genvex-persistent-gate.XXXXXX)"
 OUT="$WORK/result.txt"
