@@ -36,25 +36,25 @@ run() {
   echo "SOURCE_COMMIT: $COMMIT"
   for name in persistent_rpc45_worker.py persistent_sdk_adapter.py persistent_live_gate.py; do
     curl --fail --silent --show-error --location --max-time 45 \
-      "$BASE/$name" -o "$WORK/$name"
-    python3 -m py_compile "$WORK/$name"
+      "$BASE/$name" -o "$WORK/$name" || return $?
+    python3 -m py_compile "$WORK/$name" || return $?
   done
   echo "SOURCE_COMPILE: PASS"
-  test "$(ssh_cmd "docker inspect '$APP' --format '{{.State.Running}}'")" = "true"
+  test "$(ssh_cmd "docker inspect '$APP' --format '{{.State.Running}}'")" = "true" || return $?
   echo "APP_RUNNING: PASS"
 
-  REMOTE_DIR="$(ssh_cmd "docker exec '$APP' mktemp -d /tmp/genvex-persistent-live.XXXXXX")"
+  REMOTE_DIR="$(ssh_cmd "docker exec '$APP' mktemp -d /tmp/genvex-persistent-live.XXXXXX")" || return $?
   if [[ ! "$REMOTE_DIR" =~ ^/tmp/genvex-persistent-live\.[A-Za-z0-9]+$ ]]; then
     echo "BLOCKED: UNEXPECTED_STAGING_DIRECTORY"
     exit 2
   fi
   for name in persistent_rpc45_worker.py persistent_sdk_adapter.py persistent_live_gate.py; do
     ssh_cmd "docker exec -i '$APP' sh -c 'umask 077; cat > $REMOTE_DIR/$name'" \
-      <"$WORK/$name"
+      <"$WORK/$name" || return $?
   done
   echo "TRIAL_STAGED: PASS"
 
-  ssh_cmd "docker exec -i '$APP' python3 '$REMOTE_DIR/persistent_live_gate.py' --run-live"
+  ssh_cmd "docker exec -i '$APP' python3 '$REMOTE_DIR/persistent_live_gate.py' --run-live" || return $?
 }
 
 set +e
