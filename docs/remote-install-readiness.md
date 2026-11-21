@@ -1,5 +1,13 @@
 # Genvex Remote — installation readiness (development branch)
 
+> **Current DEV3 status (2026-11-21):** The operator's installed
+> `0.1.0-dev3` App and `genvex_remote` integration have passed live RPC45,
+> stop/start recovery, Docker network outage/recovery, Home Assistant Core
+> restart and entity-translation validation. Older checkpoints below are
+> historical. The 30-minute and 24-hour stability soaks are deferred.
+> See [DEV3 install/update](dev3-integration-install-update.md).
+
+
 ## Current state
 
 **Latest verified installation milestone (20 November 2026):** Following

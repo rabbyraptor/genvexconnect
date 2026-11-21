@@ -9,8 +9,8 @@ The original LAN integration `genvex_connect` remains a separate component.
 
 This is an experimental, manually managed integration; automated onboarding,
 SDK redistribution rights, and 30-minute/24-hour soak tests remain outstanding.
-The source installer handles **new installations only** and refuses overwriting
-an existing installation; updates require a separately reviewed procedure.
+The installer supports an explicit backup-retaining upgrade mode; it is
+not yet live-tested on HAOS. See [procedure](../../docs/dev3-integration-install-update.md).
 
 The skeleton contains:
 - `config_flow.py` (12-digit ASCII device ID, unique ID, internal IPC endpoint and bearer token in config entry);

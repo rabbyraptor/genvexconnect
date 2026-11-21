@@ -120,6 +120,24 @@ class ComponentInstallerTests(unittest.TestCase):
             installer.upgrade(self.source, self.config, apply=True)
         self.assertTrue((self.config / "custom_components/genvex_remote").is_dir())
 
+    def test_upgrade_restores_existing_component_if_publish_fails(self):
+        from unittest.mock import patch
+        installer.install(self.source, self.config, apply=True)
+        target = self.config / "custom_components/genvex_remote"
+        original = (target / "sensor.py").read_bytes()
+        rename = Path.rename
+
+        def fail_publish(path, dest):
+            if path.name.startswith(".genvex_remote-upgrade-stage-"):
+                raise OSError("simulated publish failure")
+            return rename(path, dest)
+
+        with patch.object(Path, "rename", fail_publish):
+            with self.assertRaises(OSError):
+                installer.upgrade(self.source, self.config, apply=True)
+        self.assertEqual((target / "sensor.py").read_bytes(), original)
+        self.assertFalse((self.config / "custom_components/.genvex_remote-upgrade-backup").exists())
+
     def test_rejects_invalid_manifest(self):
         (self.source / "manifest.json").write_text('{"domain":"genvex"}')
         with self.assertRaises(ValueError):

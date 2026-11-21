@@ -99,7 +99,7 @@ def upgrade(source: Path, config: Path, *, apply: bool) -> str:
         raise ValueError("Expected installed remote component")
     if backup.exists() or backup.is_symlink():
         raise ValueError("Prior upgrade backup exists; review it first")
-    if source.resolve() == target.resolve():
+    if source.resolve() == target.resolve() or target.resolve() in source.resolve().parents:
         raise ValueError("Source must be independent of target")
     manifest_path = target / "manifest.json"
     if manifest_path.is_symlink() or not manifest_path.is_file():
@@ -115,7 +115,6 @@ def upgrade(source: Path, config: Path, *, apply: bool) -> str:
         return "PASS: REMOTE_COMPONENT_UPGRADE_PREFLIGHT_ONLY"
 
     stage = Path(tempfile.mkdtemp(prefix=".genvex_remote-upgrade-stage-", dir=parent))
-    moved = False
     try:
         for name in FILES:
             destination = stage / name
@@ -124,12 +123,10 @@ def upgrade(source: Path, config: Path, *, apply: bool) -> str:
             os.chmod(destination, 0o644)
         validate_sources(stage)
         target.rename(backup)
-        moved = True
         try:
             stage.rename(target)
         except OSError:
             backup.rename(target)
-            moved = False
             raise
     finally:
         if stage.exists():
@@ -143,12 +140,13 @@ def main() -> int:
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--install", action="store_true")
     mode.add_argument("--upgrade", action="store_true")
+    mode.add_argument("--upgrade-preflight", action="store_true")
     args = parser.parse_args()
     try:
         if os.geteuid() != 0:
             raise ValueError("Root required")
-        if args.upgrade:
-            result = upgrade(args.source, args.config, apply=True)
+        if args.upgrade or args.upgrade_preflight:
+            result = upgrade(args.source, args.config, apply=args.upgrade)
         else:
             result = install(args.source, args.config, apply=args.install)
         print(result, flush=True)
