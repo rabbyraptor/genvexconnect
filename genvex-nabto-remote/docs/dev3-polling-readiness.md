@@ -280,3 +280,22 @@ This remains an **offline simulation**, not a successful field retry.
 
 No additional remote calls, HAOS App changes, credential storage or
 continuous polling were introduced by these tests.
+
+## Offline child-process safety fault injection
+
+`tests/test_dev3_process_safety.py` now runs three local, SDK-free
+subprocess fault-injection scenarios against the actual
+`SDKSnapshotAdapter`:
+
+1. A child which hangs after consuming stdin must terminate at the
+   adapter's timeout and yield only `SDK_TIMEOUT`.
+2. A child which produces more than the 32768-byte stdout cap must
+   terminate and yield a redacted `SDK_PROCESS_FAILURE`.
+3. Cancellation during an in-flight child must terminate the child,
+   propagate `CancelledError` and release the single-flight lock.
+
+These tests involve fake local processes only, not real Nabto calls.
+They demonstrate bounded cleanup behavior at the Python adapter level,
+but do not certify network reliability or native-QEMU termination on
+every hardware/platform variant. The explicit manual recovery experiment
+and all previous read-only constraints remain unchanged.
