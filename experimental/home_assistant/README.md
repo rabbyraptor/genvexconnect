@@ -1,16 +1,30 @@
-# Genvex Remote: Home Assistant integration scaffold (not installed)
+# Genvex Remote: experimental Home Assistant integration
 
-**Status:** Development-only, **do not copy to `/config/custom_components` yet**. This is an isolated native ARM64 Home Assistant integration skeleton for the user-facing part of the remote solution. The installed `custom_components/genvex_connect` LAN integration remains untouched.
+**Verified on the operator's HAOS installation (2026-11-21):** The separate
+`genvex_remote` custom integration is installed with one enabled config entry,
+one device and five live numeric sensors backed by authenticated DEV3 RPC45
+snapshots. App stop/start, private-network outage/recovery and HA Core restart
+were tested successfully. Five entity IDs were retained across Core restart.
+The original LAN integration `genvex_connect` remains a separate component.
+
+This is an experimental, manually managed integration; automated onboarding,
+SDK redistribution rights, and 30-minute/24-hour soak tests remain outstanding.
+The source installer handles **new installations only** and refuses overwriting
+an existing installation; updates require a separately reviewed procedure.
 
 The skeleton contains:
-- `config_flow.py` (12-digit ASCII device ID, unique ID, only *non-secret* data stored);
+- `config_flow.py` (12-digit ASCII device ID, unique ID, internal IPC endpoint and bearer token in config entry);
 - `coordinator.py` (60-second update interval; one atomic five-reading result);
 - `sensor.py` (five sensor entities with stable IDs, device registry grouping, measurement state classes);
 - `snapshot.py` (strict, freshness-bounded complete-schema validation);
-- `runtime_client.py` (safe-default unconfigured bridge that always raises; plus a separately injectable authenticated HTTP snapshot consumer, **not activated** by integration setup);
+- `runtime_client.py` (authenticated private-HTTP snapshot consumer used by the live setup);
 - English and Danish translated labels.
 
-**Deliberate behavior:** If installed prematurely, a Config Entry can be created, but startup cannot succeed because `UnconfiguredReader` raises `RuntimeUnavailable` on first refresh. There is **no working authenticated runtime IPC** and **no automated CA onboarding**. Therefore this is not a live or installable product release.
+Home Assistant Core 2026.11.1's own translation loader verified all five keys
+in both `translations/en.json` and `translations/da.json`. The installed
+English-language Core uses correct translated English friendly names; no
+manual entity renaming was needed. The source installer requires **both**
+translation files. Live switching to Danish has not been exercised.
 
 ## Runtime bridge acceptance criteria
 
@@ -21,7 +35,12 @@ The skeleton contains:
 5. Test coordinator/flow/entities on real HA Core or HA test framework before moving to `custom_components/genvex_remote`.
 6. SDK redistribution permission and Home Assistant packaging must be resolved.
 
-The separate [certification prototype](../genvex_remote/enrollment_core.py) and [runtime test App](../../haos-apps/genvex-nabto-runtime-test/DOCS.md) provide earlier validated building blocks. The 51/51 offline Python test suite was validated on HAOS, **before** this HA scaffold; it is not evidence that the new Home Assistant files themselves have passed HA startup tests.
+The separate [certification prototype](../genvex_remote/enrollment_core.py)
+and [runtime test App](../../haos-apps/genvex-nabto-runtime-test/DOCS.md)
+are earlier building blocks. The source integration has since passed real
+Home Assistant Core integration tests in CI and live end-to-end validation
+on the operator's HAOS host (see
+[DEV3 live recovery evidence](../../genvex-nabto-remote/docs/dev3-live-polling-recovery-regression.md)).
 
 To run parser and mocked HTTP consumer tests without Home Assistant installed:
 

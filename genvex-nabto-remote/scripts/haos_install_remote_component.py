@@ -19,7 +19,7 @@ import tempfile
 FILES = (
     "__init__.py", "config_flow.py", "const.py", "coordinator.py",
     "manifest.json", "runtime_client.py", "sensor.py", "snapshot.py",
-    "strings.json", "translations/da.json",
+    "strings.json", "translations/en.json", "translations/da.json",
 )
 DOMAIN = "genvex_remote"
 
@@ -33,6 +33,20 @@ def validate_sources(source: Path) -> None:
             raise ValueError("Missing or unsafe source")
         if path.suffix == ".py":
             compile(path.read_bytes(), str(path), "exec")
+    # HA Core does not substitute strings.json for a missing en.json.
+    # Verify both shipped language files have matching sensor keys.
+    source_strings = json.loads((source / "strings.json").read_text(encoding="utf-8"))
+    english = json.loads((source / "translations/en.json").read_text(encoding="utf-8"))
+    danish = json.loads((source / "translations/da.json").read_text(encoding="utf-8"))
+    names = source_strings["entity"]["sensor"]
+    if english != source_strings or set(names) != set(danish["entity"]["sensor"]):
+        raise ValueError("Incomplete entity translations")
+    if set(names) != {"supply_air", "outdoor_air", "exhaust_air", "extract_air", "humidity"}:
+        raise ValueError("Unexpected sensor translation keys")
+    for lang in (english, danish):
+        if not all(isinstance(lang["entity"]["sensor"][key].get("name"), str)
+                   and lang["entity"]["sensor"][key]["name"] for key in names):
+            raise ValueError("Missing sensor translation name")
     manifest = json.loads((source / "manifest.json").read_text(encoding="utf-8"))
     if manifest.get("domain") != DOMAIN or manifest.get("config_flow") is not True:
         raise ValueError("Unexpected integration manifest")

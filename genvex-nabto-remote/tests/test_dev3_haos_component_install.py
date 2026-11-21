@@ -30,8 +30,14 @@ class ComponentInstallerTests(unittest.TestCase):
                 }))
             elif name.endswith(".py"):
                 path.write_text("pass\n")
+            elif name in ("strings.json", "translations/en.json", "translations/da.json"):
+                path.write_text(json.dumps({"entity": {"sensor": {
+                    k: {"name": k} for k in (
+                        "supply_air", "outdoor_air", "exhaust_air",
+                        "extract_air", "humidity"
+                    )}}}))
             else:
-                path.write_text("{}\n")
+                path.write_text("{}\\n")
 
     def test_dry_run_does_not_create_directory(self):
         self.assertEqual(installer.install(self.source, self.config, apply=False),
@@ -62,6 +68,19 @@ class ComponentInstallerTests(unittest.TestCase):
         (self.source / "sensor.py").symlink_to(self.source / "const.py")
         with self.assertRaises(ValueError):
             installer.install(self.source, self.config, apply=True)
+
+    def test_missing_english_fallback_blocks_install(self):
+        (self.source / "translations/en.json").unlink()
+        with self.assertRaises(ValueError):
+            installer.install(self.source, self.config, apply=True)
+        self.assertFalse((self.config / "custom_components/genvex_remote").exists())
+
+    def test_inconsistent_language_keys_block_install(self):
+        (self.source / "translations/da.json").write_text(
+            json.dumps({"entity": {"sensor": {"humidity": {"name": "Luftfugtighed"}}}})
+        )
+        with self.assertRaises(ValueError):
+            installer.install(self.source, self.config, apply=False)
 
     def test_rejects_invalid_manifest(self):
         (self.source / "manifest.json").write_text('{"domain":"genvex"}')

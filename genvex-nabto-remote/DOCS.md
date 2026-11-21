@@ -1,5 +1,19 @@
 # Genvex Remote — experimental HAOS App (Nabto Micro 4)
 
+> **Current operator-verified status — 2026-11-21:** Installed live App
+> `0.1.0-dev3` is running on the private `hassio` network and supplies five
+> authenticated RPC45 snapshots to one Home Assistant Core
+> `genvex_remote` integration. Stop/start recovery, Docker network
+> disconnect/reconnect recovery and Core restart passed. The English and
+> Danish sensor translations are verified by Home Assistant's own loader;
+> English friendly names are confirmed on the installed Core. The 30-minute
+> and 24-hour stability soaks are postponed, not passed. See
+> [live validation record](docs/dev3-live-polling-recovery-regression.md).
+
+> **Historical notes below:** The older DEV2/DEV3 pre-deployment reports
+> describe their respective past checkpoints and are not the current
+> installed App state.
+
 > **Development update — 21 November 2026:** The installed
 > `0.1.0-dev2` App was started in live read-only mode on HAOS. The
 > private HTTP endpoint resolves from Home Assistant and correctly rejects
