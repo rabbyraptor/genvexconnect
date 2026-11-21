@@ -37,7 +37,7 @@ class ComponentInstallerTests(unittest.TestCase):
                         "extract_air", "humidity"
                     )}}}))
             else:
-                path.write_text("{}\\n")
+                path.write_text("{}\n")
 
     def test_dry_run_does_not_create_directory(self):
         self.assertEqual(installer.install(self.source, self.config, apply=False),
@@ -81,6 +81,44 @@ class ComponentInstallerTests(unittest.TestCase):
         )
         with self.assertRaises(ValueError):
             installer.install(self.source, self.config, apply=False)
+
+    def test_existing_install_upgrade_is_explicit_and_keeps_backup(self):
+        installer.install(self.source, self.config, apply=True)
+        target = self.config / "custom_components" / "genvex_remote"
+        old = (target / "sensor.py").read_text()
+        # Simulate the initial release without the English fallback.
+        (target / "translations/en.json").unlink()
+        (self.source / "sensor.py").write_text("pass  # new release\\n")
+        self.assertIn("PREFLIGHT_ONLY", installer.upgrade(
+            self.source, self.config, apply=False
+        ))
+        self.assertFalse((target / "translations/en.json").exists())
+        self.assertIn("UPGRADED", installer.upgrade(
+            self.source, self.config, apply=True
+        ))
+        backup = self.config / "custom_components/.genvex_remote-upgrade-backup"
+        self.assertEqual((backup / "sensor.py").read_text(), old)
+        self.assertFalse((backup / "translations/en.json").exists())
+        self.assertTrue((target / "translations/en.json").is_file())
+        self.assertEqual((target / "sensor.py").read_text(), "pass  # new release\\n")
+        with self.assertRaises(ValueError):
+            installer.upgrade(self.source, self.config, apply=True)
+
+    def test_upgrade_rejects_unrelated_existing_component(self):
+        target = self.config / "custom_components" / "genvex_remote"
+        target.mkdir(parents=True)
+        (target / "manifest.json").write_text('{"domain":"other"}')
+        for name in ("__init__.py", "sensor.py", "config_flow.py", "coordinator.py"):
+            (target / name).write_text("pass\\n")
+        with self.assertRaises(ValueError):
+            installer.upgrade(self.source, self.config, apply=True)
+
+    def test_upgrade_rejects_missing_source_translation(self):
+        installer.install(self.source, self.config, apply=True)
+        (self.source / "translations/en.json").unlink()
+        with self.assertRaises(ValueError):
+            installer.upgrade(self.source, self.config, apply=True)
+        self.assertTrue((self.config / "custom_components/genvex_remote").is_dir())
 
     def test_rejects_invalid_manifest(self):
         (self.source / "manifest.json").write_text('{"domain":"genvex"}')
