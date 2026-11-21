@@ -7,6 +7,7 @@ never installed on the operator's HAOS system.
 """
 from __future__ import annotations
 
+from functools import partial
 from pathlib import Path
 from shutil import copytree
 from types import SimpleNamespace
@@ -31,7 +32,9 @@ COMPONENT = Path(__file__).resolve().parents[1] / "custom_components" / DOMAIN
 async def test_config_entry_setup_runtime_failure_recovery_and_unload(hass, enable_custom_integrations):
     """Exercise the installed custom integration through HA config entry APIs."""
     target = Path(hass.config.path("custom_components", DOMAIN))
-    await hass.async_add_executor_job(copytree, COMPONENT, target)
+    await hass.async_add_executor_job(
+        partial(copytree, COMPONENT, target, dirs_exist_ok=True)
+    )
 
     reader = SimpleNamespace(async_fetch_snapshot=AsyncMock(side_effect=[
         make_snapshot(),
