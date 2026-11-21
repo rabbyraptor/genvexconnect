@@ -290,3 +290,56 @@ Installer fix `faffc01c` moves *future* backup directories outside
 rejection of the legacy hidden backup. The corrected upgrade writer has
 not yet been live exercised. The existing backup remains available; the
 30-minute/24-hour soak gates are still postponed.
+
+## Actual legacy Micro Nabto session reuse and post-error recovery: PASSED (operator, 2026-11-21)
+
+The installed DEV3 polling adapter starts a fresh QEMU SDK subprocess per
+poll, while its existing read-only probe opens and closes a Nabto session
+for each RPC45 request. An isolated opt-in persistent trial
+(`runtime/probe_persistent_session_trial.py`) instead uses one QEMU
+process, one `nabtoStartup`, one `nabtoOpenSession`, one RPC interface
+registration, and one final close/shutdown, with serial read-only RPC45
+requests and 60-second spacing. The active DEV3 App continued polling
+in parallel; results are **not** an isolated comparative reliability claim.
+
+Previous A+B.2: SDK startup/resources/session/interface status all 0,
+RPC45 success (1197ms), success (24ms), status 26 (13235ms). Two of
+three reads succeeded, all using the same session handle.
+
+Previous A+B.3: four RPC45 successes (1217ms, 29ms, 27ms, 28ms)
+followed by status 26 (13422ms). The last-call failure did not allow an
+in-session recovery attempt; `RECOVERED=False` was inconclusive.
+
+**A+B.4 PASS** (source revision `2626da3614f87536505acd85efb4e76cca6ddcad`):
+
+```text
+SDK_STARTUP_STATUS: 0
+SDK_RESOURCES_STATUS: 0
+SESSION_OPEN_STATUS: 0
+RPC_INTERFACE_STATUS: 0
+PROCESS_REUSE: ONE
+SESSION_OPEN_COUNT: 1
+SESSION_HANDLE_REUSED: YES
+RPC45_1: status=0 values=5 elapsed_ms=1004 session_reused=first
+RPC45_2: status=26 values=0 elapsed_ms=5046 session_reused=yes
+RPC45_3: status=0 values=5 elapsed_ms=384 session_reused=yes
+RPC45_4: status=0 values=5 elapsed_ms=27 session_reused=yes
+RPC45_SUCCESS_COUNT: 3/4
+RPC45_FAILURE_COUNT: 1
+RPC45_FAILURE_OBSERVED: True
+RPC45_POST_FAILURE_ATTEMPTS: 2
+RPC45_RECOVERED_IN_SAME_SESSION: True
+SESSION_CLOSE_STATUS: 0
+SDK_SHUTDOWN_STATUS: 0
+TRIAL_EXIT_CODE: 0
+GATE_AB4_RESULT: PASS
+```
+
+**Established:** a legacy Nabto SDK session can remain usable after an
+RPC45 return status 26, without calling `nabtoCloseSession` /
+`nabtoOpenSession` or restarting the SDK process. This does not identify
+what status 26 means, does not establish an advertised session TTL, and
+does not prove long-term reliability or eliminate gateway concurrency as
+a cause. Future work: compare failure rate under isolated, mutually
+exclusive persistent versus one-shot polling; exercise bounded recovery
+and resource cleanup in an offline test harness before any live migration.
