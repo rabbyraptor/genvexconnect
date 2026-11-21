@@ -80,7 +80,7 @@ class NetworkPreflightTests(unittest.TestCase):
     def test_dns_distinguishes_expected_absence_from_success(self):
         for marker in ("INFO: APP_DNS_NOT_RESOLVED", "PASS: APP_DNS_RESOLVES"):
             with self.subTest(marker=marker), patch.object(
-                probe, "command", return_value=(0, marker + "\\n")
+                probe, "command", return_value=(0, marker + "\n")
             ):
                 _, output = self.output(probe.check_dns)
                 self.assertEqual(output.strip(), marker)
