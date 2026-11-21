@@ -26,8 +26,8 @@ mocks the SDK adapter.
    via stdin. Do **not** pass credentials in command-line arguments, environment,
    Supervisor options, shell history, logs or repository files.
 5. Do not enable continuous polling as a substitute for a one-shot test.
-6. Verify the output against known Genvex Connect readings. This first version
-   reports validation status only; it does not expose values.
+6. First confirm the status-only probe still succeeds. Then run once with
+   `--show-values` to compare the five validated values to Genvex Connect.
 
 ## Important limitations
 
@@ -44,7 +44,7 @@ The reviewed `scripts/haos_live_once_operator.py` can launch **one disposable**
 Docker container using the already installed DEV2 image, without starting the
 Supervisor-managed DEV2 App. It first checks that DEV2 is stopped, manual boot,
 diagnostic flag remains true and all Supervisor credential options are empty.
-It validates the existing App-private profile and the two root-owned staged
+It validates the existing App-private profile and the three root-owned staged
 scripts. If these prerequisites fail, it makes **no** Nabto connection.
 
 The launcher prompts for device ID, identity and key unlock secret via an SSH
@@ -62,7 +62,7 @@ The disposable container runs `live_once.py` as its entrypoint, with:
 - Maximum 110 seconds wall-clock, with a force-remove cleanup attempt even
   on timeout.
 
-The operator must use a reviewed/pinned copy of the two scripts staged in
+The operator must use a reviewed/pinned copy of all three scripts staged in
 a root-owned 0700 directory, with each file mode 0600. The launcher does not
 send credentials to Supervisor options, pass them as command-line arguments or
 persist them to disk. It never runs the App's normal polling startup.
@@ -89,3 +89,45 @@ reviewed commit: `live_once.py`, `sdk_snapshot_adapter.py`, and
 `scripts/haos_live_once_operator.py`. The two runtime scripts are mounted
 read-only over their installed DEV2 image equivalents. The installation,
 Supervisor options and original profile remain unchanged.
+
+## Opt-in five-value comparison
+
+The operator launcher now accepts a single, non-secret display switch:
+`python3 /tmp/genvex-dev3-once/haos_live_once_operator.py --show-values`.
+No display switch is needed for the established status-only smoke test.
+
+This does not create a daemon, enable polling, or change the App config.
+The switch is forwarded only as a literal Docker argv option and the three
+credentials are still collected via hidden interactive stdin. The output is
+generated **only after** the complete snapshot passes device ID, freshness,
+five-key and finite numeric validation. It prints a fixed block:
+
+```text
+PASS: one read-only RPC45 snapshot validated
+READINGS_BEGIN
+VALUE supply_air: <number> °C
+VALUE outdoor_air: <number> °C
+VALUE exhaust_air: <number> °C
+VALUE extract_air: <number> °C
+VALUE humidity: <number> %
+READINGS_END
+```
+
+No device identifier, Nabto endpoint, identity, passphrase, certificate, raw
+response or diagnostic text is printed. Values are rounded to one decimal
+for temperatures and a whole percent for humidity. The display is for
+manual comparison, **not** a sensor-plausibility or calibration verdict.
+
+To validate, make one read and record its time, then compare against the
+Genvex Connect app within a short interval. Check these mappings:
+- `supply_air`: supply / indblæsning (address 20)
+- `outdoor_air`: outdoor / udeluft (address 21)
+- `exhaust_air`: exhaust / afkast (address 22)
+- `extract_air`: extract / udsugning (address 23)
+- `humidity`: relative humidity / luftfugtighed (address 26)
+
+Only the five numerical values and app comparison readings are needed for
+review; no identity or account information should be sent. Differences may
+reflect timing or vendor display rounding and require investigation before
+enabling persistent polling. The first success proves the transport and
+schema, **not** the exact agreement of displayed values.
