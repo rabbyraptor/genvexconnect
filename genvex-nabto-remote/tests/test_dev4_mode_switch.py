@@ -78,6 +78,14 @@ class FakePersistentAdapter(FakeLegacyAdapter):
         self.__class__.close_count += 1
 
 
+class FakeState:
+    def __init__(self, adapter):
+        self.adapter = adapter
+
+    def current(self):
+        return None
+
+
 class FakePoller:
     instance = None
     def __init__(self, state, *, interval_seconds):
@@ -126,7 +134,7 @@ class RuntimeTests(unittest.IsolatedAsyncioTestCase):
             patch.object(polling_runtime, "read_token", return_value="TEST-IPC"),
             patch.object(polling_runtime, "SDKSnapshotAdapter", FakeLegacyAdapter),
             patch.object(persistent_sdk_adapter, "PersistentSDKSnapshotAdapter", FakePersistentAdapter),
-            patch.object(polling_runtime, "SnapshotState", lambda adapter: adapter),
+            patch.object(polling_runtime, "SnapshotState", FakeState),
             patch.object(polling_runtime, "PollingService", FakePoller),
             patch.object(polling_runtime, "SnapshotHTTPServer", FakeServer),
         ):
