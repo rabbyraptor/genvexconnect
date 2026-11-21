@@ -40,7 +40,10 @@ class UpgradeBlocked(Exception):
 
 
 def run(command: list[str], *, timeout: int = 120, quiet: bool = True) -> str:
-    p = subprocess.run(command, text=True, capture_output=True, timeout=timeout)
+    p = subprocess.run(
+        command, text=True, capture_output=True,
+        stdin=subprocess.DEVNULL, timeout=timeout,
+    )
     if p.returncode:
         raise UpgradeBlocked("EXTERNAL_COMMAND_FAILED")
     return p.stdout
@@ -60,7 +63,7 @@ def info() -> dict:
 def is_app_running() -> bool:
     result = subprocess.run(
         ["docker", "inspect", CONTAINER, "--format", "{{json .}}"],
-        capture_output=True, text=True, timeout=40,
+        capture_output=True, text=True, stdin=subprocess.DEVNULL, timeout=40,
     )
     if result.returncode:
         return False
@@ -118,7 +121,7 @@ def verify_archive(archive_file: Path, expected_sha: str) -> tuple[str, ...]:
                 b'version: "0.1.0-dev4"',
                 b"boot: manual_only",
                 b"host_network: false",
-                b"persistent_session: false",
+                b"  persistent_session: false",
                 b"  persistent_session: bool",
             )
             if not all(line in lines for line in required):
