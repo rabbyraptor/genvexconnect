@@ -34,7 +34,7 @@ class SnapshotStateTests(unittest.IsolatedAsyncioTestCase):
         one["values"]["humidity"] = 1234
         self.assertEqual(state.current()["values"]["humidity"], 65.0)
 
-    async def test_no_old_data_visible_during_refresh(self):
+    async def test_fresh_old_data_visible_during_refresh(self):
         start = asyncio.Event()
         finish = asyncio.Event()
         calls = 0
@@ -49,7 +49,7 @@ class SnapshotStateTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(await state.refresh())
         task = asyncio.create_task(state.refresh())
         await start.wait()
-        self.assertIsNone(state.current())
+        self.assertEqual(state.current()["values"]["supply_air"], 6.7)
         finish.set()
         self.assertTrue(await task)
         self.assertIsNotNone(state.current())
