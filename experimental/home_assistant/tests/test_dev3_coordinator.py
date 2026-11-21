@@ -41,10 +41,11 @@ class FakeDataUpdateCoordinator:
     def __class_getitem__(cls, _):
         return cls
 
-    def __init__(self, hass, *, logger, name, update_interval):
+    def __init__(self, hass, *, logger, name, update_interval, config_entry=None):
         self.hass = hass
         self.name = name
         self.update_interval = update_interval
+        self.config_entry = config_entry
 
 
 class FakeUpdateFailed(Exception):
