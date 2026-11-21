@@ -110,6 +110,7 @@ class CoreIPCTests(unittest.TestCase):
              patch.object(op, "select_core_network", return_value="hassio"), \
              patch.object(op, "run", side_effect=runner), \
              patch.object(op.time, "sleep"), \
+             patch.object(sys, "argv", ["haos_core_ipc_network_operator.py"]), \
              patch("sys.stdout", new_callable=io.StringIO) as output:
             self.assertEqual(op.main(), 1)
         self.assertEqual(sum(x[:3] == ["docker", "exec", "-i"] for x in commands), 5)
