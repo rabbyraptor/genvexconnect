@@ -201,3 +201,34 @@ Supervisor bridge**. The results will not be considered verified on
 HAOS until the operator runs this test and supplies its sanitized
 output. The existing real-Core and two-Docker-container CI tests
 remain complementary, not substitutes for this device-specific check.
+
+## HAOS Core private-network operator: confirmed PASS (2026-11-21)
+
+The operator provided actual HAOS inspection results:
+
+- `CORE_NETWORK_MODE: host`, `CORE_NETWORKS: ['host']`
+- `CORE_RUNNING: True`
+- `HASSIO_NETWORK: bridge local`
+
+The first private IPC test assumed Core was a bridge-network
+participant, and failed during preflight. The corrected operator
+discovers the temporary runtime container's private bridge IPv4 address
+and executes the client from the running Core container, which shares
+the host's network namespace. The actual operator output was:
+
+```text
+TEST: private Supervisor network; fake-only IPC; no Nabto requests
+PASS: HA Core container reached authenticated private IPC; 401/200/404
+```
+
+This is now an **on-device verified** network/authentication boundary,
+not just a CI simulation. The real Nabto SDK -> snapshot -> HTTP and
+real Core -> private HTTP network paths have both passed individually.
+The combined real SDK -> private App HTTP -> real HA Core sensor entity
+lifecycle is **not yet** proven as one live end-to-end transaction.
+
+All relevant DEV3 read-only, HAOS candidate, private Docker IPC,
+formatting and real HA Core entity CI checks passed at
+`45f5b0a5de5c6a5af9ee7ae051953b28d5c69b19`.
+The generic repository HACS validation workflow remains unrelated
+to this DEV3 runtime acceptance gate.
