@@ -126,6 +126,47 @@ One transient additional process is compatible with the polling SDK/QEMU
 child, but its executable identity was not determined. This is
 short-duration process sampling, not proof of leak-free operation.
 
+## Actual HAOS private network outage/recovery Gate G: PASSED (operator, 2026-11-21)
+
+Before fault injection, the operator verified the installed live App container
+was running, attached only to the Docker `hassio` bridge, without published
+host ports, with restart policy `no`. The operator then executed a
+time-bounded 180-second `docker network disconnect hassio` of the **running
+DEV3 container**, with an independently launched reconnect watchdog.
+Afterward the test explicitly reattached `hassio`, observed the
+Home Assistant Recorder state transitions and queried Supervisor App state.
+
+Exact sanitized operator markers:
+
+```text
+BASELINE: PASS
+RECOVERY_WATCHDOG: ARMED
+NETWORK_DISCONNECT: PASS
+HA_UNAVAILABLE_DURING_OUTAGE: PASS
+NETWORK_RECONNECT: REQUESTED
+NETWORK_RECONNECT: PASS
+RECOVERY_OBSERVATION: STARTED
+APP_REMAINED_STARTED: PASS
+HA_ALL_RECOVERED: PASS
+GATE_G_RESULT: PASS
+GATE_G_EXIT_CODE: 0
+```
+
+All five remote entities transitioned to recorded `unavailable` during the
+outage and later back to numeric readings after restoring the private
+network. Supervisor reported the App still `started`. This establishes
+**live recovery across a container-network outage** without a
+test-script-initiated App stop/start.
+
+Limitations: the script checked Supervisor's `started` state, not a
+continuous container PID, container ID, or start timestamp, so it does not
+strictly rule out an automatic container restart. The exercise interrupted
+**all** connectivity, including private Home Assistant IPC; it did not
+isolate a Nabto-only UDP/RPC failure, and did not count SDK-specific errors.
+A separate fault-injection trial must distinguish SDK session recovery from
+the IPC reconnection behavior. No direct evidence about use of
+`api.lscontrol.dk:4160` was collected in this test.
+
 ## Correct interpretation of the operator's Recorder evidence
 
 The operator's real Home Assistant Recorder contained five numeric
