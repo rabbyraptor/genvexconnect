@@ -194,6 +194,7 @@ class OperatorTests(unittest.TestCase):
              patch.object(op, "prompt_settings",
                           return_value=json.dumps(SETTINGS).encode() + b"\n"), \
              patch.object(op, "private_address", return_value="172.30.33.77"), \
+             patch.object(op, "wait_for_runtime_ready"), \
              patch.object(op, "run", side_effect=fake_run), \
              patch.object(op.subprocess, "Popen", return_value=child) as launch, \
              patch.object(op.time, "sleep"), \
@@ -206,7 +207,7 @@ class OperatorTests(unittest.TestCase):
 
     def test_actual_pipe_waits_for_fixed_ready_marker(self):
         code = ("import time; print('IPC_READY', flush=True);"
-                " time.sleep(0.2)")
+                " time.sleep(2.0)")
         proc = subprocess.Popen(
             [sys.executable, "-u", "-c", code],
             stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
@@ -222,7 +223,7 @@ class OperatorTests(unittest.TestCase):
 
     def test_actual_pipe_rejects_runtime_error_without_raw_output(self):
         code = ("import time; print('BLOCKED: SDK_SESSION_FAILED', flush=True);"
-                " time.sleep(0.2)")
+                " time.sleep(2.0)")
         proc = subprocess.Popen(
             [sys.executable, "-u", "-c", code],
             stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
