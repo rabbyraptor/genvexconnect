@@ -75,9 +75,10 @@ async def read_once(settings: dict, *, show_values: bool = False) -> None:
 
 def main() -> int:
     try:
-        if sys.argv[1:] not in ([], ["--show-values"]):
+        if sys.argv[1:] not in ([], ["--show-values"], ["--diagnose"]):
             raise ValueError("Unsupported display option")
         show_values = sys.argv[1:] == ["--show-values"]
+        diagnose = sys.argv[1:] == ["--diagnose"]
         settings = read_settings()
     except Exception:
         print("BLOCKED: INPUT_INVALID", flush=True)
@@ -96,6 +97,13 @@ def main() -> int:
     except SDKSnapshotError as exc:
         # Strictly allowlisted code, not an exception message from SDK/QEMU.
         print("BLOCKED: " + exc.code, flush=True)
+        if diagnose:
+            # Never print raw stdout, exception text, URLs or credentials.
+            # These are strictly bounded numeric markers from the SDK probe.
+            status = exc.rpc_status if exc.rpc_status is not None else "unknown"
+            elapsed = exc.elapsed_ms if exc.elapsed_ms is not None else "unknown"
+            print(f"DIAG RPC45_STATUS: {status}", flush=True)
+            print(f"DIAG RPC45_ELAPSED_MS: {elapsed}", flush=True)
         return 1
     except Exception:
         print("BLOCKED: SNAPSHOT_OR_ADAPTER_INVALID", flush=True)
