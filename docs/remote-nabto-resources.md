@@ -87,8 +87,8 @@ The newer Smart Connect Center and Nabto Edge resources are **not** evidence tha
 | --- | --- |
 | [Working facts](remote-nabto-verified-facts.md) | Canonical verified evidence, now including HAOS remote RPC 45 |
 | [Research journal](archive/remote-nabto-investigation.md) | Historical investigation with more links and discarded hypotheses |
-| [RPC 45 reconstruction](reconstructed-readonly-query45-2026-11-19.md) | Source-grounded candidate interface and safe read-only investigation |
-| [Five-sensor validation](remote-phase1-sensor-validation-2026-11-19.md) | Remote singles and one-shot batch evidence |
+| [RPC 45 reconstruction](archive/reconstructed-readonly-query45-2026-11-19.md) | Source-grounded candidate interface and safe read-only investigation |
+| [Five-sensor validation](archive/remote-phase1-sensor-validation-2026-11-19.md) | Remote singles and one-shot batch evidence |
 | [HAOS test runtime](../haos-apps/genvex-nabto-runtime-test/DOCS.md) | Verified container, QEMU, x86_64 Python and SDK behavior |
 | [Host-only HAOS batch runner](../scripts/run_haos_local_remote_stability.sh) | Two successful authenticated read-only remote sessions, zero SSH prompts |
 | [Five-sensor model and tests](../experimental/genvex_remote/sensor_model.py) | Staged for second integration; not installed or wired to a worker |

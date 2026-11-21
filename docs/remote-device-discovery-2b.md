@@ -39,7 +39,7 @@ The upstream [GenvexNabto model adapter](https://github.com/superrob/genvexnabto
 
 ### C. RPC45 can batch *known* addresses
 
-Public [GenvexNabto read-list source](https://github.com/superrob/genvexnabto/blob/main/src/genvexnabto/protocol/cmd_datapoint_readlist.py) encodes an explicit list of `obj:uint8` and `address:uint32` values, with the request count and trailing byte. The library builds the list from preselected model definitions; it does not solicit a directory of valid addresses. The project reconstructed a compatible read-only RPC45 schema and verified one successful five-value remote batch on x86_64 and ARM64/QEMU. See [phase-one validation](remote-phase1-sensor-validation-2026-11-19.md).
+Public [GenvexNabto read-list source](https://github.com/superrob/genvexnabto/blob/main/src/genvexnabto/protocol/cmd_datapoint_readlist.py) encodes an explicit list of `obj:uint8` and `address:uint32` values, with the request count and trailing byte. The library builds the list from preselected model definitions; it does not solicit a directory of valid addresses. The project reconstructed a compatible read-only RPC45 schema and verified one successful five-value remote batch on x86_64 and ARM64/QEMU. See [phase-one validation](archive/remote-phase1-sensor-validation-2026-11-19.md).
 
 The upstream [Optima270 model mapping](https://github.com/superrob/genvexnabto/blob/main/src/genvexnabto/models/optima270.py) declares *additional* datapoints, but their remote RPC45 availability, batching limits, data semantics and controller firmware applicability are **not yet independently verified** by this project. **Never treat a model entry as authorization to scan all addresses or auto-enable entities.**
 
@@ -84,7 +84,7 @@ The current **strict five-reading snapshot v1** remains unchanged. Before adding
 
 ### What the code can already tell us
 
-**Upstream Optima 270 declares 17 datapoints** in its `_datapoints` table, and all 17 appear in `getDefaultDatapointRequest()`. **Only the five listed below are verified by this project's authenticated remote RPC45 runs.** The other **12** are legitimate *source-defined read-only candidates*, **not remotely validated**. Sources: [upstream Optima 270 model](https://github.com/superrob/genvexnabto/blob/main/src/genvexnabto/models/optima270.py); [project Phase 1 remote evidence](remote-phase1-sensor-validation-2026-11-19.md).
+**Upstream Optima 270 declares 17 datapoints** in its `_datapoints` table, and all 17 appear in `getDefaultDatapointRequest()`. **Only the five listed below are verified by this project's authenticated remote RPC45 runs.** The other **12** are legitimate *source-defined read-only candidates*, **not remotely validated**. Sources: [upstream Optima 270 model](https://github.com/superrob/genvexnabto/blob/main/src/genvexnabto/models/optima270.py); [project Phase 1 remote evidence](archive/remote-phase1-sensor-validation-2026-11-19.md).
 
 | Upstream key | obj | Address | Source scaling | Remote RPC45 |
 | --- | ---: | ---: | --- | --- |

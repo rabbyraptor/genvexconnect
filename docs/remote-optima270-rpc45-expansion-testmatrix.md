@@ -1,3 +1,5 @@
+> **Current status (21 November 2026):** This document retains design and test history. For DEV3 verified worker results and current deployment gates use [STATUS.md](STATUS.md).
+
 # 2B – Optima 270: plan for sikre RPC45-udvidelser
 
 **Dato:** 20. november 2026  

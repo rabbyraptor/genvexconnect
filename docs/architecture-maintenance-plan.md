@@ -3,13 +3,13 @@
 **Created:** 2026-11-20  
 **Branch:** `remote-nabto-connection`  
 **Scope:** Experimental Remote App, experimental HA integration, source-level research and packaging only.  
-**Status:** Approved roadmap; individual tasks may be researched and tested offline without activating new gateway requests or migrating real credentials.
+**Status:** Living roadmap. Documentation cleanup (5A) is underway as of 2026-11-21; for verified DEV3 progress and current gates see [STATUS.md](STATUS.md).
 
 ## Non-negotiable isolation rules
 
 - **2C — Existing LAN integration is protected.** No edits to `custom_components/genvex_connect/`, its configuration, dependent `genvexnabto==1.5.4` library, established entities, or a running LAN installation. The sole exception is a strictly necessary change, explicitly assessed and separately approved *before* implementation. Read-only source inspection is allowed.
 - Preserve the running `local_genvex_nabto_runtime_test` v0.5.0 App and its pre-existing encrypted Nabto profile. Do not start, stop, reinstall, rebuild, or alter it as part of this roadmap.
-- The experimental `local_genvex_nabto_remote` v0.1.0-dev1 remains stopped and manual-boot after the successful F2.5 diagnostic mount attestation. No live polling, new CA enrollment, real credential import or arbitrary Nabto RPC calls without separate operator approval.
+- The experimental App was verified updated to `0.1.0-dev2` on 2026-11-20. A bounded DEV3 persistent-adapter test on 2026-11-21 passed three 5-value RPC45 calls with worker reuse. These do not establish unattended polling or current Supervisor service state.
 - Prefer offline source inspection, synthetic fixtures, local unit tests and explicitly read-only code changes; never commit keys, tokens, identifying account/device values, private app captures or proprietary binary artifacts.
 - Each implementation step must have focused tests, clear source-of-truth ownership, documented compatibility implications and an independently reversible deployment plan. Existing entity unique IDs and the current validated five-reading RPC contract remain stable until a versioned migration is reviewed.
 
@@ -26,7 +26,7 @@
 | **3B** | IPC authentication and token lifecycle | High / research now | Secure per-install provision, delivery, storage and rotation, endpoint scope and trust boundary; no user token copy/paste in final UX | Planned |
 | **3C** | LAN/Remote entity identity and duplicates | Later | Stable device/entity IDs, coexistence and future migration without breaking HA history/automations | Deferred |
 | **4** | Unified transport/domain architecture | Later target | Adapter boundary for LAN and remote, shared capability contract only when justified by actual multi-model evidence | Deferred |
-| **5A** | Documentation hygiene | High / now | One architecture/status index; distinguish tested, installed, experimental, historical; identify and retire outdated instructions | Planned |
+| **5A** | Documentation hygiene | High / now | One architecture/status index; distinguish tested, installed, experimental, historical; archive dated scripts/docs and update references | **In progress: 2026-11-21 cleanup branch** |
 | **5B** | Build/licensing/distribution | High / before production | Pin/check SDK downloads and image dependencies; resolve proprietary SDK redistribution, performance and QEMU deployment | Before release |
 | **5C** | Regression, CI and lifecycle tests | High / continuous | Offline contract/model tests, HA Core import/flow/entities test, recovery/restart/soak/resource tests | Continuous |
 
@@ -60,7 +60,7 @@ Preserve space for physical device identity across transports, model/capability-
 - The isolated HAOS x86_64/QEMU legacy Nabto SDK has successfully performed **read-only RPC 45** with exactly five known Optima 270 addresses (20, 21, 22, 23, 26). A batch of known addresses is **not** an enumeration of capabilities.
 - Separate authenticated App-to-container HTTP tests, offline runtime/source tests and F2.5's private `/data` mount verification have passed as recorded in the existing development documents.
 - The new `genvex_remote` HA integration is still an experimental scaffold, not an installed production integration.
-- See [verified facts](remote-nabto-verified-facts.md), [phase-one sensor validation](remote-phase1-sensor-validation-2026-11-19.md), [F2 private profile design](remote-phase-f2-private-profile-design.md) and [HA entity plan](remote-ha-entity-plan.md). Older documents may contain superseded milestone descriptions.
+- See [verified facts](remote-nabto-verified-facts.md), [phase-one sensor validation](archive/remote-phase1-sensor-validation-2026-11-19.md), [F2 private profile design](archive/remote-phase-f2-private-profile-design.md) and [HA entity plan](remote-ha-entity-plan.md). Older documents may contain superseded milestone descriptions.
 
 ## Task completion ledger
 
@@ -75,3 +75,7 @@ Update this section as tasks finish; a committed plan or passing synthetic tests
 ### CI visibility note (2026-11-20; 5C backlog)
 
 The 2B selector's [offline suite](https://github.com/rabbyraptor/genvexconnect/actions/runs/44795217541), [App offline workflow](https://github.com/rabbyraptor/genvexconnect/actions/runs/44795217526), formatting, and Hassfest passed for the relevant source commit. **The HACS validation workflow remains red**, independently of those source test results: [HACS run](https://github.com/rabbyraptor/genvexconnect/actions/runs/44795217481) reports repository **Issues disabled** and **no valid GitHub topics**. This is repository metadata validation, not evidence that the offline 2B model tests failed. The issue appears across earlier commits as well. Keep it on 5C/5B's repository-release readiness backlog; **do not alter GitHub repository settings without separate review**.
+
+## 2026-11-21 update — DEV3 and documentation hygiene
+
+The user-verified DEV3 live adapter validation returned 5 values on all three RPC45 calls, with observed timings 10,504 / 40 / 34 ms and process reuse on calls 2 and 3. Worker close, offline preflight and DEV3 restart checks passed. See [current status](STATUS.md). The documentation/script archival pass is tracked by [docs index](README.md) and [scripts index](../scripts/README.md).

@@ -1,3 +1,5 @@
+> **Current status (21 November 2026):** This document retains design and test history. For DEV3 verified worker results and current deployment gates use [STATUS.md](STATUS.md).
+
 # Remote Genvex → Home Assistant: first five read-only sensors
 
 **Status: isolated development-only Home Assistant integration scaffold and read-only polling worker committed. NOT deployed; authenticated App-to-Core transport and automatic CA enrollment remain incomplete.**
@@ -75,7 +77,7 @@ The user's HAOS terminal output confirms [`run_haos_live_rpc_to_ipc_test_v2.sh`]
 
 [`sdk_snapshot_adapter.py`](../experimental/genvex_remote/sdk_snapshot_adapter.py) now provides a native Python async bridge to the **already working isolated QEMU x86_64 snapshot probe**. The adapter uses a bounded subprocess, routes the existing unlock secret only over stdin (never as a command-line argument/environment variable), captures output without logging it, accepts exactly one validated structured snapshot marker, and kills/waits for the subprocess on timeout/cancellation. Its `poll_once()` method is directly compatible with `SnapshotState` and the serial 60-second `PollingService`. This is **source-only**: the installed App still has no persistent worker or secured token-provisioned IPC.
 
-[`test_sdk_snapshot_adapter.py`](../experimental/genvex_remote/test_sdk_snapshot_adapter.py) adds mock-subprocess tests for success, SDK failure redaction, timeout, cancellation, malformed output and polling integration. The pinned [native HAOS test runner](../scripts/run_haos_sdk_adapter_offline_v1.sh) exercises the full backend suite plus compilation **without touching the real Nabto profile or gateway**. **Test result pending.** Remaining production work includes daemon supervision/restart, credential lifecycle/CA pinning, bounded stream buffering, secure internal API and real HA Core config-flow test.
+[`test_sdk_snapshot_adapter.py`](../experimental/genvex_remote/test_sdk_snapshot_adapter.py) adds mock-subprocess tests for success, SDK failure redaction, timeout, cancellation, malformed output and polling integration. The pinned [native HAOS test runner](../scripts/archive/run_haos_sdk_adapter_offline_v1.sh) exercises the full backend suite plus compilation **without touching the real Nabto profile or gateway**. **Test result pending.** Remaining production work includes daemon supervision/restart, credential lifecycle/CA pinning, bounded stream buffering, secure internal API and real HA Core config-flow test.
 
 ## Engineering gates before installation
 
@@ -95,7 +97,7 @@ Source-only components added on `remote-nabto-connection`:
 - [`polling_http_server.py`](../experimental/genvex_remote/polling_http_server.py): token-authenticated GET `/v1/snapshot`, no device writes, no HTTP diagnostics, bounded queue, intended only for private App network.
 - [`test_polling_runtime.py`](../experimental/genvex_remote/test_polling_runtime.py): local HTTP auth, snapshot invalidation and credential-file permission tests. **Not yet executed on HAOS.**
 - [`experimental/home_assistant/custom_components/genvex_remote`](../experimental/home_assistant/custom_components/genvex_remote): HA coordinator now uses `AuthenticatedSnapshotReader`; config flow requires device ID, a private App endpoint on port 18275, and an IPC bearer token. HA never loads the Nabto SDK or the Nabto unlock passphrase. Redirects are disabled and response bodies are read with a 4097-byte cap. **No end-to-end HA Core test yet.**
-- [`run_haos_remote_install_preflight_v1.sh`](../scripts/run_haos_remote_install_preflight_v1.sh): pinned source-only offline acceptance test for both packages.
+- [`run_haos_remote_install_preflight_v1.sh`](../scripts/archive/run_haos_remote_install_preflight_v1.sh): pinned source-only offline acceptance test for both packages.
 
 **Critical installation blockers:** package a separately installable HAOS App using a lawful Nabto 4 SDK distribution path (legacy SDK licensing is unresolved), provision an authenticated private network and shared IPC token safely, supply user-facing encrypted profile/secret enrollment without exposing credentials, test the long-running service against real Nabto with 60-second polls and failure diagnostics, validate HA Core config flow/entity availability and HAOS reboot recovery. Do not copy the experimental scaffold into production or replace the working LAN integration yet. HTTP bearer token must never traverse a public/untrusted network; a private App network or stronger transport protection is mandatory.
 
