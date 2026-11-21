@@ -20,6 +20,8 @@ on:
       - 'genvex-nabto-remote/tests/test_dev3_haos_core_ipc_operator.py'
       - 'genvex-nabto-remote/scripts/haos_core_live_once_operator.py'
       - 'genvex-nabto-remote/tests/test_dev3_haos_core_live_once_operator.py'
+      - 'genvex-nabto-remote/scripts/haos_core_live_entity_once_operator.py'
+      - 'genvex-nabto-remote/tests/test_dev3_haos_core_live_once_entities.py'
       - 'genvex-nabto-remote/tests/test_dev3_ipc_core_live_once.py'
       - 'experimental/home_assistant/custom_components/genvex_remote/**'
       - 'experimental/home_assistant/tests/test_dev3_coordinator.py'
@@ -45,7 +47,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Syntax check
-        run: python -m compileall -q runtime scripts/haos_live_once_operator.py tests/test_live_once.py tests/test_haos_live_once_operator.py tests/test_dev3_polling_state.py tests/test_dev3_recovery_policy.py tests/test_dev3_recovery_subprocess.py tests/test_dev3_process_safety.py tests/test_dev3_real_loopback_ipc.py tests/test_dev3_ipc_once.py scripts/haos_core_ipc_network_operator.py tests/test_dev3_haos_core_ipc_operator.py scripts/haos_core_live_once_operator.py tests/test_dev3_haos_core_live_once_operator.py tests/test_dev3_ipc_core_live_once.py ../experimental/home_assistant/custom_components/genvex_remote ../experimental/home_assistant/tests/test_dev3_coordinator.py ../experimental/home_assistant/tests/test_dev3_sensor_availability.py
+        run: python -m compileall -q runtime scripts/haos_live_once_operator.py tests/test_live_once.py tests/test_haos_live_once_operator.py tests/test_dev3_polling_state.py tests/test_dev3_recovery_policy.py tests/test_dev3_recovery_subprocess.py tests/test_dev3_process_safety.py tests/test_dev3_real_loopback_ipc.py tests/test_dev3_ipc_once.py scripts/haos_core_ipc_network_operator.py tests/test_dev3_haos_core_ipc_operator.py scripts/haos_core_live_once_operator.py tests/test_dev3_haos_core_live_once_operator.py scripts/haos_core_live_entity_once_operator.py tests/test_dev3_haos_core_live_once_entities.py tests/test_dev3_ipc_core_live_once.py ../experimental/home_assistant/custom_components/genvex_remote ../experimental/home_assistant/tests/test_dev3_coordinator.py ../experimental/home_assistant/tests/test_dev3_sensor_availability.py
       - name: Test single-shot contract and operator launcher (no network credentials)
         run: python -m unittest discover -s tests -p 'test_*live_once*.py' -v
       - name: Test atomic snapshot state and bounded polling (no SDK)
