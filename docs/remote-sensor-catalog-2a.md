@@ -17,7 +17,7 @@ The new [capability_catalog.py](../experimental/genvex_remote/capability_catalog
 | extract_air | 45 | 0 | 23 | (raw - 300) / 10 | sensor, temperature °C |
 | humidity | 45 | 0 | 26 | raw | sensor, humidity % |
 
-These are the *only* remotely verified readings declared in the profile. The address/scale definitions come from the [upstream Optima 270 model](https://github.com/superrob/genvexnabto/blob/main/src/genvexnabto/models/optima270.py); their authenticated remote read status comes from [our Phase 1 evidence](remote-phase1-sensor-validation-2026-11-19.md). The profile's capability enumeration flag remains **unverified**.
+These are the *only* remotely verified readings declared in the profile. The address/scale definitions come from the [upstream Optima 270 model](https://github.com/superrob/genvexnabto/blob/main/src/genvexnabto/models/optima270.py); their authenticated remote read status comes from [our Phase 1 evidence](archive/remote-phase1-sensor-validation-2026-11-19.md). The profile's capability enumeration flag remains **unverified**.
 
 ## Validated behavior
 

@@ -1,3 +1,5 @@
+> **Archived evidence (21 November 2026).** This is a dated investigation or completed milestone, not the current operating instructions. See [current status](../STATUS.md).
+
 # Phase F2 — private Nabto Micro profile provisioning design
 
 Status: **read-only source preflight implemented with offline unit tests; 13 tests passed on Steam Deck; not yet executed on HAOS.** No importer, credential migration or live enrollment authorized.

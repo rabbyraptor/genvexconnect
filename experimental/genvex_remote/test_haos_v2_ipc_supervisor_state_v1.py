@@ -6,7 +6,7 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = ROOT / "scripts/audit_haos_v2_ipc_supervisor_state_v1.sh"
+SCRIPT = ROOT / "scripts/archive/audit_haos_v2_ipc_supervisor_state_v1.sh"
 
 
 class SupervisorStateAuditTests(unittest.TestCase):

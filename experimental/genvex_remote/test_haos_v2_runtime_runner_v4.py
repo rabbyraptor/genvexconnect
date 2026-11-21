@@ -4,7 +4,7 @@ import subprocess
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
-RUNNER = ROOT / "scripts/run_haos_v2_runtime_offline_v4.sh"
+RUNNER = ROOT / "scripts/archive/run_haos_v2_runtime_offline_v4.sh"
 PINNED = "a0e32de6673eb08d792262ff81a0a00e3a03a097"
 
 

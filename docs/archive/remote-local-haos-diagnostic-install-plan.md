@@ -1,3 +1,5 @@
+> **Archived evidence (21 November 2026).** This is a dated investigation or completed milestone, not the current operating instructions. See [current status](../STATUS.md).
+
 # HAOS local App: controlled diagnostic-only installation plan
 
 Status: **Phase C Supervisor ARM64 build/install completed; App stopped**.

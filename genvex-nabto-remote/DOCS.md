@@ -1,5 +1,7 @@
 # Genvex Remote — experimental HAOS App (Nabto Micro 4)
 
+**21 November DEV3 evidence:** A bounded live SDK adapter test returned three five-value RPC45 batches with persistent worker reuse (10,504 / 40 / 34 ms); shutdown and restart checks passed. This does not mean a deployed continuous HA service. See [current status](../docs/STATUS.md).
+
 **Status (operator-verified 21 November 2026):** The separately managed App
 `local_genvex_nabto_remote` was updated to `0.1.0-dev2` on HAOS with
 `ha apps update local_genvex_nabto_remote --backup`. The installed App
@@ -56,5 +58,4 @@ HA integration, live SDK/remote runtime validation, private App-to-Core DNS,
 and end-to-end soak tests. A backup inventory entry is not equivalent to a
 verified restore path.
 
-See `docs/remote-app-update-safety-plan.md` and
-`docs/remote-phase-f2-private-profile-design.md`.
+See [historical dev2 update plan](../docs/archive/remote-app-update-safety-plan.md), [F2 private profile notes](../docs/archive/remote-phase-f2-private-profile-design.md) and [current readiness](../docs/remote-install-readiness.md).

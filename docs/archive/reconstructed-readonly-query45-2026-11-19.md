@@ -1,3 +1,5 @@
+> **Archived evidence (21 November 2026).** This is a dated investigation or completed milestone, not the current operating instructions. See [current status](../STATUS.md).
+
 # Reconstructing a read-only remote RPC query from the LAN implementation
 
 Date: 2026-11-19  
@@ -43,8 +45,8 @@ Nabto's original [uNabto query C code](https://github.com/nabto/unabto/blob/mast
 
 ## Prototype artifact
 
-- [`tests/fixtures/candidate_readonly_query45.xml`](../tests/fixtures/candidate_readonly_query45.xml) — *hypothetical* read-only schema, mapping query ID **45** to list fields `obj:uint8`, `address:uint32`, and an explicit `trailer:uint8=1`, with a candidate response list of signed 16-bit values.
-- [`tests/test_reconstructed_readonly_rpc.py`](../tests/test_reconstructed_readonly_rpc.py) — offline-only comparison against public LAN serialization.
+- [`tests/fixtures/candidate_readonly_query45.xml`](../../tests/fixtures/candidate_readonly_query45.xml) — *hypothetical* read-only schema, mapping query ID **45** to list fields `obj:uint8`, `address:uint32`, and an explicit `trailer:uint8=1`, with a candidate response list of signed 16-bit values.
+- [`tests/test_reconstructed_readonly_rpc.py`](../../tests/test_reconstructed_readonly_rpc.py) — offline-only comparison against public LAN serialization.
 
 The author ran **four equivalent offline structural tests**, passing for one, three, and zero datapoints and a schema assertion. The test reimplements the documented encoding and checks exact bytes; **the SDK now independently accepted the candidate XML and decoded a single remote response successfully**.
 
@@ -64,7 +66,7 @@ Remote reachability of query 45 for one address, SDK XML acceptance, and one-ele
 
 ## Prepared single-sensor authenticated read-only test
 
-A dedicated, standalone probe is now available at [`scripts/probe_remote_datapoint45_readonly.py`](../scripts/probe_remote_datapoint45_readonly.py). It uses the already provisioned, encrypted RSA-1024 test profile, registers **only** the candidate RPC opcode 45, and sends **at most one** read for `obj=0, address=20` after the XML is accepted. It does not enable write opcode 43, make arbitrary-ID requests, print raw responses, alter Home Assistant files, or store credentials in Git. It uses the existing test profile and suppresses personal identifiers in printed output.
+A dedicated, standalone probe is now available at [`scripts/probe_remote_datapoint45_readonly.py`](../../scripts/probe_remote_datapoint45_readonly.py). It uses the already provisioned, encrypted RSA-1024 test profile, registers **only** the candidate RPC opcode 45, and sends **at most one** read for `obj=0, address=20` after the XML is accepted. It does not enable write opcode 43, make arbitrary-ID requests, print raw responses, alter Home Assistant files, or store credentials in Git. It uses the existing test profile and suppresses personal identifiers in printed output.
 
 **The user has now executed the script against the authorized Genvex gateway.** The SDK accepted the XML and returned RPC status 0, with one signed 16-bit datapoint value (367). If the SDK returns a diagnostic, record only sanitized status/event codes. A plausible numerical temperature still requires independent comparison against the known local integration.
 

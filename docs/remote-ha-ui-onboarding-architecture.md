@@ -1,3 +1,5 @@
+> **Current status (21 November 2026):** This document retains design and test history. For DEV3 verified worker results and current deployment gates use [STATUS.md](STATUS.md).
+
 # Architectural decision: a real Home Assistant integration backed by an internal Nabto runtime
 
 **Status: the UI integration and serialized worker exist as isolated development scaffolds, not installed or connected; end-user setup and automatic CA enrollment are not yet operational.** This document records the requested user experience and the engineering/security work remaining. See [resource catalogue](remote-nabto-resources.md), [verified experiments](remote-nabto-verified-facts.md), and [first five entity plan](remote-ha-entity-plan.md).

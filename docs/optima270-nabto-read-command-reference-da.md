@@ -149,6 +149,6 @@ De beregnede entiteter medfører ikke nødvendigvis ekstra RPC-kald; de må **ik
 - [Nabto/LS Controls officielle ping-RPC-interface](https://github.com/nabto/cordova-lsc-test/blob/main/www/js/index.js)
 - [GenvexNabto modeladapter og afkodningslogik](https://github.com/superrob/genvexnabto/blob/main/src/genvexnabto/genvexnabto_modeladapter.py)
 - [Eksisterende danske Home Assistant-oversættelser](../custom_components/genvex_connect/translations/da.json) og [alarmliste-implementering](../custom_components/genvex_connect/sensor.py) (læst som reference; **ikke ændret**)
-- [Projektets fjernverificerede sensoraflæsninger](remote-phase1-sensor-validation-2026-11-19.md) · [2B-undersøgelse](remote-device-discovery-2b.md) · [2A-katalog](remote-sensor-catalog-2a.md)
+- [Projektets fjernverificerede sensoraflæsninger](archive/remote-phase1-sensor-validation-2026-11-19.md) · [2B-undersøgelse](remote-device-discovery-2b.md) · [2A-katalog](remote-sensor-catalog-2a.md)
 
 **Intet i dette opslagsværk er en tilladelse til at teste uspecificerede RPC-id'er, skrive til anlægget, ændre LAN-integrationen eller ændre de installerede Apps.**
