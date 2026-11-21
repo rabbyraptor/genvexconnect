@@ -343,3 +343,22 @@ does not prove long-term reliability or eliminate gateway concurrency as
 a cause. Future work: compare failure rate under isolated, mutually
 exclusive persistent versus one-shot polling; exercise bounded recovery
 and resource cleanup in an offline test harness before any live migration.
+
+## P.1: new persistent stdio adapter live trial (operator, 2026-11-21)
+
+Separate from earlier A+B.4, the newly implemented async
+`PersistentSDKSnapshotAdapter` and persistent x86_64 SDK worker
+ran from temporary files inside the existing live DEV3 App
+(source `29cfc151`). Six read-only RPC45 commands within one
+worker produced five successful five-value snapshots and one
+status-26 failure (RPC #3, 12686 ms). RPC #4 then succeeded
+in the **same worker/session** (374 ms), followed by two further
+successful reads (30/34 ms). `WORKERS_OBSERVED=1`,
+`RECOVERED_AFTER_ERROR_IN_SAME_WORKER=True` and
+`WORKER_CLOSED=True`. Exit code 0. No new App configuration
+or Core deployment occurred.
+
+The established DEV3 Gate H 30-minute 27/31 rate was recorded
+during ordinary polling, while this P.1 test ran concurrently
+with ordinary polling. These are **not** fair comparable failure
+rates; comparison requires mutually exclusive modes.
