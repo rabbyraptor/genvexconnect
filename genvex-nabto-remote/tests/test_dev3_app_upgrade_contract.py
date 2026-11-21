@@ -41,7 +41,7 @@ class Dev3AppUpgradeContractTests(unittest.TestCase):
         stub = self.bin / "ssh"
         stub.write_text(
             "#!/bin/sh\n"
-            "printf '%s\\n' \"$*\" >> \"$TEST_SSH_CALLS\"\n"
+            "printf 'CALL:%s\\n' \"$*\" >> \"$TEST_SSH_CALLS\"\n"
             "if [ \"$TEST_SSH_FAIL\" = yes ]; then exit 7; fi\n"
             "cat >/dev/null\n"
             "echo 'PASS: fake SSH transport'\n"
