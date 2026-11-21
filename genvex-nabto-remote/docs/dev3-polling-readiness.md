@@ -235,3 +235,25 @@ No HAOS App or LAN integration is modified.
 This is a **candidate**; despite passing SDK-free tests it has not yet
 demonstrated a successful live recovery. Do not turn on unattended
 polling until a separate reliability review.
+
+## Offline recovery outcome observability
+
+The operator's last opt-in live trial completed on the **first** RPC45
+read, without exercising the recovery branch. To make a future trial
+unambiguous, the one-shot runner now prints an allowlisted outcome only
+when the exact eligible error actually triggers a conditional retry:
+
+- `RECOVERY: eligible RPC45 event; waiting 60 seconds before final attempt`
+  means the first read failed with the exact allowlisted signature.
+- `RECOVERY_RESULT: SUCCESS` means the fresh final attempt returned a
+  **complete, validated** snapshot; it is printed only after validation.
+- `RECOVERY_RESULT: FAILED` means the second attempt failed, or its
+  returned data failed validation. The normal `BLOCKED` marker follows.
+- Neither result is printed after an ordinary first-attempt success or
+  an ineligible failure. A user-initiated cancellation still aborts.
+
+These markers do not contain any device identifiers, credentials,
+SDK response text, sensor readings, or vendor diagnostic strings.
+The API and runtime request counts remain unchanged, at most two
+RPC45 calls under explicit `--recover-once`. This is verified by
+offline tests only; successful on-device recovery is not yet proven.
