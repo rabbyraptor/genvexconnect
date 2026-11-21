@@ -1,0 +1,41 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Genvex Remote (experimental read-only)",
+        "description": "Requires a separately installed private Genvex Nabto runtime App. Enter its internal snapshot endpoint and matching IPC token. Do not enter your Nabto account password here.",
+        "data": {
+          "device_id": "Device ID",
+          "runtime_endpoint": "Private App snapshot URL",
+          "runtime_token": "Internal IPC bearer token"
+        }
+      }
+    },
+    "error": {
+      "invalid_device_id": "Enter exactly 12 ASCII digits.",
+      "invalid_runtime_config": "Enter the fixed Genvex Remote App URL (local-genvex-nabto-remote:18275) and a valid internal token."
+    },
+    "abort": {
+      "already_configured": "This device is already configured."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "supply_air": {
+        "name": "Supply air"
+      },
+      "outdoor_air": {
+        "name": "Outdoor air"
+      },
+      "exhaust_air": {
+        "name": "Exhaust air"
+      },
+      "extract_air": {
+        "name": "Extract air"
+      },
+      "humidity": {
+        "name": "Humidity"
+      }
+    }
+  }
+}
