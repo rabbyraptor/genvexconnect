@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+import time
 import unittest
 from unittest.mock import Mock, patch
 
@@ -85,6 +86,7 @@ class OperatorTests(unittest.TestCase):
              patch.object(op.secrets, "token_urlsafe", return_value=TOKEN), \
              patch.object(op.secrets, "token_hex", return_value="abc123"), \
              patch.object(op, "private_address", return_value="172.30.33.77"), \
+             patch.object(op, "wait_for_runtime_ready"), \
              patch.object(op, "run", side_effect=fake_run), \
              patch.object(op.subprocess, "Popen", side_effect=fake_popen), \
              patch("sys.stdout", new_callable=io.StringIO) as output:
@@ -127,6 +129,7 @@ class OperatorTests(unittest.TestCase):
              patch.object(op, "prompt_settings",
                           return_value=json.dumps(SETTINGS).encode() + b"\n"), \
              patch.object(op, "private_address", return_value=None), \
+             patch.object(op, "wait_for_runtime_ready"), \
              patch.object(op, "run", side_effect=fake_run), \
              patch.object(op.subprocess, "Popen", return_value=FakeProcess()), \
              patch.object(op.time, "monotonic", side_effect=[0, 112]), \
@@ -200,6 +203,38 @@ class OperatorTests(unittest.TestCase):
         self.assertEqual(sum(c[0][:3] == ["docker", "exec", "-i"]
                              for c in commands), 2)
         self.assertEqual(commands[-1][0][:3], ["docker", "rm", "-f"])
+
+    def test_actual_pipe_waits_for_fixed_ready_marker(self):
+        code = ("import time; print('IPC_READY', flush=True);"
+                " time.sleep(0.2)")
+        proc = subprocess.Popen(
+            [sys.executable, "-u", "-c", code],
+            stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+        )
+        try:
+            self.assertIsNone(op.wait_for_runtime_ready(
+                proc, time.monotonic() + 3
+            ))
+        finally:
+            proc.terminate()
+            proc.wait(timeout=3)
+
+    def test_actual_pipe_rejects_runtime_error_without_raw_output(self):
+        code = ("import time; print('BLOCKED: SDK_SESSION_FAILED', flush=True);"
+                " time.sleep(0.2)")
+        proc = subprocess.Popen(
+            [sys.executable, "-u", "-c", code],
+            stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+        )
+        try:
+            with self.assertRaises(op.OperatorFailure) as result:
+                op.wait_for_runtime_ready(proc, time.monotonic() + 3)
+            self.assertEqual(result.exception.code, "SDK_SESSION_FAILED")
+        finally:
+            proc.terminate()
+            proc.wait(timeout=3)
 
 
 if __name__ == "__main__":
