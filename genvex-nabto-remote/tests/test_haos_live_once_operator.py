@@ -163,6 +163,32 @@ class LauncherTests(unittest.TestCase):
                 launcher.bounded_trial(image, b"private", sleep=lambda _: None)
         probe.assert_called_once()
 
+    def test_manual_recovery_mounts_policy_and_increases_only_its_timeout(self):
+        calls = []
+        def fake_run(argv, **kwargs):
+            calls.append((argv, kwargs))
+            return Mock(returncode=0)
+        payload = b"credential-stays-on-stdin"
+        with patch.object(launcher.subprocess, "run", side_effect=fake_run):
+            launcher.run_once("sha256:" + "a" * 64, payload, recover_once=True)
+        cmd, kwargs = calls[0]
+        self.assertEqual(cmd[-1], "--recover-once")
+        self.assertIn("recovery_policy.py,readonly", " ".join(cmd))
+        self.assertEqual(kwargs["timeout"], 260)
+        self.assertEqual(kwargs["input"], payload)
+        self.assertNotIn("credential-stays-on-stdin", " ".join(cmd))
+        self.assertEqual(calls[1][0][1:3], ["rm", "-f"])
+
+    def test_normal_timeout_and_flags_unchanged(self):
+        calls = []
+        def fake_run(argv, **kwargs):
+            calls.append((argv, kwargs))
+            return Mock(returncode=0)
+        with patch.object(launcher.subprocess, "run", side_effect=fake_run):
+            launcher.run_once("sha256:" + "a" * 64, b"private")
+        self.assertEqual(calls[0][1]["timeout"], 110)
+        self.assertNotIn("--recover-once", calls[0][0])
+
     def test_diagnostic_flag_forwarded_without_credentials(self):
         calls = []
         def fake_run(argv, **kwargs):
