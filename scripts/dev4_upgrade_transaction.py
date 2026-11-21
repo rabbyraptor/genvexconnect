@@ -8,6 +8,7 @@ This script does NOT start the upgraded App.
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import os
 from pathlib import Path, PurePosixPath
@@ -83,6 +84,52 @@ def require_old_state(*, stopped: bool) -> dict:
     return metadata
 
 
+def _system_gzip_bytes(path: Path) -> bytes:
+    """Decompress with system gzip when host Python lacks zlib.
+
+    HAOS host can read .tar.gz using its system tar despite a minimal
+    Python build missing zlib. Keep a strict expansion cap and do not
+    print decompressed source or external tool diagnostics.
+    """
+    last_error = "GZIP_DECOMPRESS_UNAVAILABLE"
+    for command in (["gzip", "-dc", str(path)],
+                    ["busybox", "gzip", "-dc", str(path)]):
+        try:
+            proc = subprocess.Popen(
+                command, stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+            )
+        except FileNotFoundError:
+            continue
+        try:
+            assert proc.stdout is not None
+            data = proc.stdout.read(4_194_305)
+            if len(data) > 4_194_304:
+                raise UpgradeBlocked("ARCHIVE_EXPANSION_LIMIT")
+            proc.wait(timeout=30)
+            if proc.returncode == 0:
+                return data
+            last_error = "GZIP_DECOMPRESS_FAILED"
+        except subprocess.TimeoutExpired:
+            last_error = "GZIP_DECOMPRESS_TIMEOUT"
+        finally:
+            if proc.poll() is None:
+                proc.kill()
+            proc.wait()
+            if proc.stdout is not None:
+                proc.stdout.close()
+    raise UpgradeBlocked(last_error)
+
+
+def open_source_archive(path: Path) -> tarfile.TarFile:
+    """Use Python gzip if available, otherwise system gzip + raw tar."""
+    try:
+        return tarfile.open(path, "r:gz")
+    except tarfile.CompressionError:
+        uncompressed = _system_gzip_bytes(path)
+        return tarfile.open(fileobj=io.BytesIO(uncompressed), mode="r:")
+
+
 def verify_archive(archive_file: Path, expected_sha: str) -> tuple[str, ...]:
     if (len(expected_sha) != 64 or any(c not in "0123456789abcdef" for c in expected_sha)
             or archive_file.is_symlink() or not archive_file.is_file()
@@ -91,7 +138,7 @@ def verify_archive(archive_file: Path, expected_sha: str) -> tuple[str, ...]:
     if hashlib.sha256(archive_file.read_bytes()).hexdigest() != expected_sha:
         raise UpgradeBlocked("ARCHIVE_HASH_MISMATCH")
     try:
-        with tarfile.open(archive_file, "r:gz") as archive:
+        with open_source_archive(archive_file) as archive:
             members = archive.getmembers()
             names = set()
             total = 0
@@ -146,7 +193,7 @@ def diagnose_archive(archive_file: Path, expected_sha: str) -> None:
         print("ARCHIVE_DIAGNOSTIC_COMPLETE")
         return
     try:
-        with tarfile.open(archive_file, "r:gz") as tf:
+        with open_source_archive(archive_file) as tf:
             members = tf.getmembers()
             print("PYTHON_TAR_GZIP: PASS")
             print("PYTHON_TAR_MEMBERS:", len(members))
@@ -172,7 +219,7 @@ def unpack(archive_file: Path, names: tuple[str, ...], target: Path) -> Path:
     dest = target / "genvex_nabto_remote"
     dest.mkdir(mode=0o700)
     (dest / "runtime").mkdir(mode=0o700)
-    with tarfile.open(archive_file, "r:gz") as archive:
+    with open_source_archive(archive_file) as archive:
         for name in names:
             rel = PurePosixPath(name).relative_to("genvex_nabto_remote")
             path = dest.joinpath(*rel.parts)
