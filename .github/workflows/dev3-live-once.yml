@@ -21,6 +21,7 @@ on:
       - 'genvex-nabto-remote/tests/test_dev4_source_baseline.py'
       - 'genvex-nabto-remote/tests/test_dev4_upgrade_transaction.py'
       - 'scripts/dev4_upgrade_transaction.py'
+      - 'scripts/run_dev4_upgrade_from_deck.sh'
       - 'scripts/dev4_source_baseline_preflight.py'
       - 'genvex-nabto-remote/tests/test_dev3_persistent_live_operator.py'
       - 'genvex-nabto-remote/tests/test_dev3_real_loopback_ipc.py'
@@ -78,6 +79,8 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_dev3_persistent_adapter.py' -v
       - name: Syntax check pinned persistent HAOS operator shell
         run: bash -n scripts/run_haos_persistent_gate_from_deck.sh
+      - name: Syntax check DEV4 source and Supervisor upgrade launcher
+        run: bash -n scripts/run_dev4_upgrade_from_deck.sh
       - name: Verify DEV4 source swap and Supervisor backup transaction (fake-only)
         run: python -m unittest discover -s tests -p 'test_dev4_upgrade_transaction.py' -v
       - name: Verify pinned installed DEV3 source preflight contract (fake-only)
