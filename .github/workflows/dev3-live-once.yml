@@ -80,7 +80,7 @@ jobs:
       - name: Syntax check pinned persistent HAOS operator shell
         run: bash -n scripts/run_haos_persistent_gate_from_deck.sh
       - name: Syntax check DEV4 source and Supervisor upgrade launcher
-        run: bash -n scripts/run_dev4_upgrade_from_deck.sh
+        run: bash -n ../scripts/run_dev4_upgrade_from_deck.sh
       - name: Verify DEV4 source swap and Supervisor backup transaction (fake-only)
         run: python -m unittest discover -s tests -p 'test_dev4_upgrade_transaction.py' -v
       - name: Verify pinned installed DEV3 source preflight contract (fake-only)
