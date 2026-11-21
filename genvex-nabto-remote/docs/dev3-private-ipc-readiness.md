@@ -1,6 +1,6 @@
 # DEV3 private IPC bridge — deployment gate
 
-**Status: source-only architecture review. No live listener, App startup, or Home Assistant deployment is authorized by this document.**
+**Status: real one-shot Core-container IPC proven; no persistent listener, App startup, integration installation, or unattended polling is authorized by this document.**
 
 ## Proven offline contracts
 
@@ -20,10 +20,10 @@
    It covers authenticated 200, missing-SDK-snapshot 503, invalid
    transport-token 401 and full recovery without opening a socket.
 
-These are entirely local fake-data tests. **No successful network IPC
-transaction between a running HA Core process and a Nabto App has yet
-been demonstrated.** Offline token and schema compatibility is not
-equivalent to permission to start a listener.
+These were originally entirely local fake-data tests. **A later successful
+real-device RPC45 -> ephemeral private bridge -> Core-container HTTP read
+is documented below.** That one-shot test is not permission to start a
+persistent App listener or install the integration.
 
 ## Remaining security and operational requirements
 
@@ -371,3 +371,79 @@ live-Core entity integration test using the actual HA coordinator,
 snapshot reader and five sensor entities against this already
 validated private network bridge. The user must separately authorize
 any installation of a persistent App/integration or automatic polling.
+
+## Real HA integration over real TCP in CI; ephemeral live class-probe prepared
+
+On 2026-11-21, the dedicated Home Assistant Core 2026.11.2 workflow
+verified **15 passing isolated tests** (including
+`tests_core/test_real_tcp_config_entry.py` and
+`tests_core/test_real_inmemory_live_client.py`).
+
+1. The real `SnapshotHTTPServer` listens on `127.0.0.1` with an ephemeral
+   port in a CI runner. A test-only resolver maps the **unchanged, pinned**
+   HA integration endpoint to that loopback address. The *actual*
+   `AuthenticatedSnapshotReader`, `GenvexRemoteCoordinator`, config
+   entry and five registered real-Core sensor entities consume HTTP 200,
+   then fail closed over HTTP 503 and 401, then recover over HTTP 200.
+   Every measurement and token in this test is synthetic.
+2. A separate CI subprocess tests the **exact new one-shot HA class-probe**
+   against real loopback TCP while running the pinned Home Assistant
+   libraries. It injects reviewed Python sources into the ephemeral
+   interpreter's import namespace, makes one actual coordinator read
+   through the pinned endpoint plus strict test DNS mapping, and checks
+   all five sensor class projections without saving or installing the
+   integration. Its first draft exposed an implicit HA ConfigEntry context
+   dependency: the coordinator now accepts an explicit `config_entry`
+   argument from normal integration setup. Real Core and SDK-free offline
+   tests have been updated accordingly.
+3. The earlier manually confirmed live HAOS test validated exactly one
+   real Micro Nabto RPC45 -> short-lived private HTTP -> running Core
+   **container** stdlib HTTP client. Combining it with the new in-memory
+   HA class-probe on the actual HAOS host requires a **new operator-run
+   one-shot test**. A CI pass is not evidence that this new field test
+   has already happened.
+
+The new standalone operator is
+`scripts/haos_core_live_entity_once_operator.py`. It reuses the
+existing temporary Docker launcher and its fixed private HTTP tests,
+then asks an independent Python interpreter **within the running
+`homeassistant` container** to import five reviewed HA component source
+files in memory and validate one additional authenticated HTTP read using
+the actual production reader/coordinator/sensor classes. These imports
+do **not** mutate the running HA Core interpreter, register entities
+in its state machine, install an integration, add an App, change
+Supervisor options or start polling. The temporary Docker listener
+exists only for up to 60 seconds and is force-removed on completion.
+
+**Staging gate:** Use one reviewed, pinned Git commit. Copy
+`scripts/haos_core_live_entity_once_operator.py` into
+`/tmp/genvex-dev3-once/` as root mode 0600; copy exactly
+`const.py`, `runtime_client.py`, `snapshot.py`,
+`coordinator.py` and `sensor.py` from
+`experimental/home_assistant/custom_components/genvex_remote/`
+into root-owned `/tmp/genvex-dev3-once/ha_component/`
+(directory 0700, individual files 0600).
+No private credentials or sensor data are staged. The earlier
+successful, reviewed staging files for the original live operator
+must remain present; the original DEV2 App/image/profile remains
+stopped/manual/read-only. The operator prompts for the same three
+private credentials only in the interactive terminal and passes
+them via Docker stdin, not command line/environment/files.
+
+**Operator execution after explicit consent:**
+
+```sh
+ssh -tt -p 22222 root@rabbyshome.duckdns.org \
+  python3 /tmp/genvex-dev3-once/haos_core_live_entity_once_operator.py
+```
+
+Successful fixed output adds:
+`PASS: real snapshot validated by actual HA reader, coordinator and five sensor classes`
+after the existing two successful single-RPC Core transport markers.
+This checks the production class implementation **inside an ephemeral
+Core-container interpreter**, not state registration in the running
+Core process; the latter remains separately blocked on secure App
+provisioning, HAOS App DNS reachability and a reviewable reversible
+installation plan. Any automatic RPC polling, persistent token
+provisioning, unattended App startup and UI onboarding remain
+separate future authorization gates.
