@@ -176,7 +176,7 @@ class PersistentSDKSnapshotAdapter:
                         raise SDKSnapshotError("SDK_RESPONSE_INVALID")
                     self._consecutive_rpc_errors += 1
                     if self._consecutive_rpc_errors >= 2:
-                        await self._shutdown_worker()
+                        await self._shutdown_worker(graceful=True)
                     raise SDKSnapshotError(
                         "SDK_RPC45_FAILED",
                         rpc_status=payload["status"],

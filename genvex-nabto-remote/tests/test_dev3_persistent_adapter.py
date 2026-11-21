@@ -140,6 +140,7 @@ class PersistentAdapterTests(unittest.IsolatedAsyncioTestCase):
             finally:
                 await adapter.aclose()
             self.assertEqual(sum(x.startswith("started:") for x in log.read_text().splitlines()), 2)
+            self.assertEqual(sum(x.startswith("closed:") for x in log.read_text().splitlines()), 2)
 
     async def test_single_flight_concurrent_calls(self):
         with tempfile.TemporaryDirectory() as tmp:
