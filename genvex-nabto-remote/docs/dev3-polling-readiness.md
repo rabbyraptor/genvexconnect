@@ -437,3 +437,35 @@ the installed HAOS App, Supervisor IPC or a real live polling session.
 
 Keep the existing LAN integration and DEV2 installation untouched.
 Persistent polling remains explicitly unauthorized.
+
+## Full real-Core state-machine contract verified (isolated runner)
+
+The isolated real Home Assistant Core workflow now tests **actual**
+`hass.states` records for all five sensor entities, not only
+`CoordinatorEntity.available`. The tests register the real
+`GenvexRemoteSensor` classes through Core's `EntityComponent`,
+then check the complete sequence:
+
+1. A complete five-value synthetic snapshot creates five distinct
+   `sensor.*` entities with readable states.
+2. An injected runtime/session failure marks **all five actual states**
+   `unavailable`; no private error text appears in state strings.
+3. A later validated five-value snapshot restores all five state
+   records and updates humidity to the normal Core representation
+   `"67.0"`.
+4. An incomplete snapshot marks the entire five-sensor state set
+   `unavailable` rather than publishing partial data.
+
+The `DEV3 isolated real Home Assistant Core entity contract` workflow
+completed **successfully** on the test revision
+`fa4784141ca9b01d0075968ec7b283887da41483` using pinned
+Core 2026.11.2. This remains entirely offline and independent of HAOS.
+
+**Remaining installation gate:** These tests register entities through
+`EntityComponent` **without a configured integration entry**. Core
+2026.11 emits a warning that attaching a device without a config
+entry will stop working from Core 2027.8.0. The warning is caused by
+the test setup; it is not a verified deployed-integrations bug.
+Before deployment, test the actual config-entry setup/teardown and
+device registry relationship in an isolated test environment. The
+Supervisor runtime transport and unattended polling remain disabled.
