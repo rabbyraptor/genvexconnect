@@ -71,6 +71,32 @@ aggregated baseline gate. A separate read-only Gate E.1 then verified five
 numeric states and a started App. The corrected Gate E.2 completed with
 the PASS markers above.
 
+## Actual HAOS polling stability Gate F: PASSED (operator, 2026-11-21)
+
+Four passive readings of the already running live DEV3 App, spaced by
+70 seconds, produced four HTTP 200 responses with complete, validated,
+fresh five-value snapshots and four distinct snapshot timestamps:
+
+| Sample | Snapshot age | Container memory | Process count |
+| --- | ---: | ---: | ---: |
+| 1 | 63.9 seconds | 76.75 MiB | 9 |
+| 2 | 4.0 seconds | 17.98 MiB | 8 |
+| 3 | 9.8 seconds | 18.38 MiB | 8 |
+| 4 | 15.6 seconds | 18.07 MiB | 8 |
+
+Exact operator markers: `FRESH_VALID_SAMPLES: 4 /4`,
+`DISTINCT_SNAPSHOTS: 4`, `PROCESS_COUNT_MIN: 8`,
+`PROCESS_COUNT_MAX: 9`, `GATE_F_RESULT: PASS` and
+`GATE_F_EXIT_CODE: 0`.
+
+This establishes successful short-term polling and fresh snapshots.
+The initial memory and process-count spike may have coincided with a
+short-lived SDK/QEMU subprocess, but **the process identities were not
+inspected** and the cause is not established. Four samples are insufficient
+for a memory-leak or long-duration reliability claim. Next inspect bounded
+SDK child lifecycle and perform an extended passive soak; a real SDK
+connection-failure/recovery test is still pending.
+
 ## Correct interpretation of the operator's Recorder evidence
 
 The operator's real Home Assistant Recorder contained five numeric
