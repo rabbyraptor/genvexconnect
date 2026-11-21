@@ -137,15 +137,15 @@ class OperatorTests(unittest.TestCase):
         self.assertIn("BLOCKED", output.getvalue())
 
     def test_runtime_exit_reports_only_allowlisted_category(self):
-        safe = Mock(stdout=io.BytesIO(b"BLOCKED: SDK_SESSION_FAILED\\n"))
+        safe = Mock(stdout=io.BytesIO(b"BLOCKED: SDK_SESSION_FAILED\n"))
         self.assertEqual(op.classify_runtime_exit(safe).code,
                          "SDK_SESSION_FAILED")
         for output in (
-            b"BLOCKED: SDK_SESSION_FAILED\\nsecret=hunter2\\n",
-            b"BLOCKED: unknown-secret-code\\n",
-            b"token=example-private-value\\n",
-            b"BLOCKED: SDK_SESSION_FAILED\\n" + b"z" * 600,
-            b"\\xff\\xfe\\n",
+            b"BLOCKED: SDK_SESSION_FAILED\nsecret=hunter2\n",
+            b"BLOCKED: unknown-secret-code\n",
+            b"token=example-private-value\n",
+            b"BLOCKED: SDK_SESSION_FAILED\n" + b"z" * 600,
+            b"\xff\xfe\n",
         ):
             with self.subTest(output_size=len(output)):
                 unsafe = Mock(stdout=io.BytesIO(output))
@@ -178,17 +178,17 @@ class OperatorTests(unittest.TestCase):
                 return Mock(returncode=0, stdout=b"")
             raise AssertionError(args)
 
-        with patch.object(op.os, "geteuid", return_value=0), \\
-             patch.object(op, "check_file"), \\
-             patch.object(op, "preflight", return_value="sha256:" + "a" * 64), \\
-             patch.object(op, "select_core_network", return_value="hassio"), \\
-             patch.object(op, "core_network_mode", return_value="host"), \\
+        with patch.object(op.os, "geteuid", return_value=0), \
+             patch.object(op, "check_file"), \
+             patch.object(op, "preflight", return_value="sha256:" + "a" * 64), \
+             patch.object(op, "select_core_network", return_value="hassio"), \
+             patch.object(op, "core_network_mode", return_value="host"), \
              patch.object(op, "prompt_settings",
-                          return_value=json.dumps(SETTINGS).encode() + b"\\n"), \\
-             patch.object(op, "private_address", return_value="172.30.33.77"), \\
-             patch.object(op, "run", side_effect=fake_run), \\
-             patch.object(op.subprocess, "Popen", return_value=child) as launch, \\
-             patch.object(op.time, "sleep"), \\
+                          return_value=json.dumps(SETTINGS).encode() + b"\n"), \
+             patch.object(op, "private_address", return_value="172.30.33.77"), \
+             patch.object(op, "run", side_effect=fake_run), \
+             patch.object(op.subprocess, "Popen", return_value=child) as launch, \
+             patch.object(op.time, "sleep"), \
              patch("sys.stdout", new_callable=io.StringIO):
             self.assertEqual(op.operator(), 0)
         launch.assert_called_once()
