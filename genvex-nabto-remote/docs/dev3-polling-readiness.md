@@ -96,3 +96,33 @@ There are 60 seconds **after each completed attempt** before the next starts
 
 The trial takes several minutes, must be run interactively by the authorized
 operator, and is **not** started by installing or importing the module.
+
+## Optional sanitized SDK diagnostics
+
+The last three-attempt field trial validated two RPC45 reads and returned
+`SDK_RPC45_FAILED` for the third. The generic category cannot distinguish
+a transient Nabto RPC status from a long-running request. The new
+`--trial-diagnose` operator mode retains the same **exactly three** isolated
+read-only attempts and 60-second spacing, but forwards `--diagnose` into
+the one-shot container.
+
+On a failed SDK RPC the adapter extracts only the exact integer markers
+`Batch RPC status:` and `RPC elapsed_ms:` from the bounded SDK stdout.
+It prints:
+
+```text
+BLOCKED: SDK_RPC45_FAILED
+DIAG RPC45_STATUS: <integer or unknown>
+DIAG RPC45_ELAPSED_MS: <integer or unknown>
+```
+
+No raw SDK output, host, identity, device ID, certificate, URL, JSON
+diagnostic or unlock secret is exposed. Invalid, duplicate, negative or
+out-of-range markers are rendered as `unknown`. On a success the normal
+one-shot PASS marker is printed, without extra diagnostics.
+
+This is a diagnostic experiment, **not a workaround**: it does not alter
+SDK timeouts, retry logic, credentials, QEMU architecture, gateway requests
+or persistent service behavior. `--diagnose` is also available for a
+single isolated read, but an intermittent failure may not reproduce.
+Only stage/status/timing markers should be shared.
