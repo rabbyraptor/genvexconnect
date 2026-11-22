@@ -91,6 +91,50 @@ def decode_batch(raw: str) -> dict[str, float] | None:
         return None
 
 
+def numeric_error_event(raw: str) -> int | None:
+    """Extract only the numeric Nabto error event; discard all raw strings."""
+    if type(raw) is not str or len(raw) > 4096:
+        return None
+    try:
+        parsed = json.loads(raw)
+        if type(parsed) is not dict:
+            return None
+        error = parsed.get("error")
+        if type(error) is not dict:
+            return None
+        event = error.get("event")
+        if type(event) is int and 0 <= event <= 10000000:
+            return event
+    except (ValueError, TypeError):
+        pass
+    return None
+
+
+def record_error_event(status: int, raw: str) -> None:
+    """Record bounded non-secret event metadata outside the worker protocol."""
+    if status != 26:
+        return
+    event = numeric_error_event(raw)
+    if event is None:
+        return
+    record = json.dumps({
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "sdk_status": status,
+        "event": event,
+    }, separators=(",", ":")) + "\\n"
+    try:
+        fd = os.open(
+            "/data/rpc45_json_diagnostic.log",
+            os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_NOFOLLOW,
+            0o600,
+        )
+        with os.fdopen(fd, "a", encoding="ascii") as output:
+            if os.fstat(output.fileno()).st_size <= 1048576:
+                output.write(record)
+    except OSError:
+        pass
+
+
 def main() -> int:
     if sys.argv[1:] != ["--serve-stdio"]:
         return 2
@@ -179,6 +223,7 @@ def main() -> int:
                 if type(status) is not int or not 0 <= status <= 100000:
                     break
                 if status:
+                    record_error_event(status, raw)
                     emit(RESULT, {"ok": False, "status": status, "elapsed_ms": elapsed})
                     continue
                 values = decode_batch(raw)
