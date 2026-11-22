@@ -135,21 +135,58 @@ class UnifiedInstallerTests(unittest.TestCase):
         self.assertEqual(str(error.exception), "CORE_API_NOT_READY")
         self.assertEqual(self.calls.count(("core", "info", "--raw-json")), 24)
 
-    def test_real_core_api_probe_accepts_unauthorized(self):
-        from urllib.error import HTTPError
-        err = HTTPError("http://127.0.0.1:8123/api/", 401,
-                        "Unauthorized", {}, None)
-        with patch.object(installer, "urlopen", side_effect=err) as probe:
-            self.assertTrue(self.real_api_probe(8123, False))
-        self.assertEqual(probe.call_args.kwargs["timeout"], 4)
+    def test_real_core_api_probe_accepts_actual_http_status(self):
+        """Check Core's unauthenticated API response over plain TCP."""
+        for status in (
+            b"HTTP/1.1 401 Unauthorized\r\n",
+            b"HTTP/1.1 403 Forbidden\r\n",
+            b"HTTP/1.0 200 OK\r\n",
+        ):
+            with self.subTest(status=status):
+                with patch.object(installer.socket, "create_connection") as dial:
+                    connection = dial.return_value.__enter__.return_value
+                    connection.recv.return_value = status
+                    self.assertTrue(self.real_api_probe(8123, False))
+                    dial.assert_called_once_with(("127.0.0.1", 8123), timeout=4)
+                    self.assertIn(b"GET /api/ HTTP/1.0", connection.sendall.call_args.args[0])
 
     def test_real_core_api_probe_rejects_unresponsive_port(self):
-        from urllib.error import URLError
-        with patch.object(installer, "urlopen",
-                          side_effect=URLError("connection refused")):
+        with patch.object(installer.socket, "create_connection",
+                          side_effect=OSError("connection refused")):
             self.assertFalse(self.real_api_probe(8123, False))
         self.assertFalse(self.real_api_probe(0, False))
         self.assertFalse(self.real_api_probe(8123, "false"))
+        with patch.object(installer.socket, "create_connection") as dial:
+            dial.return_value.__enter__.return_value.recv.return_value = (
+                b"HTTP/1.1 500 Internal Server Error\r\n"
+            )
+            self.assertFalse(self.real_api_probe(8123, False))
+
+    def test_host_installer_imports_without_optional_ssl_extension(self):
+        """HAOS host Python lacks _ssl: the module import must still succeed."""
+        source = SCRIPT.read_text()
+        self.assertNotIn("import ssl", source)
+        self.assertNotIn("from urllib", source)
+        import sys
+        program = """
+import builtins
+import importlib.util
+original = builtins.__import__
+def blocked(name, *args, **kwargs):
+    if name in ("ssl", "_ssl", "urllib.error", "urllib.request"):
+        raise ModuleNotFoundError("host has no " + name)
+    return original(name, *args, **kwargs)
+builtins.__import__ = blocked
+spec = importlib.util.spec_from_file_location("haos_install_no_ssl", %r)
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+assert callable(module.core_api_ready)
+""" % str(SCRIPT)
+        process = subprocess.run(
+            [sys.executable, "-S", "-c", program],
+            capture_output=True, text=True, timeout=15,
+        )
+        self.assertEqual(process.returncode, 0, process.stderr)
 
     def test_wrong_archive_sha_refused_without_mutation(self):
         with self.assertRaises(installer.InstallBlocked) as caught:
