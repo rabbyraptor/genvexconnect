@@ -35,6 +35,9 @@
       },
       "humidity": {
         "name": "Humidity"
+      },
+      "data_age": {
+        "name": "Data age"
       }
     }
   }
