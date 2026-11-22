@@ -103,7 +103,7 @@ def check_archive(path: Path, expected_sha256: str) -> list[tuple[str, bytes]]:
         "genvex_remote/runtime_client.py", "genvex_remote/coordinator.py",
         "genvex_remote/sensor.py", "genvex_remote/snapshot.py",
     }
-    if not required <= names:
+    if not required <= seen:
         raise InstallBlocked("ARCHIVE_REQUIRED_FILES_MISSING")
     manifest = json.loads(dict(result)["genvex_remote/manifest.json"])
     if (manifest.get("domain") != "genvex_remote"
