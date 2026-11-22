@@ -11,9 +11,12 @@ import hashlib
 import json
 from pathlib import Path, PurePosixPath
 import shutil
+import ssl
 import subprocess
 import sys
 import time
+from urllib.error import HTTPError, URLError
+from urllib.request import urlopen
 
 HOME = Path("/mnt/data/supervisor/homeassistant")
 COMPONENTS = HOME / "custom_components"
@@ -125,16 +128,44 @@ def ha_cli(*args: str, timeout: int = 240) -> str:
     return completed.stdout
 
 
+def core_api_ready(port: int, use_ssl: bool) -> bool:
+    """Probe Core's loopback REST API; no credentials are sent or required."""
+    if type(port) is not int or not 1 <= port <= 65535:
+        return False
+    if type(use_ssl) is not bool:
+        return False
+    protocol = "https" if use_ssl else "http"
+    endpoint = f"{protocol}://127.0.0.1:{port}/api/"
+    try:
+        # A 401 is the normal unauthenticated response from a ready Core API.
+        # TLS is loopback-only and may use HA's own self-signed certificate.
+        ctx = ssl._create_unverified_context() if use_ssl else None
+        with urlopen(endpoint, timeout=4, context=ctx) as response:
+            return response.status == 200
+    except HTTPError as error:
+        return error.code in (401, 403)
+    except (URLError, TimeoutError, OSError, ValueError):
+        return False
+
+
 def check_core_started() -> None:
-    for _ in range(20):
+    """Wait for a responding Core API, not a nonexistent /core/info state key."""
+    for _ in range(24):
         try:
-            data = json.loads(ha_cli("core", "info", "--raw-json", timeout=25))
-            if data.get("data", {}).get("state") == "started":
+            info = json.loads(
+                ha_cli("core", "info", "--raw-json", timeout=15)
+            )
+            data = info.get("data")
+            if (isinstance(data, dict)
+                    and isinstance(data.get("version"), str)
+                    and core_api_ready(
+                        data.get("port", 8123), data.get("ssl", False)
+                    )):
                 return
-        except (ValueError, InstallBlocked):
+        except (ValueError, TypeError, InstallBlocked):
             pass
         time.sleep(5)
-    raise InstallBlocked("CORE_NOT_STARTED")
+    raise InstallBlocked("CORE_API_NOT_READY")
 
 
 def apply(path: Path, sha256: str) -> None:
