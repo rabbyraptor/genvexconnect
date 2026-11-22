@@ -16,6 +16,8 @@ class SetupAutoPairingTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.tokens = []
         self.token_loaders = []
+        self.reader_endpoints = []
+        self.raw_modes = []
         self.lookups = []
         self.latest_token = "N" * 43
         self.missing = False
@@ -28,6 +30,7 @@ class SetupAutoPairingTests(unittest.IsolatedAsyncioTestCase):
             "CONF_RUNTIME_ENDPOINT": "runtime_endpoint",
             "CONF_RUNTIME_TOKEN": "runtime_token",
             "CONF_PAIR_FROM_APP": "pair_from_app",
+            "CONF_RAW_REGISTERS_V3": "raw_registers_v3",
             "DOMAIN": "genvex_remote",
         }.items():
             setattr(const, key, value)
@@ -51,8 +54,9 @@ class SetupAutoPairingTests(unittest.IsolatedAsyncioTestCase):
         outer = self
 
         class FakeCoordinator:
-            def __init__(self, hass, device_id, reader):
+            def __init__(self, hass, device_id, reader, *, raw_registers_v3=False):
                 outer.tokens.append(reader._token)
+                outer.raw_modes.append(raw_registers_v3)
                 outer.token_loaders.append(reader._token_loader)
 
             async def async_config_entry_first_refresh(self):
@@ -64,12 +68,15 @@ class SetupAutoPairingTests(unittest.IsolatedAsyncioTestCase):
 
         class FakeReader:
             def __init__(self, session, *, endpoint, token, token_loader=None):
-                if endpoint != "http://local-genvex-nabto-remote:18275/v1/snapshot":
+                if endpoint not in ("http://local-genvex-nabto-remote:18275/v1/snapshot",
+                                    "http://local-genvex-nabto-remote:18275/v3/snapshot"):
                     raise ValueError
                 self._token = token
                 self._token_loader = token_loader
+                outer.reader_endpoints.append(endpoint)
 
         client.AuthenticatedSnapshotReader = FakeReader
+        client.EXPECTED_V3_APP_ENDPOINT = "http://local-genvex-nabto-remote:18275/v3/snapshot"
         homeassistant = types.ModuleType("homeassistant")
         homeassistant.const = types.ModuleType("homeassistant.const")
         homeassistant.const.Platform = types.SimpleNamespace(SENSOR="sensor")
@@ -164,6 +171,23 @@ class SetupAutoPairingTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.tokens, ["N" * 43])
         self.assertEqual(self.lookups, ["123456789012"])
         self.assertNotIn("runtime_token", self.entry.data)
+
+    async def test_raw_v3_opt_in_selects_pinned_endpoint_and_preserves_pairing(self):
+        self.entry.options = {"pair_from_app": True, "raw_registers_v3": True}
+        self.assertTrue(await self.integration.async_setup_entry(self.hass, self.entry))
+        self.assertEqual(self.reader_endpoints, [
+            "http://local-genvex-nabto-remote:18275/v3/snapshot"
+        ])
+        self.assertEqual(self.raw_modes, [True])
+        self.assertTrue(callable(self.token_loaders[0]))
+        self.assertNotIn("runtime_token", self.entry.data)
+
+    async def test_raw_v3_disabled_keeps_v1_endpoint(self):
+        self.assertTrue(await self.integration.async_setup_entry(self.hass, self.entry))
+        self.assertEqual(self.reader_endpoints, [
+            "http://local-genvex-nabto-remote:18275/v1/snapshot"
+        ])
+        self.assertEqual(self.raw_modes, [False])
 
     async def test_unavailable_auto_pair_fails_without_stale_token(self):
         self.missing = True
