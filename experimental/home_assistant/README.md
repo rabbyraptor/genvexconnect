@@ -28,3 +28,22 @@ To run parser and mocked HTTP consumer tests without Home Assistant installed:
 ```sh
 python3 -m unittest discover -s experimental/home_assistant/tests -p "test_*.py" -v
 ```
+
+
+## Measurement-age grace policy (development branch, 22 November 2026)
+
+The coordinator now retains the last validated five-value measurement during
+temporary transport or schema failures. The grace period is **600 seconds from
+the original device snapshot timestamp**, not 600 seconds from a failed poll or
+a repeated cached HTTP response. During grace, the five measurement entities
+remain available with the last confirmed values; after expiry they become
+unavailable. A later valid snapshot restores availability automatically.
+
+An additional read-only diagnostic sensor, **Data age**, reports elapsed
+minutes since that original measurement and refreshes with the coordinator's
+60-second cycle. This entity is intended for optional dashboard display in
+neutral styling, without alert-color transitions at 3 minutes. A fresh
+measurement is still required for initial integration setup.
+
+This code is not proof of deployment to HAOS. The previously deployed five
+measurement entities and DEV4 App are separate from this new source change.
