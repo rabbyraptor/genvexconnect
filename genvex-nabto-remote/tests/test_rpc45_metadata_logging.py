@@ -97,5 +97,49 @@ class DiagnosticTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(output.getvalue(), "")
 
 
+    async def test_unexpected_refresh_exception_recovers_without_leaking(self):
+        """One internal failure must not permanently stop the polling task."""
+        class FlakyState:
+            _poller = _FakeAdapter()
+
+            def __init__(self):
+                self.calls = 0
+                self.invalidations = 0
+
+            async def refresh(self):
+                self.calls += 1
+                if self.calls == 1:
+                    raise RuntimeError("FAKE-SECRET-MUST-NOT-APPEAR")
+                return True
+
+            def invalidate(self):
+                self.invalidations += 1
+
+        state = FlakyState()
+        outcomes = []
+        ready = asyncio.Event()
+
+        async def on_result(ok):
+            outcomes.append(ok)
+            if len(outcomes) >= 2:
+                ready.set()
+
+        output = StringIO()
+        with redirect_stdout(output):
+            service = PollingService(state, interval_seconds=0.01, on_result=on_result)
+            await service.start()
+            try:
+                await asyncio.wait_for(ready.wait(), timeout=3)
+                self.assertTrue(service.running)
+            finally:
+                await service.stop()
+
+        self.assertEqual(outcomes[:2], [False, True])
+        self.assertGreaterEqual(state.invalidations, 1)
+        self.assertIn(" FEJL ", output.getvalue())
+        self.assertIn(" OK ", output.getvalue())
+        self.assertNotIn("FAKE-SECRET-MUST-NOT-APPEAR", output.getvalue())
+
+
 if __name__ == "__main__":
     unittest.main()
