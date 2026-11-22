@@ -32,7 +32,17 @@ class SnapshotState:
                 parse_snapshot(result, expected_device_id=self._poller.device_id)
             except asyncio.CancelledError:
                 raise
-            except Exception:
+            except Exception as exc:
+                # SDK result metadata only; never print exception text/response.
+                status = getattr(exc, "rpc_status", None)
+                elapsed_ms = getattr(exc, "elapsed_ms", None)
+                if (type(status) is int and 0 <= status <= 100000
+                        and type(elapsed_ms) is int and 0 <= elapsed_ms <= 120000):
+                    print(
+                        f"RPC45_DIAGNOSTIC rpc_status={status} "
+                        f"elapsed_ms={elapsed_ms}",
+                        flush=True,
+                    )
                 return False
             self._snapshot = result
             return True
