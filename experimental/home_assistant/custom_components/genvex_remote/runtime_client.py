@@ -7,11 +7,18 @@ this integration in HAOS. No mock readings or cached test values.
 """
 from __future__ import annotations
 
+import asyncio
+import json
+from collections.abc import Awaitable, Callable
 from typing import Any, Protocol
 
 
 class RuntimeUnavailable(Exception):
     """No functioning trusted App -> HA snapshot channel exists."""
+
+
+class RuntimeAuthenticationFailed(RuntimeUnavailable):
+    """Only an explicit 401/403 response can trigger token re-pairing."""
 
 
 class SnapshotReader(Protocol):
@@ -46,38 +53,90 @@ class HTTPSession(Protocol):
 
 
 SNAPSHOT_REQUEST_TIMEOUT_SECONDS = 20
+TOKEN_REFRESH_TIMEOUT_SECONDS = 12
+
+
+def _valid_runtime_token(token: object) -> bool:
+    """Check header-safe token shape both on setup and after rotation."""
+    return (
+        type(token) is str
+        and 40 <= len(token) <= 128
+        and token.isascii()
+        and not any(char in token for char in "\r\n\x00")
+    )
 
 
 class AuthenticatedSnapshotReader:
-    """Fail-closed HTTP consumer, usable only after trusted provisioning.
+    """Pinned read-only App IPC with bounded in-session token recovery.
 
-    This is a transport component, not automatic discovery/onboarding.
-    The future HA setup must provide a trusted Supervisor-internal endpoint
-    and a securely provisioned token. No config-flow password is stored here.
+    When Core pairing is enabled, a 401/403 can refresh the in-memory token
+    from the authenticated Supervisor client. Each failed read is retried
+    at most once; transport errors never trigger a Supervisor lookup.
     """
 
     def __init__(
-        self, session: HTTPSession, *, endpoint: str, token: str,
+        self,
+        session: HTTPSession,
+        *,
+        endpoint: str,
+        token: str,
+        token_loader: Callable[[], Awaitable[str]] | None = None,
     ) -> None:
         validate_private_endpoint(endpoint)
-        if not isinstance(token, str) or not 40 <= len(token) <= 128 or not token.isascii():
+        if not _valid_runtime_token(token):
             raise ValueError("Invalid internal transport token")
+        if token_loader is not None and not callable(token_loader):
+            raise ValueError("Invalid token loader")
         self._session = session
         self._url = endpoint
         self._token = token
+        self._token_loader = token_loader
+        # Concurrent callers discovering the same expired token perform
+        # only one Supervisor lookup, then reuse the new in-memory token.
+        self._refresh_lock = asyncio.Lock()
 
     async def async_fetch_snapshot(self, device_id: str) -> dict[str, Any]:
-        """Fetch exactly one bounded JSON snapshot without retry or token logging."""
-        import asyncio
-        import json
+        """One IPC read, optionally one trusted token refresh and retry."""
+        attempted_token = self._token
+        try:
+            return await self._fetch_once(attempted_token)
+        except RuntimeAuthenticationFailed:
+            if self._token_loader is None:
+                raise RuntimeUnavailable("Runtime snapshot unavailable") from None
+
+        async with self._refresh_lock:
+            if self._token == attempted_token:
+                try:
+                    # The real Core Supervisor adapter is independently
+                    # bounded to ten seconds; this bounds injected loaders.
+                    async with asyncio.timeout(TOKEN_REFRESH_TIMEOUT_SECONDS):
+                        replacement = await self._token_loader()
+                    if not _valid_runtime_token(replacement) or replacement == attempted_token:
+                        raise ValueError("No valid replacement token")
+                except Exception:
+                    # Do not leak Supervisor metadata, credentials or
+                    # transport exceptions into the coordinator or logs.
+                    raise RuntimeUnavailable("Runtime snapshot unavailable") from None
+                self._token = replacement
+
+        try:
+            return await self._fetch_once(self._token)
+        except RuntimeAuthenticationFailed:
+            # No recursion or unbounded retry on repeated 401/403.
+            raise RuntimeUnavailable("Runtime snapshot unavailable") from None
+
+    async def _fetch_once(self, token: str) -> dict[str, Any]:
+        """One bounded request with no redirects, error body or URL leakage."""
         try:
             async with asyncio.timeout(SNAPSHOT_REQUEST_TIMEOUT_SECONDS):
                 async with self._session.get(
                     self._url,
-                    headers={"Authorization": "Bearer " + self._token,
+                    headers={"Authorization": "Bearer " + token,
                              "Accept": "application/json"},
                     allow_redirects=False,
                 ) as response:
+                    if response.status in (401, 403):
+                        raise RuntimeAuthenticationFailed("Runtime snapshot unavailable")
                     if response.status != 200:
                         raise RuntimeUnavailable("Runtime snapshot unavailable")
                     if response.content_length is not None and response.content_length > 4096:
@@ -92,7 +151,6 @@ class AuthenticatedSnapshotReader:
         except RuntimeUnavailable:
             raise
         except Exception:
-            # Never surface URL, token, raw HTTP error or SDK details.
             raise RuntimeUnavailable("Runtime snapshot unavailable") from None
 
 # Fixed Supervisor-internal App DNS name, not a user-supplied hostname or
