@@ -3,20 +3,42 @@
     "step": {
       "user": {
         "title": "Genvex Remote (udvikling)",
-        "description": "Indtast det 12-cifrede enheds-ID. Automatisk certifikatoprettelse og sikker kommunikation med runtime er endnu ikke aktiveret.",
-        "data": { "device_id": "Enheds-ID" }
+        "description": "Kræver Genvex Remote App. Angiv internt snapshot-endpoint og IPC-token (ikke Nabto-kontoens adgangskode).",
+        "data": {
+          "device_id": "Enheds-ID",
+          "runtime_endpoint": "Internt App-snapshot-URL",
+          "runtime_token": "Internt IPC-token"
+        }
       }
     },
-    "error": { "invalid_device_id": "Indtast præcis 12 almindelige cifre." },
-    "abort": { "already_configured": "Enheden er allerede konfigureret." }
+    "error": {
+      "invalid_device_id": "Indtast præcis 12 almindelige cifre.",
+      "invalid_runtime_config": "Angiv den faste interne App-adresse og et gyldigt IPC-token."
+    },
+    "abort": {
+      "already_configured": "Enheden er allerede konfigureret."
+    }
   },
   "entity": {
     "sensor": {
-      "supply_air": { "name": "Indblæsning" },
-      "outdoor_air": { "name": "Udeluft" },
-      "exhaust_air": { "name": "Afkast" },
-      "extract_air": { "name": "Udsugning" },
-      "humidity": { "name": "Luftfugtighed" }
+      "supply_air": {
+        "name": "Indblæsning"
+      },
+      "outdoor_air": {
+        "name": "Udeluft"
+      },
+      "exhaust_air": {
+        "name": "Afkast"
+      },
+      "extract_air": {
+        "name": "Udsugning"
+      },
+      "humidity": {
+        "name": "Luftfugtighed"
+      },
+      "data_age": {
+        "name": "Dataalder"
+      }
     }
   }
 }
