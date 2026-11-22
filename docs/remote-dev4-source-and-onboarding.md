@@ -47,3 +47,16 @@ Target user experience: install separate Remote App/integration, enter the autho
 ## Execution order
 
 **First:** complete CI and compare this DEV4 candidate with deployed source. **Second:** prove reproducible package and ARM64 image + App/HA snapshots under fake and live lifecycle gates. **Third:** complete authenticated pairing and credential lifecycle with a fake HAOS test. This is the blocking order for a trustworthy installable release; sensor v2 expansion can remain separate.
+
+## Installed DEV4 source comparison — 22 November 2026, 11:41 CET
+
+Operator provided a code-only TAR from `/opt/genvex-remote/runtime/` containing the exact ten files selected by `scripts/export_haos_dev4_sources_readonly.sh`. The archive was read without deployment or remote commands; all ten Python files parse successfully. Compared **Git blob SHA-1** of each archived file against the same filename under `genvex-nabto-remote/runtime/` at PR #4 commit `9ca0fe9`:
+
+- **Exact match (7/10):** `app_bootstrap.py`, `polling_runtime.py`, `persistent_sdk_adapter.py`, `sdk_snapshot_adapter.py`, `polling_http_server.py`, `snapshot_contract.py`, `ipc_auth.py`.
+- **Expected, intentional source drift (3/10):** `polling_service.py` (runtime's ad-hoc timing/PID log versus source's bounded metadata log), `snapshot_state.py` (runtime's exception-type/stage diagnostic versus source's integer-only SDK status/elapsed metadata), and `persistent_rpc45_worker.py` (runtime's nested field-type diagnostic versus source's bounded numeric Nabto event extractor).
+- **Installed file Git blob hashes for audit only:** `polling_service.py` `2a5dffff25feb51a4cd108e68a47d16f7de594e7`; `snapshot_state.py` `1726a3234931f6488f964eff2aa1c56bdac60131`; `persistent_rpc45_worker.py` `a865fb7d59d57fed7bbbcf8c264b7ee9f71781d2`. These are hashes of **code only**, not private `/data` files.
+- Both SDK worker execution and public snapshot contract are unchanged in semantics: one session, serial RPC45, fixed five-address response, validated v1 snapshot, unchanged 60-second poll interval. The differences are diagnostic metadata handling.
+- **Decision:** retain the new source diagnostics instead of copying ad-hoc runtime patches. Require a fresh image lifecycle test before upgrading the installed App.
+
+This confirms that the recovered DEV4 implementation matches the deployed source everywhere except the explicitly introduced diagnostics. It does **not** prove that a rebuilt candidate has been installed, restarted, or that automatic onboarding is operational.
+
