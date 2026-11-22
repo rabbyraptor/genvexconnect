@@ -1,6 +1,7 @@
 """Offline fake-Supervisor Core pairing tests; no live API credentials."""
 from __future__ import annotations
 
+import asyncio
 import importlib.util
 from pathlib import Path
 import unittest
@@ -68,6 +69,83 @@ class SupervisorPairingTests(unittest.TestCase):
         for invalid in ({}, {"result": "error"}, None, [], {"result": "ok", "data": None}):
             with self.assertRaises(pairing.SupervisorPairingUnavailable):
                 pairing.extract_app_ipc_token(invalid, expected_device_id="123456789012")
+
+
+
+class CorePairingAsyncTests(unittest.IsolatedAsyncioTestCase):
+    async def test_success_uses_fixed_app_id_and_returns_only_token(self):
+        called = []
+
+        async def load(app_id):
+            called.append(app_id)
+            return fake_info()
+
+        token = await pairing.async_load_app_ipc_token(
+            load, expected_device_id="123456789012"
+        )
+        self.assertEqual(token, "Z" * 43)
+        self.assertEqual(called, [pairing.APP_ID])
+
+    async def test_bad_device_fails_before_loader_invocation(self):
+        called = []
+
+        async def load(app_id):
+            called.append(app_id)
+            return fake_info()
+
+        with self.assertRaises(pairing.SupervisorPairingUnavailable):
+            await pairing.async_load_app_ipc_token(
+                load, expected_device_id="12345678901x"
+            )
+        self.assertEqual(called, [])
+
+    async def test_transport_errors_are_sanitized(self):
+        async def load(_app_id):
+            raise RuntimeError("FAKE-SUPERVISOR-SECRET")
+
+        with self.assertRaises(pairing.SupervisorPairingUnavailable) as caught:
+            await pairing.async_load_app_ipc_token(
+                load, expected_device_id="123456789012"
+            )
+        self.assertNotIn("FAKE-SUPERVISOR-SECRET", str(caught.exception))
+
+    async def test_mismatched_device_fails_closed(self):
+        async def load(_app_id):
+            info = fake_info()
+            info["data"]["options"]["device_id"] = "999999999999"
+            return info
+
+        with self.assertRaises(pairing.SupervisorPairingUnavailable):
+            await pairing.async_load_app_ipc_token(
+                load, expected_device_id="123456789012"
+            )
+
+    async def test_timeout_is_bounded_and_sanitized(self):
+        async def load(_app_id):
+            await asyncio.sleep(5)
+            return fake_info()
+
+        with self.assertRaises(pairing.SupervisorPairingUnavailable) as caught:
+            await pairing.async_load_app_ipc_token(
+                load, expected_device_id="123456789012",
+                timeout_seconds=0.01,
+            )
+        self.assertEqual(str(caught.exception), "Trusted App pairing unavailable")
+
+    async def test_cancellation_propagates(self):
+        entered = asyncio.Event()
+
+        async def load(_app_id):
+            entered.set()
+            await asyncio.sleep(60)
+
+        task = asyncio.create_task(pairing.async_load_app_ipc_token(
+            load, expected_device_id="123456789012"
+        ))
+        await asyncio.wait_for(entered.wait(), timeout=1)
+        task.cancel()
+        with self.assertRaises(asyncio.CancelledError):
+            await task
 
 
 if __name__ == "__main__":
