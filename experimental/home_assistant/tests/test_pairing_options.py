@@ -51,6 +51,7 @@ class PairingOptionsTests(unittest.IsolatedAsyncioTestCase):
         const.CONF_DEVICE_ID = "device_id"
         const.CONF_RUNTIME_TOKEN = "runtime_token"
         const.CONF_PAIR_FROM_APP = "pair_from_app"
+        const.CONF_RAW_REGISTERS_V3 = "raw_registers_v3"
         pairing = types.ModuleType(NAMESPACE + ".supervisor_pairing")
 
         class Unavailable(ValueError):
@@ -152,6 +153,33 @@ class PairingOptionsTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["errors"], {
             "base": "invalid_runtime_config"
         })
+        self.assertEqual(self.lookups, [])
+
+    async def test_v3_opt_in_and_disable_preserve_pairing(self):
+        result = await self.flow.async_step_init({
+            "pair_from_app": True, "raw_registers_v3": True,
+        })
+        self.assertEqual(result["data"], {
+            "pair_from_app": True, "raw_registers_v3": True,
+        })
+        self.assertNotIn("runtime_token", self.entry.data)
+        self.entry.options = dict(result["data"])
+        self.lookups.clear()
+        result = await self.flow.async_step_init({
+            "pair_from_app": True, "raw_registers_v3": False,
+        })
+        self.assertEqual(result["data"], {"pair_from_app": True})
+        self.assertEqual(len(self.lookups), 1)
+
+    async def test_raw_v3_non_boolean_flag_is_rejected(self):
+        for flag in ("true", 1, None):
+            with self.subTest(flag=flag):
+                result = await self.flow.async_step_init({
+                    "pair_from_app": True, "raw_registers_v3": flag,
+                })
+                self.assertEqual(
+                    result["errors"], {"base": "invalid_runtime_config"}
+                )
         self.assertEqual(self.lookups, [])
 
     async def test_invalid_supervisor_token_is_not_persisted(self):
