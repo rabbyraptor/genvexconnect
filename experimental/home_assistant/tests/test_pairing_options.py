@@ -31,6 +31,7 @@ class PairingOptionsTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.lookups = []
         self.fail_pairing = False
+        self.returned_token = AUTO_TOKEN
         self.entry = types.SimpleNamespace(
             data={"device_id": DEVICE_ID, "runtime_token": MANUAL_TOKEN,
                   "runtime_endpoint": "http://local-genvex-nabto-remote:18275/v1/snapshot"},
@@ -62,7 +63,7 @@ class PairingOptionsTests(unittest.IsolatedAsyncioTestCase):
             self.lookups.append((hass, device_id))
             if self.fail_pairing:
                 raise Unavailable("PRIVATE")
-            return AUTO_TOKEN
+            return self.returned_token
 
         core.async_fetch_paired_token = paired_token
         ha = types.ModuleType("homeassistant")
@@ -154,7 +155,11 @@ class PairingOptionsTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.lookups, [])
 
     async def test_invalid_supervisor_token_is_not_persisted(self):
-        self.flow.__class__.__module__
+        self.returned_token = "short"
+        result = await self.flow.async_step_init({"pair_from_app": True})
+        self.assertEqual(result["errors"], {
+            "base": "app_pairing_unavailable"
+        })
         self.assertEqual(self.entry.data["runtime_token"], MANUAL_TOKEN)
 
 
