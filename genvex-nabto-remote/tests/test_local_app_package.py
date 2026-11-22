@@ -86,6 +86,18 @@ class LocalAppPackageTests(unittest.TestCase):
         self.assertIn("--build-arg BUILD_VERSION=0.1.0-dev2", workflow)
         self.assertIn('if [ "$IMAGE_VERSION" != 0.1.0-dev2 ]; then', workflow)
 
+    def test_deployed_source_export_is_allowlisted(self):
+        script = ROOT / "scripts/export_haos_dev4_sources_readonly.sh"
+        syntax = subprocess.run(["bash", "-n", str(script)], capture_output=True)
+        self.assertEqual(syntax.returncode, 0, syntax.stderr.decode())
+        text = script.read_text()
+        self.assertIn("persistent_rpc45_worker.py", text)
+        self.assertIn("persistent_sdk_adapter.py", text)
+        self.assertIn("tar -tzf", text)
+        self.assertIn("SOURCE_EXPORT_BLOCKED", text)
+        self.assertNotIn('root / "options.json"', text)
+        self.assertNotIn('root / "ipc-token"', text)
+
     def test_source_archive_is_byte_reproducible(self):
         with tempfile.TemporaryDirectory() as directory:
             dest = Path(directory)
