@@ -247,7 +247,7 @@ STANDALONE_CONFIG
       die "Publish failed; verify GitHub credentials and repo permissions"
     fi
     printf 'MIGRATION_PUBLISH: PASS\n'
-    printf 'REMOTE_URL: %s\n' "$DESTINATION"
+    printf 'REMOTE_URL: %s\n' "$REMOTE"
     ;;
   *)
     die "Mode must be --prepare, --verify or --publish"
