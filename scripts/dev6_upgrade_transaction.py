@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""DEV6 -> DEV6 source + Supervisor App update; no automatic App restart.
+"""DEV5 -> DEV6 source + Supervisor App update; no automatic App restart.
 
 Prepared from a pinned source archive. Reads only App metadata/source and the
 archive. Credentials are compared in-memory, never printed or copied.
