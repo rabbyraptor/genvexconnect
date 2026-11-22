@@ -7,6 +7,7 @@
 | Document | Scope |
 | --- | --- |
 | [Status and next gates](STATUS.md) | Canonical current status, DEV3 worker test and outstanding work |
+| [DEV4 source parity and onboarding plan](remote-dev4-source-and-onboarding.md) | Candidate reproducibility, secure token/provisioning gates; source-only work |
 | [Installation readiness](remote-install-readiness.md) | Living deployment readiness and distinction between LAN and Remote |
 | [Architecture/maintenance roadmap](architecture-maintenance-plan.md) | Workstreams 2A–5C; read with latest status |
 | [UI onboarding architecture](remote-ha-ui-onboarding-architecture.md) | Intended separate HA integration + App onboarding |
