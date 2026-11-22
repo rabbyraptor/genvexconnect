@@ -33,6 +33,7 @@ def read_options(path: Path = OPTIONS) -> dict:
     allowed = {
         "device_id", "identity", "unlock_secret", "ipc_token",
         "poll_seconds", "diagnostic_only", "persistent_session",
+        "raw_registers_v3",
     }
     if set(data) - allowed:
         raise ValueError("Unknown App option")
@@ -42,12 +43,15 @@ def read_options(path: Path = OPTIONS) -> dict:
     persistent_session = data.get("persistent_session", False)
     if type(persistent_session) is not bool:
         raise ValueError("Invalid persistent session option")
+    raw_v3 = data.get("raw_registers_v3", False)
+    if type(raw_v3) is not bool or (raw_v3 and not persistent_session):
+        raise ValueError("Raw-register mode requires a persistent session")
     poll = data.get("poll_seconds", 60)
     if type(poll) is not int or not 60 <= poll <= 3600:
         raise ValueError("Invalid poll interval")
 
     if diagnostic is True:
-        if persistent_session:
+        if persistent_session or raw_v3:
             raise ValueError("Diagnostic mode cannot use persistent session")
         # Explicit opt-in only. Do not run a diagnostic process if the
         # configuration contains credentials that may belong to a live App.
@@ -157,6 +161,7 @@ def main() -> None:
             "bind_host": "0.0.0.0",
             "poll_seconds": options.get("poll_seconds", 60),
             "persistent_session": options.get("persistent_session", False),
+            "raw_registers_v3": options.get("raw_registers_v3", False),
         }
         print("Genvex Remote App: starting read-only polling on private App network", flush=True)
         asyncio.run(run(config))
