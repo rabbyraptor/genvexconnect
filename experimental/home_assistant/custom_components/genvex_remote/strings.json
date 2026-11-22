@@ -41,5 +41,21 @@
         "name": "Data age"
       }
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Genvex Remote App pairing",
+        "description": "Switch this existing integration to automatic Supervisor pairing or use a manual IPC token. Automatic pairing removes the previously stored IPC token.",
+        "data": {
+          "pair_from_app": "Pair automatically via Home Assistant Supervisor",
+          "runtime_token": "Manual internal IPC token (manual pairing only)"
+        }
+      }
+    },
+    "error": {
+      "app_pairing_unavailable": "Cannot retrieve the IPC token from the started Genvex Remote App through Supervisor.",
+      "invalid_runtime_config": "Invalid selection, or enter a valid manual IPC token."
+    }
   }
 }
