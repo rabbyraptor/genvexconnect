@@ -121,7 +121,7 @@ def record_error_event(status: int, raw: str) -> None:
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "sdk_status": status,
         "event": event,
-    }, separators=(",", ":")) + "\\n"
+    }, separators=(",", ":")) + "\n"
     try:
         fd = os.open(
             "/data/rpc45_json_diagnostic.log",
