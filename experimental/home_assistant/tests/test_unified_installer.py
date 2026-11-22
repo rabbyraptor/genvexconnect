@@ -175,6 +175,15 @@ class UnifiedInstallerTests(unittest.TestCase):
         )
         self.assertEqual(self.calls.count(("core", "restart")), 1)
 
+    def test_host_tar_cli_is_used_for_archive_reads(self):
+        # HAOS host Python's tarfile rejected the real source bundle.
+        # The DEV6 upgrade on that host already used tar -tzf/-xOzf.
+        source = SCRIPT.read_text()
+        for command in ('tar_command("-tzf"', 'tar_command("-tvzf"',
+                        'tar_command("-xOzf"'):
+            self.assertIn(command, source)
+        self.assertNotIn("tarfile.open(", source)
+
     def test_operator_launcher_clears_screen_and_pins_source(self):
         path = ROOT / "scripts/run_unified_ha_install_from_deck.sh"
         result = subprocess.run(["bash", "-n", str(path)], capture_output=True)
@@ -183,6 +192,7 @@ class UnifiedInstallerTests(unittest.TestCase):
         for text in (
             "PINNED_COMMIT", "SOURCE_COMMIT:", "COMPONENT_SHA256:",
             "install_unified_ha_integration.py", "STEAM_DECK_EXIT_CODE:",
+            "ConnectionAttempts=5",
             r"printf '\033[3J\033[2J\033[H'",
         ):
             self.assertIn(text, source)
