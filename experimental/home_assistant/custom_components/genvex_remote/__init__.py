@@ -27,13 +27,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             raise ConfigEntryNotReady(
                 "Genvex Remote App pairing unavailable"
             ) from None
+        # Resolve a replacement token only if the App rejects the current
+        # in-memory token. Never persist either token to the config entry.
+        token_loader = lambda: async_fetch_paired_token(
+            hass, device_id=entry.data[CONF_DEVICE_ID],
+        )
     else:
         # Existing manually configured entries continue to work unchanged.
         token = entry.data[CONF_RUNTIME_TOKEN]
+        token_loader = None
     reader = AuthenticatedSnapshotReader(
         async_get_clientsession(hass),
         endpoint=entry.data[CONF_RUNTIME_ENDPOINT],
         token=token,
+        token_loader=token_loader,
     )
     coordinator = GenvexRemoteCoordinator(
         hass, entry.data[CONF_DEVICE_ID], reader,
