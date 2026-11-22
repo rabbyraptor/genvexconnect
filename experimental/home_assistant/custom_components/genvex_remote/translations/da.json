@@ -41,5 +41,21 @@
         "name": "Dataalder"
       }
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Parring med Genvex Remote App",
+        "description": "Skift den eksisterende integration til automatisk Supervisor-parring, eller fortsæt med et manuelt IPC-token. Når automatisk parring vælges, fjernes det tidligere gemte IPC-token.",
+        "data": {
+          "pair_from_app": "Par automatisk via Home Assistant Supervisor",
+          "runtime_token": "Manuelt internt IPC-token (kun ved manuel parring)"
+        }
+      }
+    },
+    "error": {
+      "app_pairing_unavailable": "Kan ikke hente IPC-token fra den startede Genvex Remote App via Supervisor.",
+      "invalid_runtime_config": "Ugyldigt valg, eller angiv et gyldigt manuelt IPC-token."
+    }
   }
 }
