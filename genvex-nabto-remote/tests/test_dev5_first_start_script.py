@@ -49,6 +49,8 @@ class DEV5FirstStartScriptTests(unittest.TestCase):
             "PERSISTENT_WORKER_COUNT:",
             "HA_REGISTERED_ENTITIES:",
             "DEV5_LIVE_RESULT: PASS",
+            "DEV5_FIRST_START_FULL_GATE: PASS",
+            "FIRST_START_INCOMPLETE",
             "STEAM_DECK_EXIT_CODE:",
             "printf '\\033[3J\\033[2J\\033[H'",
         ):
