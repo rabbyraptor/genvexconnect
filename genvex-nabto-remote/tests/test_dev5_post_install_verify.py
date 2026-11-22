@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import hashlib
 import importlib.util
 from pathlib import Path
 import subprocess
@@ -16,15 +17,22 @@ spec.loader.exec_module(gate)
 
 
 class DEV5PostInstallTests(unittest.TestCase):
-    def test_historic_dev5_manifest_rejects_dev6_changed_source(self):
-        """DEV5 installed-source attestation must not approve DEV6 code."""
+    def test_historic_dev5_manifest_rejects_later_changed_source(self):
+        """DEV5 attestation must reject every newer DEV6/DEV8 runtime."""
         source = ROOT / "genvex-nabto-remote"
         self.assertEqual(len(gate.EXPECTED), 20)
         unchanged = {
             rel: digest for rel, digest in gate.EXPECTED.items()
-            if rel not in {"config.yaml", "runtime/polling_service.py"}
+            if (source / rel).is_file()
+            and hashlib.sha256((source / rel).read_bytes()).hexdigest() == digest
         }
-        self.assertEqual(gate.inspect_source(source, unchanged, False), 18)
+        # Later development can change additional files while the historic
+        # DEV5 attestation remains immutable and correctly rejects them.
+        self.assertGreater(len(unchanged), 0)
+        self.assertLess(len(unchanged), len(gate.EXPECTED))
+        self.assertEqual(
+            gate.inspect_source(source, unchanged, False), len(unchanged)
+        )
         with self.assertRaises(gate.GateBlocked) as caught:
             gate.inspect_source(source, gate.EXPECTED, False)
         self.assertEqual(str(caught.exception), "SOURCE_HASH_MISMATCH")
@@ -34,7 +42,9 @@ class DEV5PostInstallTests(unittest.TestCase):
                 target = staged / rel
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_bytes((source / rel).read_bytes())
-            self.assertEqual(gate.inspect_source(staged, unchanged, True), 18)
+            self.assertEqual(
+                gate.inspect_source(staged, unchanged, True), len(unchanged)
+            )
 
 
     def test_detect_one_changed_file(self):
