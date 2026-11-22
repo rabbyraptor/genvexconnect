@@ -10,7 +10,8 @@ the configured device ID or other sensitive option values.
 """
 from __future__ import annotations
 
-from collections.abc import Mapping
+import asyncio
+from collections.abc import Awaitable, Callable, Mapping
 
 APP_ID = "local_genvex_nabto_remote"
 
@@ -52,3 +53,40 @@ def extract_app_ipc_token(payload: object, *, expected_device_id: str) -> str:
         return token
     except (ValueError, TypeError):
         raise SupervisorPairingUnavailable("Trusted App pairing unavailable") from None
+
+
+
+async def async_load_app_ipc_token(
+    load_app_info: Callable[[str], Awaitable[object]],
+    *,
+    expected_device_id: str,
+    timeout_seconds: float = 10.0,
+) -> str:
+    """Core-only pairing boundary with injected, authenticated Supervisor I/O.
+
+    The loader is provided by trusted Home Assistant Core code, NOT this
+    module. It must read only the fixed App's Supervisor metadata; it must
+    never accept a user URL, bearer token, or arbitrary App ID. This helper
+    is source-only until the Core integration supplies that loader.
+    """
+    if (type(expected_device_id) is not str
+            or len(expected_device_id) != 12
+            or not expected_device_id.isascii()
+            or not expected_device_id.isdecimal()
+            or not callable(load_app_info)
+            or type(timeout_seconds) not in (int, float)
+            or not 0 < timeout_seconds <= 30):
+        raise SupervisorPairingUnavailable("Trusted App pairing unavailable")
+    try:
+        async with asyncio.timeout(timeout_seconds):
+            response = await load_app_info(APP_ID)
+        return extract_app_ipc_token(
+            response, expected_device_id=expected_device_id,
+        )
+    except asyncio.CancelledError:
+        raise
+    except Exception:
+        # Never copy Supervisor responses, secrets or transport errors to HA.
+        raise SupervisorPairingUnavailable(
+            "Trusted App pairing unavailable"
+        ) from None
