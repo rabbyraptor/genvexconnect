@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 import stat
 
-from ipc_auth import authorize_read, new_ipc_token
+from ipc_auth import IPCAuthError, authorize_read, new_ipc_token
 
 
 class TokenStoreError(ValueError):
@@ -57,7 +57,7 @@ class PrivateIPCTokenStore:
                 return token
             finally:
                 os.close(fd)
-        except (OSError, UnicodeError, ValueError):
+        except (OSError, UnicodeError, ValueError, IPCAuthError):
             raise TokenStoreError("Invalid private IPC token") from None
         finally:
             os.close(directory_fd)
