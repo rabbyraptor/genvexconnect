@@ -1,0 +1,42 @@
+name: Standalone Genvex Remote extraction verification
+
+on:
+  push:
+    branches:
+      - standalone-repo-migration
+    paths:
+      - scripts/prepare_standalone_repo.sh
+      - .github/workflows/standalone-repo-migration.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prepare-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate migration shell syntax
+        run: bash -n scripts/prepare_standalone_repo.sh
+      - name: Install history-filtering tool
+        run: python -m pip install git-filter-repo
+      - name: Extract remote-only history without publishing
+        run: |
+          git config --global user.name "Genvex Remote migration validation"
+          git config --global user.email "migration-validation@users.noreply.github.com"
+          bash scripts/prepare_standalone_repo.sh --prepare "$RUNNER_TEMP/genvex-remote-standalone"
+          bash scripts/prepare_standalone_repo.sh --verify "$RUNNER_TEMP/genvex-remote-standalone"
+      - name: Assert LAN excluded and DEV8 package still valid
+        run: |
+          DEST="$RUNNER_TEMP/genvex-remote-standalone"
+          test ! -d "$DEST/custom_components/genvex_connect"
+          test ! -e "$DEST/hacs.json"
+          (cd "$DEST" && python scripts/check_remote_runtime_parity.py --check)
+          (cd "$DEST" && python -m unittest discover -s genvex-nabto-remote/tests -p 'test_*.py')
+          (cd "$DEST" && python -m unittest discover -s experimental/home_assistant/tests -p 'test_*.py')
+          (cd "$DEST" && python scripts/package_dev8_combined.py)
