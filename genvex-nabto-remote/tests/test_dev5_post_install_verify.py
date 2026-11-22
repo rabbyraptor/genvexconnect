@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-import hashlib
 import importlib.util
 from pathlib import Path
 import subprocess
@@ -24,7 +23,7 @@ class DEV5PostInstallTests(unittest.TestCase):
         unchanged = {
             rel: digest for rel, digest in gate.EXPECTED.items()
             if (source / rel).is_file()
-            and hashlib.sha256((source / rel).read_bytes()).hexdigest() == digest
+            and gate.git_blob_sha((source / rel).read_bytes()) == digest
         }
         # Later development can change additional files while the historic
         # DEV5 attestation remains immutable and correctly rejects them.
