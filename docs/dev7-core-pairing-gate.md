@@ -19,7 +19,10 @@ HAOS deployment or automatic certificate enrollment.
 - The config flow adds a **disabled-by-default**, explicit
   `pair_from_app` checkbox. Selecting it loads the matching token from
   Core's Supervisor connection; otherwise a manually entered IPC token is
-  still accepted. The App endpoint is fixed, never user-editable.
+  still accepted. In auto-pairing mode the config entry saves only the pairing
+  flag, not the IPC token. On every entry setup/reload, Core fetches the
+  current token again and fails with ConfigEntryNotReady if the App is not
+  available. The App endpoint is fixed, never user-editable.
 - English and Danish config-flow labels and error messages are updated.
 
 ## Verification
@@ -31,7 +34,9 @@ python3 -m compileall -q experimental/home_assistant/custom_components/genvex_re
 
 Unit tests use a fake Supervisor client and check one fixed App slug,
 successful pairing, invalid device ID, wrong/stopped App, missing token,
-mismatched identity, sanitized transport errors, and cancellation. Source
+mismatched identity, sanitized transport errors, and cancellation. The actual
+config-flow and setup-entry modules also execute against isolated HA stubs,
+including a changed token across setup calls and the manual fallback. Source
 contracts ensure that the manual fallback and fixed endpoint remain.
 
 **Not yet verified in HA Core:** the actual installed Supervisor's options
@@ -44,8 +49,10 @@ passing them does not establish production pairing.
 1. Test the proposed Core path on the exact installed HA Core version,
    including a started App with matching options and network access to the
    pinned snapshot endpoint.
-2. Verify token refresh/rotation and stopped-App recovery. Existing HA config
-   entries hold a copied IPC token and do not automatically update on rotation.
+2. Verify token refresh/rotation and stopped-App recovery. Auto-paired entries
+   re-read the token on entry setup/reload, but there is no in-session refresh
+   when a running App rotates its token. Older manually configured entries
+   continue to hold their original IPC tokens.
 3. Integrate the separate trusted legacy CA enrollment and private profile
    lifecycle before claiming fully automatic onboarding.
 4. Once accepted, deploy via the normal reviewed development process.
