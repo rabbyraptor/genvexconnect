@@ -242,7 +242,7 @@ def main() -> int:
                 command = sys.stdin.buffer.readline(16)
                 if not command or command == b"CLOSE\n":
                     break
-                if command != b"POLL\n":
+                if command not in (b"POLL\n", b"POLL3\n"):
                     break
                 response = P()
                 start = time.monotonic()
@@ -260,7 +260,7 @@ def main() -> int:
                     emit(RESULT, {"ok": False, "status": 0, "elapsed_ms": elapsed})
                     continue
                 measured_at = datetime.now(timezone.utc)
-                if command == b"POLL3\\n":
+                if command == b"POLL3\n":
                     baseline_raw = decode_raw_rpc(raw, len(SENSORS))
                     extra_raw = None
                     response2 = P()
