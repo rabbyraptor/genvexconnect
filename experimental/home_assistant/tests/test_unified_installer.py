@@ -124,6 +124,24 @@ class UnifiedInstallerTests(unittest.TestCase):
         self.assertTrue((self.existing / "original.py").is_file())
         self.assertEqual(self.calls, [])
 
+    def test_json_and_utf8_failures_have_specific_categories(self):
+        for invalid, expected in (
+            (("strings.json", b'{"bad":}'), "ARCHIVE_JSON_INVALID"),
+            (("strings.json", b"\xff"), "ARCHIVE_UTF8_INVALID"),
+        ):
+            self.create_archive(extra=invalid)
+            digest = hashlib.sha256(self.archive.read_bytes()).hexdigest()
+            with self.subTest(expected=expected):
+                with self.assertRaises(installer.InstallBlocked) as caught:
+                    installer.check_archive(self.archive, digest)
+                self.assertEqual(str(caught.exception), expected)
+
+    def test_installer_uses_core_check_for_source_syntax(self):
+        """The host cannot be required to use HA Core's newer Python grammar."""
+        source = SCRIPT.read_text()
+        self.assertNotIn("ast.parse(", source)
+        self.assertIn('ha_cli("core", "check"', source)
+
     def test_traversal_and_symlinks_refused(self):
         self.create_archive(extra=("../escape.py", b"BAD = True\n"))
         sha = hashlib.sha256(self.archive.read_bytes()).hexdigest()
