@@ -90,12 +90,57 @@ class UnifiedInstallerTests(unittest.TestCase):
         self.assertEqual(self.calls.count(("core", "check")), 1)
         self.assertEqual(self.calls.count(("core", "restart")), 1)
 
+    def test_actual_component_archive_generated_by_operator_is_accepted(self):
+        """Do not validate only fake fixtures: inspect every real deployed file."""
+        import gzip
+        source = ROOT / "experimental/home_assistant/custom_components/genvex_remote"
+        files = sorted(
+            p for p in source.rglob("*")
+            if p.is_file() and p.suffix in (".py", ".json")
+        )
+        self.assertGreaterEqual(len(files), 9)
+        with self.archive.open("wb") as stream:
+            with gzip.GzipFile(filename="", fileobj=stream,
+                               mode="wb", mtime=0) as zipped:
+                with tarfile.open(fileobj=zipped, mode="w",
+                                  format=tarfile.PAX_FORMAT) as bundle:
+                    for file in files:
+                        arc = "genvex_remote/" + file.relative_to(source).as_posix()
+                        info = bundle.gettarinfo(str(file), arcname=arc)
+                        info.mtime = 0
+                        info.uid = info.gid = 0
+                        info.uname = info.gname = ""
+                        info.mode = 0o644
+                        with file.open("rb") as content:
+                            bundle.addfile(info, content)
+        digest = hashlib.sha256(self.archive.read_bytes()).hexdigest()
+        accepted = installer.check_archive(self.archive, digest)
+        self.assertEqual(len(accepted), len(files))
+
     def test_wrong_archive_sha_refused_without_mutation(self):
         with self.assertRaises(installer.InstallBlocked) as caught:
             installer.apply(self.archive, "0" * 64)
         self.assertEqual(str(caught.exception), "ARCHIVE_SHA256_MISMATCH")
         self.assertTrue((self.existing / "original.py").is_file())
         self.assertEqual(self.calls, [])
+
+    def test_json_and_utf8_failures_have_specific_categories(self):
+        for invalid, expected in (
+            (("strings.json", b'{"bad":}'), "ARCHIVE_JSON_INVALID"),
+            (("strings.json", b"\xff"), "ARCHIVE_UTF8_INVALID"),
+        ):
+            self.create_archive(extra=invalid)
+            digest = hashlib.sha256(self.archive.read_bytes()).hexdigest()
+            with self.subTest(expected=expected):
+                with self.assertRaises(installer.InstallBlocked) as caught:
+                    installer.check_archive(self.archive, digest)
+                self.assertEqual(str(caught.exception), expected)
+
+    def test_installer_uses_core_check_for_source_syntax(self):
+        """The host cannot be required to use HA Core's newer Python grammar."""
+        source = SCRIPT.read_text()
+        self.assertNotIn("ast.parse(", source)
+        self.assertIn('ha_cli("core", "check"', source)
 
     def test_traversal_and_symlinks_refused(self):
         self.create_archive(extra=("../escape.py", b"BAD = True\n"))
