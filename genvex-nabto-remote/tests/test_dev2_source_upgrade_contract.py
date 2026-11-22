@@ -4,7 +4,6 @@ from __future__ import annotations
 import importlib.util
 import hashlib
 import os
-import re
 import shutil
 from pathlib import Path
 import subprocess
@@ -35,10 +34,10 @@ class Dev2UpgradeContractTests(unittest.TestCase):
         shutil.copytree(packager.SOURCE, legacy_source)
         manifest = legacy_source / "config.yaml"
         original = manifest.read_text()
-        rewritten = re.sub(
-            r'version: "0\\.1\\.0-dev[0-9]+"',
+        rewritten = original.replace(
+            'version: "0.1.0-dev4"',
             'version: "0.1.0-dev2"',
-            original, count=1,
+            1,
         )
         if rewritten == original:
             raise AssertionError("Unable to create historical DEV2 fixture")
