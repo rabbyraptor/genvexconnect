@@ -289,13 +289,11 @@ def apply(archive: Path, sha: str) -> None:
             raise ReleaseBlocked("DEV8_APP_NOT_INSTALLED")
         app_installed = True
         after_options = app_options(installed.get("options"))
-        after_options.pop("raw_registers_v3", None) if (
-            after_options.get("raw_registers_v3") is False
-        ) else None
+        if after_options.get("raw_registers_v3") is False:
+            after_options.pop("raw_registers_v3")
         original = dict(previous_options)
-        original.pop("raw_registers_v3", None) if (
-            original.get("raw_registers_v3") is False
-        ) else None
+        if original.get("raw_registers_v3") is False:
+            original.pop("raw_registers_v3")
         if after_options != original:
             raise ReleaseBlocked("APP_OPTIONS_NOT_PRESERVED")
         command(["ha", "apps", "start", APP_SLUG], 240)
@@ -326,6 +324,17 @@ def apply(archive: Path, sha: str) -> None:
                 check_core_ready()
             except ReleaseBlocked:
                 print("DEV8_HA_ROLLBACK_RESTART: BLOCKED", flush=True)
+        # A command failure can occur *after* Supervisor has installed
+        # DEV8 but *before* we received its confirmation. Do not restore
+        # dev6 source over a successfully installed dev8 image.
+        if app_swapped and not app_installed:
+            try:
+                app_installed = (
+                    ha_info("apps", "info", APP_SLUG).get("version")
+                    == NEW_VERSION
+                )
+            except ReleaseBlocked:
+                pass
         if not app_installed and app_swapped and APP_BACKUP.is_dir():
             shutil.rmtree(APP_SOURCE)
             APP_BACKUP.rename(APP_SOURCE)
@@ -334,11 +343,15 @@ def apply(archive: Path, sha: str) -> None:
                 command(["ha", "store", "reload"], 120)
             except ReleaseBlocked:
                 pass
-        if app_was_stopped and not app_installed:
+        if app_was_stopped:
+            # The App must not remain stopped after an installer error.
+            # Use only the original or confirmed DEV8 install as present.
             try:
-                command(["ha", "apps", "start", APP_SLUG], 240)
+                state = ha_info("apps", "info", APP_SLUG)
+                if state.get("state") != "started":
+                    command(["ha", "apps", "start", APP_SLUG], 240)
             except ReleaseBlocked:
-                print("DEV8_PREVIOUS_APP_START: BLOCKED", flush=True)
+                print("DEV8_APP_RECOVERY_START: BLOCKED", flush=True)
         raise
     finally:
         for path in (APP_STAGE, HA_STAGE):
