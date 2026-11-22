@@ -74,3 +74,16 @@ Operator verification after coordinator `config_entry` fix (`984930e`): all six 
 ### Recommended next development gate (priority)
 
 **3A + 2E + 5C: persist and test the now-proven DEV4 polling/diagnostic implementation in the canonical repository source.** Compare the checked-in App runtime with the running container, incorporate narrowly scoped non-secret RPC status/timing/worker-reuse logging under source control, add offline regression tests and build/parity checks, then verify the packaged App survives a normal rebuild/restart with consistent five-sensor v1 snapshots and Dataalder/grace behavior. This prevents the valuable live diagnostic work from being lost on the next image replacement. After this, proceed with 2D/3B credential/IPC token lifecycle and the 2A/2B → v2/seven-address expansion gates; see [architecture roadmap](architecture-maintenance-plan.md) and [installation readiness](remote-install-readiness.md).
+
+## DEV4-to-DEV5 release candidate — 22 November 2026
+
+After the installed DEV4 runtime gate passed (10/10 baseline files, persistent worker 1, authenticated v1 HTTP 200, five values, snapshot age 0.5 s), the operator ran the **read-only versioned-update environment gate**, which returned `VERSIONED_UPDATE_PREFLIGHT: PASS` and exit code 0:
+
+- Running/manual Supervisor App version `0.1.0-dev4`; installed local source manifest also dev4; no update currently offered (expected).
+- `persistent_session: true`, `poll_seconds: 60`; Docker container running without published host ports.
+- No occupied DEV5 stage or DEV4 source-backup transaction path; available source filesystem space **6921 MiB**.
+- Supervisor backup inventory contains **8 backups**. This count is not proof of a new rollback backup for the next release.
+
+A separate **`0.1.0-dev5` App candidate** has been staged on the draft `dev4-source-parity-onboarding-20261122` PR #4 branch to preserve DEV4 RPC semantics and put metadata-only diagnostics in permanent source. The build workflow and version contract use dev5. `scripts/dev5_upgrade_transaction.py` and `scripts/run_dev5_upgrade_from_deck.sh` implement a commit-pinned source-archive preflight and an explicit staged/backup Supervisor update that preserves the live persistent options; the update leaves the App **stopped**, requiring an independent start and smoke test. Offline fixture tests validate the transaction with a fake Supervisor.
+
+**Status:** packaged/offline tested, not yet installed or live-verified. Next user action: run the *candidate archive* `--preflight` from a pinned, CI-green commit. Only after that succeeds should explicit `--apply` and live entity/grace checks be considered. See [DEV5 diagnostic upgrade](dev5-diagnostic-upgrade.md).
