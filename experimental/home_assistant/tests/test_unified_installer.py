@@ -40,7 +40,7 @@ class UnifiedInstallerTests(unittest.TestCase):
         def fake_ha(*args, **kwargs):
             self.calls.append(args)
             if args[:2] == ("core", "info"):
-                return json.dumps({"data": {"state": "started"}})
+                return json.dumps({"data": {"version": "2026.11.1", "port": 8123, "ssl": False}})
             return ""
 
         self.fake_ha = fake_ha
@@ -52,6 +52,7 @@ class UnifiedInstallerTests(unittest.TestCase):
             patch.object(installer, "STAGE",
                          self.components / ".genvex_remote_unified_stage"),
             patch.object(installer, "ha_cli", side_effect=self.fake_ha),
+            patch.object(installer, "core_api_ready", return_value=True),
         ]
         for patcher in self.patchers:
             patcher.start()
@@ -117,6 +118,38 @@ class UnifiedInstallerTests(unittest.TestCase):
         accepted = installer.check_archive(self.archive, digest)
         self.assertEqual(len(accepted), len(files))
 
+    def test_core_readiness_accepts_real_supervisor_info_without_state(self):
+        """Supervisor /core/info has version/port/ssl but NO state field."""
+        with patch.object(installer, "core_api_ready", return_value=True) as probe:
+            installer.check_core_started()
+        probe.assert_called_once_with(8123, False)
+        self.assertEqual(self.calls, [("core", "info", "--raw-json")])
+
+    def test_core_readiness_does_not_accept_only_info_without_api(self):
+        """An up Supervisor does not prove the HA Core API is listening."""
+        with (patch.object(installer, "core_api_ready", return_value=False),
+              patch.object(installer.time, "sleep")):
+            with self.assertRaises(installer.InstallBlocked) as error:
+                installer.check_core_started()
+        self.assertEqual(str(error.exception), "CORE_API_NOT_READY")
+        self.assertEqual(self.calls.count(("core", "info", "--raw-json")), 24)
+
+    def test_real_core_api_probe_accepts_unauthorized(self):
+        from urllib.error import HTTPError
+        err = HTTPError("http://127.0.0.1:8123/api/", 401,
+                        "Unauthorized", {}, None)
+        with patch.object(installer, "urlopen", side_effect=err) as probe:
+            self.assertTrue(installer.core_api_ready(8123, False))
+        self.assertEqual(probe.call_args.kwargs["timeout"], 4)
+
+    def test_real_core_api_probe_rejects_unresponsive_port(self):
+        from urllib.error import URLError
+        with patch.object(installer, "urlopen",
+                          side_effect=URLError("connection refused")):
+            self.assertFalse(installer.core_api_ready(8123, False))
+        self.assertFalse(installer.core_api_ready(0, False))
+        self.assertFalse(installer.core_api_ready(8123, "false"))
+
     def test_wrong_archive_sha_refused_without_mutation(self):
         with self.assertRaises(installer.InstallBlocked) as caught:
             installer.apply(self.archive, "0" * 64)
@@ -163,7 +196,7 @@ class UnifiedInstallerTests(unittest.TestCase):
             if args == ("core", "check"):
                 raise installer.InstallBlocked("HA_CORE_CHECK_FAILED")
             if args[:2] == ("core", "info"):
-                return '{"data":{"state":"started"}}'
+                return '{"data":{"version":"2026.11.1","port":8123,"ssl":false}}'
             return ""
 
         with patch.object(installer, "ha_cli", side_effect=fail_check):
