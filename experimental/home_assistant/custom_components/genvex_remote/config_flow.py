@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Any
 
 from homeassistant import config_entries
+from homeassistant.core import callback
 import voluptuous as vol
 from homeassistant.helpers.selector import TextSelector, TextSelectorConfig, TextSelectorType
 
@@ -18,6 +19,14 @@ class GenvexRemoteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Use a fixed App endpoint; allow explicit Core-based token pairing."""
 
     VERSION = 1
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry):
+        """Configure Core pairing for an existing Genvex Remote entry."""
+        from .pairing_options import GenvexRemoteOptionsFlow
+
+        return GenvexRemoteOptionsFlow()
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None):
         errors: dict[str, str] = {}
