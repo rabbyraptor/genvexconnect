@@ -36,6 +36,7 @@ class UnifiedInstallerTests(unittest.TestCase):
         self.create_archive()
         self.sha = hashlib.sha256(self.archive.read_bytes()).hexdigest()
         self.calls = []
+        self.real_api_probe = installer.core_api_ready
 
         def fake_ha(*args, **kwargs):
             self.calls.append(args)
@@ -139,16 +140,16 @@ class UnifiedInstallerTests(unittest.TestCase):
         err = HTTPError("http://127.0.0.1:8123/api/", 401,
                         "Unauthorized", {}, None)
         with patch.object(installer, "urlopen", side_effect=err) as probe:
-            self.assertTrue(installer.core_api_ready(8123, False))
+            self.assertTrue(self.real_api_probe(8123, False))
         self.assertEqual(probe.call_args.kwargs["timeout"], 4)
 
     def test_real_core_api_probe_rejects_unresponsive_port(self):
         from urllib.error import URLError
         with patch.object(installer, "urlopen",
                           side_effect=URLError("connection refused")):
-            self.assertFalse(installer.core_api_ready(8123, False))
-        self.assertFalse(installer.core_api_ready(0, False))
-        self.assertFalse(installer.core_api_ready(8123, "false"))
+            self.assertFalse(self.real_api_probe(8123, False))
+        self.assertFalse(self.real_api_probe(0, False))
+        self.assertFalse(self.real_api_probe(8123, "false"))
 
     def test_wrong_archive_sha_refused_without_mutation(self):
         with self.assertRaises(installer.InstallBlocked) as caught:
