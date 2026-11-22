@@ -44,7 +44,7 @@ _OPTIONAL_FIELDS = (
 
 def project_v2_sensors(
     payload: Any, *, expected_device_id: str, now: datetime | None = None,
-    include_fan_duty: bool = True,
+    include_fan_duty: bool = False,
 ) -> tuple[SensorProjection, ...]:
     """Build a fresh deterministic HA-oriented view, no side effects.
 
