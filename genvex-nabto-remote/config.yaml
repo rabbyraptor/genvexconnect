@@ -1,5 +1,5 @@
 name: "Genvex Remote (experimental)"
-version: "0.1.0-dev6"
+version: "0.1.0-dev8"
 slug: "genvex_nabto_remote"
 description: "Isolated read-only Nabto 4/Micro RPC45 runtime; separate from working LAN integration."
 url: "https://github.com/rabbyraptor/genvexconnect/blob/remote-nabto-connection/docs/remote-install-readiness.md"
