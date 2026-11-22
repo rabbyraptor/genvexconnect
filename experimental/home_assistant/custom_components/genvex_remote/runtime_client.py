@@ -158,9 +158,12 @@ class AuthenticatedSnapshotReader:
 EXPECTED_APP_ENDPOINT = (
     "http://local-genvex-nabto-remote:18275/v1/snapshot"
 )
+EXPECTED_V3_APP_ENDPOINT = (
+    "http://local-genvex-nabto-remote:18275/v3/snapshot"
+)
 
 
 def validate_private_endpoint(endpoint: str) -> None:
     """Pin bearer-token delivery to the dedicated Supervisor App endpoint."""
-    if endpoint != EXPECTED_APP_ENDPOINT:
+    if endpoint not in (EXPECTED_APP_ENDPOINT, EXPECTED_V3_APP_ENDPOINT):
         raise ValueError("Invalid internal runtime endpoint")
