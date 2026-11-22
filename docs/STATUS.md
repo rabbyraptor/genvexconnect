@@ -51,3 +51,7 @@ The LAN `genvex_connect` HACS integration is a **separate already-working path**
 4. Validate sustained operation, recovery/soak tests, packaging parity and proprietary legacy SDK licensing/distribution before declaring remote support installable.
 
 For the development entry points see [scripts](../scripts/README.md), [experimental runtime](../experimental/genvex_remote/), [HA scaffold](../experimental/home_assistant/README.md), [isolated App](../genvex-nabto-remote/DOCS.md) and [architecture roadmap](architecture-maintenance-plan.md).
+
+
+### HAOS live entity registration (22 November 2026)
+Operator verification after coordinator `config_entry` fix (`984930e`): all six `genvex_remote` entities registered and enabled, including unique ID `286529209114_data_age` (entity ID `sensor.sommerhus_genvex_connect_remote`). Genvex log matches after the 01:46 restart contained only the generic custom-integration warning, no setup error. Live measurement-age progression and ten-minute grace recovery still require runtime verification.
