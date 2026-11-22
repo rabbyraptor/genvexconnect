@@ -29,13 +29,13 @@ class Dev2UpgradeContractTests(unittest.TestCase):
         self.artifacts = self.root / "dist"
         self.artifacts.mkdir()
         # The historical DEV1 -> DEV2 migration contract must keep its
-        # original DEV2 fixture even when the current App advances to DEV6.
+        # original DEV2 fixture even when the current App advances to DEV8.
         legacy_source = self.root / "legacy-dev2-source"
         shutil.copytree(packager.SOURCE, legacy_source)
         manifest = legacy_source / "config.yaml"
         original = manifest.read_text()
         rewritten = original.replace(
-            'version: "0.1.0-dev6"',
+            'version: "0.1.0-dev8"',
             'version: "0.1.0-dev2"',
             1,
         )

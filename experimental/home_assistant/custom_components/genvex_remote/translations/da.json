@@ -46,10 +46,11 @@
     "step": {
       "init": {
         "title": "Parring med Genvex Remote App",
-        "description": "Skift den eksisterende integration til automatisk Supervisor-parring, eller fortsæt med et manuelt IPC-token. Når automatisk parring vælges, fjernes det tidligere gemte IPC-token.",
+        "description": "Konfigurer Supervisor-parring og valgfri råværdi-sensorer. Råværdi-tilstand kræver, at den separate Remote-app også har raw_registers_v3 aktiveret.",
         "data": {
           "pair_from_app": "Par automatisk via Home Assistant Supervisor",
-          "runtime_token": "Manuelt internt IPC-token (kun ved manuel parring)"
+          "runtime_token": "Manuelt internt IPC-token (kun ved manuel parring)",
+          "raw_registers_v3": "Vis alle 17 RPC45-råværdier (kræver v3-tilstand i Remote-appen)"
         }
       }
     },

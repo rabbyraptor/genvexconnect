@@ -11,6 +11,7 @@ import json
 from pathlib import Path
 
 from sdk_snapshot_adapter import SDKSnapshotError
+from raw_registers_v3 import parse_raw_v3
 from sensor_model import remote_hostname
 from snapshot_contract import parse_snapshot
 
@@ -33,6 +34,7 @@ class PersistentSDKSnapshotAdapter:
         profile_dir: str, worker_file: str,
         timeout_seconds: float = 85.0,
         startup_timeout_seconds: float = 30.0,
+        raw_registers_v3: bool = False,
         command: tuple[str, ...] | None = None,
     ):
         self.device_id = device_id
@@ -48,11 +50,14 @@ class PersistentSDKSnapshotAdapter:
                 or type(startup_timeout_seconds) not in (int, float)
                 or not 0 < startup_timeout_seconds <= 120):
             raise ValueError("Invalid timeout")
+        if type(raw_registers_v3) is not bool:
+            raise ValueError("Invalid raw v3 flag")
         if not Path(profile_dir).is_dir() or not Path(worker_file).is_file():
             raise ValueError("Missing SDK profile or worker")
         self._identity = identity
         self._secret = unlock_secret
         self._profile_dir = profile_dir
+        self._raw_registers_v3 = raw_registers_v3
         self._timeout = float(timeout_seconds)
         self._startup_timeout = float(startup_timeout_seconds)
         self._command = command or (
@@ -157,12 +162,15 @@ class PersistentSDKSnapshotAdapter:
                 if proc is None or proc.stdin is None:
                     raise ValueError("Worker missing")
                 async with asyncio.timeout(self._timeout):
-                    proc.stdin.write(b"POLL\n")
+                    proc.stdin.write(b"POLL3\n" if self._raw_registers_v3 else b"POLL\n")
                     await proc.stdin.drain()
                     payload = await self._frame(proc, _RESULT)
                 if set(payload) == {"ok", "snapshot"} and payload["ok"] is True:
                     snapshot = payload["snapshot"]
-                    parse_snapshot(snapshot, expected_device_id=self.device_id)
+                    if self._raw_registers_v3:
+                        parse_raw_v3(snapshot, expected_device_id=self.device_id)
+                    else:
+                        parse_snapshot(snapshot, expected_device_id=self.device_id)
                     self._consecutive_rpc_errors = 0
                     return snapshot
                 if (set(payload) == {"ok", "status", "elapsed_ms"}

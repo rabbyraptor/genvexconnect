@@ -19,6 +19,7 @@ from polling_http_server import SnapshotHTTPServer
 from polling_service import PollingService
 from sdk_snapshot_adapter import SDKSnapshotAdapter
 from snapshot_state import SnapshotState
+from raw_snapshot_state_v3 import RawV3SnapshotState
 
 
 def load_config(path: Path) -> dict:
@@ -34,10 +35,14 @@ def load_config(path: Path) -> dict:
         "device_id", "identity", "unlock_secret", "profile_dir",
         "probe_file", "token_file", "bind_host", "poll_seconds",
     }
-    if not isinstance(data, dict) or not expected <= set(data) or set(data) - expected - {"persistent_session"}:
+    if not isinstance(data, dict) or not expected <= set(data) or set(data) - expected - {"persistent_session", "raw_registers_v3"}:
         raise ValueError("Invalid runtime configuration")
     if type(data.get("persistent_session", False)) is not bool:
         raise ValueError("Invalid persistent session flag")
+    if type(data.get("raw_registers_v3", False)) is not bool:
+        raise ValueError("Invalid raw v3 flag")
+    if data.get("raw_registers_v3", False) and not data.get("persistent_session", False):
+        raise ValueError("Raw v3 requires persistent SDK session")
     if data["bind_host"] not in ("127.0.0.1", "0.0.0.0"):
         raise ValueError("Invalid bind address")
     return data
@@ -64,6 +69,7 @@ async def run(config: dict) -> None:
             unlock_secret=config["unlock_secret"],
             profile_dir=config["profile_dir"],
             worker_file=str(Path(__file__).with_name("persistent_rpc45_worker.py")),
+            raw_registers_v3=config.get("raw_registers_v3", False),
         )
     else:
         adapter = SDKSnapshotAdapter(
@@ -73,11 +79,13 @@ async def run(config: dict) -> None:
             profile_dir=config["profile_dir"],
             probe_file=config["probe_file"],
         )
-    state = SnapshotState(adapter)
+    raw_v3 = config.get("raw_registers_v3", False)
+    state = RawV3SnapshotState(adapter) if raw_v3 else SnapshotState(adapter)
     poller = PollingService(state, interval_seconds=config["poll_seconds"])
     server = SnapshotHTTPServer(
         bind_host=config["bind_host"], port=18275, token=token,
         device_id=adapter.device_id, snapshot_provider=state.current,
+        v3_snapshot_provider=state.current_v3 if raw_v3 else None,
     )
     stop = asyncio.Event()
     loop = asyncio.get_running_loop()

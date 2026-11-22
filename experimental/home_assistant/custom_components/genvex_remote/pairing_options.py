@@ -16,6 +16,7 @@ import voluptuous as vol
 
 from .const import (
     CONF_DEVICE_ID, CONF_PAIR_FROM_APP, CONF_RUNTIME_TOKEN,
+    CONF_RAW_REGISTERS_V3,
 )
 from .core_supervisor_loader import async_fetch_paired_token
 from .supervisor_pairing import SupervisorPairingUnavailable
@@ -38,10 +39,12 @@ class GenvexRemoteOptionsFlow(config_entries.OptionsFlowWithReload):
             entry.options.get(CONF_PAIR_FROM_APP, 
                               entry.data.get(CONF_PAIR_FROM_APP, False)) is True
         )
+        existing_raw = entry.options.get(CONF_RAW_REGISTERS_V3, False) is True
         errors: dict[str, str] = {}
         if user_input is not None:
             requested_auto = user_input.get(CONF_PAIR_FROM_APP, False)
-            if type(requested_auto) is not bool:
+            requested_raw = user_input.get(CONF_RAW_REGISTERS_V3, existing_raw)
+            if type(requested_auto) is not bool or type(requested_raw) is not bool:
                 errors["base"] = "invalid_runtime_config"
             elif requested_auto:
                 try:
@@ -59,8 +62,11 @@ class GenvexRemoteOptionsFlow(config_entries.OptionsFlowWithReload):
                     data.pop(CONF_RUNTIME_TOKEN, None)
                     data.pop(CONF_PAIR_FROM_APP, None)
                     self.hass.config_entries.async_update_entry(entry, data=data)
+                    options = {CONF_PAIR_FROM_APP: True}
+                    if requested_raw:
+                        options[CONF_RAW_REGISTERS_V3] = True
                     return self.async_create_entry(
-                        title="", data={CONF_PAIR_FROM_APP: True},
+                        title="", data=options,
                     )
             else:
                 # A manual entry may keep its existing token if the field is
@@ -75,8 +81,11 @@ class GenvexRemoteOptionsFlow(config_entries.OptionsFlowWithReload):
                     data[CONF_RUNTIME_TOKEN] = token
                     data.pop(CONF_PAIR_FROM_APP, None)
                     self.hass.config_entries.async_update_entry(entry, data=data)
+                    options = {CONF_PAIR_FROM_APP: False}
+                    if requested_raw:
+                        options[CONF_RAW_REGISTERS_V3] = True
                     return self.async_create_entry(
-                        title="", data={CONF_PAIR_FROM_APP: False},
+                        title="", data=options,
                     )
 
         return self.async_show_form(
@@ -84,6 +93,9 @@ class GenvexRemoteOptionsFlow(config_entries.OptionsFlowWithReload):
             data_schema=vol.Schema({
                 vol.Optional(
                     CONF_PAIR_FROM_APP, default=existing_auto,
+                ): bool,
+                vol.Optional(
+                    CONF_RAW_REGISTERS_V3, default=existing_raw,
                 ): bool,
                 vol.Optional(CONF_RUNTIME_TOKEN): TextSelector(
                     TextSelectorConfig(type=TextSelectorType.PASSWORD)

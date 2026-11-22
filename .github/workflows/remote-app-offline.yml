@@ -73,6 +73,18 @@ jobs:
             dist/APP_SOURCE_SHA256SUMS
           if-no-files-found: error
           retention-days: 14
+      - name: Package combined DEV8 source release
+        run: |
+          python scripts/package_dev8_combined.py
+          (cd dist && sha256sum -c DEV8_COMBINED_SHA256SUMS)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: genvex-remote-dev8-combined-${{ github.sha }}
+          path: |
+            dist/genvex-remote-dev8-combined.tar.gz
+            dist/DEV8_COMBINED_SHA256SUMS
+          if-no-files-found: error
+          retention-days: 14
       - name: Package experimental HA integration (not a production release)
         run: |
           python - <<'PY'

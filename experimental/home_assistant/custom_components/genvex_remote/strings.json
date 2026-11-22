@@ -46,10 +46,11 @@
     "step": {
       "init": {
         "title": "Genvex Remote App pairing",
-        "description": "Switch this existing integration to automatic Supervisor pairing or use a manual IPC token. Automatic pairing removes the previously stored IPC token.",
+        "description": "Configure Supervisor pairing and optional raw-register sensors. Raw-register mode requires raw_registers_v3 enabled in the separate Remote App.",
         "data": {
           "pair_from_app": "Pair automatically via Home Assistant Supervisor",
-          "runtime_token": "Manual internal IPC token (manual pairing only)"
+          "runtime_token": "Manual internal IPC token (manual pairing only)",
+          "raw_registers_v3": "Expose all 17 RPC45 raw values (requires v3 mode in Remote App)"
         }
       }
     },
