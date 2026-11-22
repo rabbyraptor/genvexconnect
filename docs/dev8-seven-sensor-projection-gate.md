@@ -6,10 +6,10 @@ the two additional addresses are provisional fan-duty readings pending
 comparison with the official Genvex Connect UI. No HAOS runtime changes or
 live Nabto requests occur in this PR.
 
-The pure `ha_v2_projection.project_v2_sensors` function now supports
-`include_fan_duty=False` to produce the legacy five measurement entities
-while validating the full incoming v2 contract. When explicitly requested,
-`include_fan_duty=True` preserves the existing seven-row offline projection.
+The pure `ha_v2_projection.project_v2_sensors` function now defaults to
+`include_fan_duty=False`, producing only the five legacy measurement entities
+while validating the full incoming v2 contract. Only an explicit
+`include_fan_duty=True` produces the seven-row offline projection.
 The gate accepts only real booleans (never `0`, `1`, or strings).
 
 Both projections keep stable keys and the v1 unique-ID rule. Optional fan
