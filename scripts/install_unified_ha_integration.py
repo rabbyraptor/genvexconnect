@@ -204,6 +204,11 @@ def apply(path: Path, sha256: str) -> None:
     if old_manifest.get("domain") != "genvex_remote":
         raise InstallBlocked("INSTALLED_COMPONENT_DOMAIN_INVALID")
 
+    # Prove this host can query the *current* Core before replacing its
+    # files. Fail here rather than trigger an avoidable rollback after restart.
+    check_core_started()
+    print("CORE_API_PREFLIGHT: PASS", flush=True)
+
     STAGE.mkdir(mode=0o700)
     try:
         for rel, data in files:
