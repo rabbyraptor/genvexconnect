@@ -77,14 +77,54 @@ class LocalAppPackageTests(unittest.TestCase):
             self.assertEqual(len(calls.read_text().splitlines()), 1)
             self.assertIn("test ! -e", calls.read_text())
 
-    def test_dev2_candidate_version_matches_arm64_image_build(self):
+    def test_dev6_candidate_version_matches_arm64_image_build(self):
         config = (ROOT / "genvex-nabto-remote/config.yaml").read_text()
         workflow = (ROOT / ".github/workflows/remote-app-image-build.yml").read_text()
-        self.assertIn('version: "0.1.0-dev2"', config)
+        self.assertIn('version: "0.1.0-dev6"', config)
         self.assertIn("boot: manual_only", config)
         self.assertIn("host_network: false", config)
-        self.assertIn("--build-arg BUILD_VERSION=0.1.0-dev2", workflow)
-        self.assertIn('if [ "$IMAGE_VERSION" != 0.1.0-dev2 ]; then', workflow)
+        self.assertIn("--build-arg BUILD_VERSION=0.1.0-dev6", workflow)
+        self.assertIn('if [ "$IMAGE_VERSION" != 0.1.0-dev6 ]; then', workflow)
+
+    def test_deployed_source_export_is_allowlisted(self):
+        script = ROOT / "scripts/export_haos_dev4_sources_readonly.sh"
+        syntax = subprocess.run(["bash", "-n", str(script)], capture_output=True)
+        self.assertEqual(syntax.returncode, 0, syntax.stderr.decode())
+        text = script.read_text()
+        self.assertIn("persistent_rpc45_worker.py", text)
+        self.assertIn("persistent_sdk_adapter.py", text)
+        self.assertIn("tar -tzf", text)
+        self.assertIn("SOURCE_EXPORT_BLOCKED", text)
+        self.assertNotIn('root / "options.json"', text)
+        self.assertNotIn('root / "ipc-token"', text)
+
+    def test_dev4_readonly_gate_has_no_mutating_commands(self):
+        script = ROOT / "scripts/verify_haos_dev4_runtime_readonly.sh"
+        syntax = subprocess.run(["bash", "-n", str(script)], capture_output=True)
+        self.assertEqual(syntax.returncode, 0, syntax.stderr.decode())
+        text = script.read_text()
+        self.assertIn("SNAPSHOT_AGE_SECONDS", text)
+        self.assertIn("SOURCE_SYNTAX: PASS", text)
+        self.assertIn("PERSISTENT_SESSION:", text)
+        self.assertIn("bytes([0]) + source", text)
+        for forbidden in ("docker restart", "ha apps update", "ha apps restart",
+                          "ha apps install", "docker cp", "ha apps stop"):
+            self.assertNotIn(forbidden, text)
+
+    def test_source_archive_is_byte_reproducible(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dest = Path(directory)
+            with (
+                patch.object(packager, "DEST", dest),
+                patch.object(packager, "ARCHIVE", dest / "source.tar.gz"),
+            ):
+                first = packager.create_archive().read_bytes()
+                checksum = (dest / "APP_SOURCE_SHA256SUMS").read_text()
+                second = packager.create_archive().read_bytes()
+                self.assertEqual(first, second)
+                self.assertEqual(
+                    checksum, (dest / "APP_SOURCE_SHA256SUMS").read_text()
+                )
 
     def test_allowlist_excludes_credentials_and_unknown_files(self):
         paths = packager.archive_sources()

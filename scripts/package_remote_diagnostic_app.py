@@ -7,6 +7,7 @@ Use only versioned repository sources, never an on-host /data profile.
 from __future__ import annotations
 
 import hashlib
+import gzip
 from pathlib import Path
 import stat
 import tarfile
@@ -42,21 +43,24 @@ def archive_sources() -> list[Path]:
 def create_archive() -> Path:
     sources = archive_sources()
     DEST.mkdir(parents=True, exist_ok=True)
-    with tarfile.open(ARCHIVE, "w:gz", format=tarfile.PAX_FORMAT) as archive:
-        for source in sources:
-            rel = source.relative_to(SOURCE)
-            info = archive.gettarinfo(str(source), arcname=f"{APP_DIR}/{rel.as_posix()}")
-            if not info.isfile():
-                raise RuntimeError("Cannot package a nonregular file")
-            # Stable, owner-only modes within App source; run.sh executable.
-            info.uid = 0
-            info.gid = 0
-            info.uname = ""
-            info.gname = ""
-            info.mtime = 0
-            info.mode = 0o755 if rel.as_posix() == "run.sh" else 0o644
-            with source.open("rb") as stream:
-                archive.addfile(info, stream)
+    # No gzip filename/current-time header: identical source produces identical bytes.
+    with ARCHIVE.open("wb") as output:
+        with gzip.GzipFile(filename="", mode="wb", fileobj=output, mtime=0) as zipped:
+            with tarfile.open(fileobj=zipped, mode="w", format=tarfile.PAX_FORMAT) as archive:
+                for source in sources:
+                    rel = source.relative_to(SOURCE)
+                    info = archive.gettarinfo(str(source), arcname=f"{APP_DIR}/{rel.as_posix()}")
+                    if not info.isfile():
+                        raise RuntimeError("Cannot package a nonregular file")
+                    # Stable, owner-only modes within App source; run.sh executable.
+                    info.uid = 0
+                    info.gid = 0
+                    info.uname = ""
+                    info.gname = ""
+                    info.mtime = 0
+                    info.mode = 0o755 if rel.as_posix() == "run.sh" else 0o644
+                    with source.open("rb") as stream:
+                        archive.addfile(info, stream)
     checksum = hashlib.sha256(ARCHIVE.read_bytes()).hexdigest()
     (DEST / "APP_SOURCE_SHA256SUMS").write_text(
         checksum + "  " + ARCHIVE.name + "\n", encoding="ascii"

@@ -1,0 +1,25 @@
+name: HAOS development MCP preflight (offline only)
+
+on:
+  pull_request:
+    paths:
+      - "tools/haos_dev_mcp/**"
+      - ".github/workflows/remote-dev-mcp-offline.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Syntax check and isolated policy tests
+        run: |
+          python -m compileall -q tools/haos_dev_mcp
+          python -m unittest discover -s tools/haos_dev_mcp -p 'test_*.py' -v

@@ -1,7 +1,8 @@
 """An atomic, fail-closed view of the most recent successful five-sensor read.
 
 This is an in-process prototype; no network, real account or SDK is loaded.
-Read failures clear prior success immediately, avoiding stale 'live' readings.
+Known failures clear prior success immediately. During an in-flight read, only
+an earlier validated, still-fresh result may be served.
 """
 from __future__ import annotations
 
@@ -24,17 +25,38 @@ class SnapshotState:
     async def refresh(self) -> bool:
         """Serialize refreshes; never retain an older value after RPC failure."""
         async with self._lock:
-            # Clears the prior data *before* any potentially slow I/O.
-            self._snapshot = None
+            # Keep only a still-fresh result during in-flight I/O; current()
+            # independently enforces the 180-second freshness limit.
+            self.current()
             self._generation += 1
             try:
                 result = await self._poller.poll_once()
-                parse_snapshot(result, expected_device_id=self._poller.device_id)
+                readings = parse_snapshot(result, expected_device_id=self._poller.device_id)
             except asyncio.CancelledError:
+                self.invalidate()
                 raise
-            except Exception:
+            except Exception as exc:
+                # Do not log SDK exception text, credentials or raw response.
+                status = getattr(exc, "rpc_status", None)
+                elapsed_ms = getattr(exc, "elapsed_ms", None)
+                if (type(status) is int and 0 <= status <= 100000
+                        and type(elapsed_ms) is int and 0 <= elapsed_ms <= 120000):
+                    print(
+                        f"RPC45_DIAGNOSTIC rpc_status={status} "
+                        f"elapsed_ms={elapsed_ms}",
+                        flush=True,
+                    )
+                self.invalidate()
                 return False
-            self._snapshot = result
+            # Keep an owned, schema-projected copy; a reader must not be able
+            # to mutate a previously accepted snapshot after validation.
+            self._snapshot = {
+                "schema_version": 1,
+                "device_id": self._poller.device_id,
+                "timestamp_utc": result["timestamp_utc"],
+                "health": "ok",
+                "values": dict(readings),
+            }
             return True
 
     def invalidate(self) -> None:

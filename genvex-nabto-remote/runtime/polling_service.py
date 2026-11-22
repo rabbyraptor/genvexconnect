@@ -6,6 +6,8 @@ Does not start a service, store secrets, expose ports or run on import.
 from __future__ import annotations
 
 import asyncio
+import time
+from datetime import datetime, timezone
 from typing import Callable, Awaitable
 
 from snapshot_state import SnapshotState
@@ -51,7 +53,29 @@ class PollingService:
     async def _loop(self) -> None:
         """Never overlap polls and avoid catch-up bursts after slow requests."""
         while not self._stop.is_set():
-            ok = await self.state.refresh()
+            # Keep the log strictly metadata-only; no SDK responses or secrets.
+            adapter = getattr(self.state, "_poller", None)
+            before_pid = getattr(getattr(adapter, "_proc", None), "pid", None)
+            started = time.monotonic()
+            try:
+                ok = await self.state.refresh()
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                # An unexpected internal failure must not terminate the
+                # scheduled poll loop or leave the last snapshot available.
+                # Never log the exception: it may contain SDK secrets.
+                self.state.invalidate()
+                ok = False
+            elapsed = time.monotonic() - started
+            after_pid = getattr(getattr(adapter, "_proc", None), "pid", None)
+            timestamp = datetime.now(timezone.utc).isoformat()
+            status = "OK" if ok else "FEJL"
+            print(
+                f"RPC45 {timestamp} {status} {elapsed:.2f}s "
+                f"PID_BEFORE={before_pid} PID_AFTER={after_pid}",
+                flush=True,
+            )
             if self.on_result is not None:
                 try:
                     await self.on_result(ok)

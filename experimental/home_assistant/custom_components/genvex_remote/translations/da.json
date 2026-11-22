@@ -3,17 +3,18 @@
     "step": {
       "user": {
         "title": "Genvex Remote (udvikling)",
-        "description": "Kræver Genvex Remote App. Angiv internt snapshot-endpoint og IPC-token (ikke Nabto-kontoens adgangskode).",
+        "description": "Kræver den særskilte Genvex Remote App. Vælg automatisk Core-parring for at hente IPC-token fra den startede App, eller indsæt et IPC-token manuelt. Brug ikke Nabto-kontoens adgangskode.",
         "data": {
           "device_id": "Enheds-ID",
-          "runtime_endpoint": "Internt App-snapshot-URL",
-          "runtime_token": "Internt IPC-token"
+          "runtime_token": "Internt IPC-token",
+          "pair_from_app": "Par automatisk via Home Assistant Supervisor"
         }
       }
     },
     "error": {
       "invalid_device_id": "Indtast præcis 12 almindelige cifre.",
-      "invalid_runtime_config": "Angiv den faste interne App-adresse og et gyldigt IPC-token."
+      "invalid_runtime_config": "Vælg Core-parring eller indtast et gyldigt internt IPC-token.",
+      "app_pairing_unavailable": "Kan ikke hente IPC-token fra den startede Genvex Remote App via Supervisor."
     },
     "abort": {
       "already_configured": "Enheden er allerede konfigureret."
@@ -39,6 +40,22 @@
       "data_age": {
         "name": "Dataalder"
       }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Parring med Genvex Remote App",
+        "description": "Skift den eksisterende integration til automatisk Supervisor-parring, eller fortsæt med et manuelt IPC-token. Når automatisk parring vælges, fjernes det tidligere gemte IPC-token.",
+        "data": {
+          "pair_from_app": "Par automatisk via Home Assistant Supervisor",
+          "runtime_token": "Manuelt internt IPC-token (kun ved manuel parring)"
+        }
+      }
+    },
+    "error": {
+      "app_pairing_unavailable": "Kan ikke hente IPC-token fra den startede Genvex Remote App via Supervisor.",
+      "invalid_runtime_config": "Ugyldigt valg, eller angiv et gyldigt manuelt IPC-token."
     }
   }
 }

@@ -12,6 +12,10 @@ on:
       - ".github/workflows/remote-app-image-build.yml"
       - "scripts/test_remote_app_private_docker_network.sh"
       - "scripts/test_remote_app_private_storage_container.sh"
+  pull_request:
+    paths:
+      - "genvex-nabto-remote/**"
+      - ".github/workflows/remote-app-image-build.yml"
   workflow_dispatch:
 
 permissions:
@@ -44,7 +48,7 @@ jobs:
           set -euo pipefail
           docker build --platform linux/arm64 \
             --build-arg BUILD_ARCH=aarch64 \
-            --build-arg BUILD_VERSION=0.1.0-dev2 \
+            --build-arg BUILD_VERSION=0.1.0-dev6 \
             --tag genvex-nabto-remote:ci \
             genvex-nabto-remote
       - name: Inspect image and import runtime offline
@@ -65,8 +69,8 @@ jobs:
             exit 1
           fi
           IMAGE_VERSION=$(docker image inspect genvex-nabto-remote:ci --format '{{index .Config.Labels "io.hass.version"}}')
-          if [ "$IMAGE_VERSION" != 0.1.0-dev2 ]; then
-            echo "::error::App image version does not match v0.1.0-dev2 candidate"
+          if [ "$IMAGE_VERSION" != 0.1.0-dev6 ]; then
+            echo "::error::App image version does not match v0.1.0-dev6 candidate"
             exit 1
           fi
           PORTS=$(docker image inspect genvex-nabto-remote:ci --format '{{json .Config.ExposedPorts}}')

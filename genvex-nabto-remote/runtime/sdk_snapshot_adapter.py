@@ -7,6 +7,7 @@ enrollment path, persistent credential manager or production App yet.
 from __future__ import annotations
 
 import asyncio
+import ast
 import json
 from pathlib import Path
 
@@ -31,7 +32,123 @@ runpy.run_path(probe, run_name="__main__")
 
 
 class SDKSnapshotError(Exception):
-    """The isolated legacy client did not return one valid read-only batch."""
+    """Only a fixed, non-sensitive failure category may leave the SDK adapter."""
+
+    ALLOWED = frozenset({
+        "SDK_PROCESS_FAILURE", "SDK_TIMEOUT", "SDK_STARTUP_FAILED",
+        "SDK_RESOURCES_FAILED", "SDK_SESSION_FAILED", "SDK_XML_FAILED",
+        "SDK_RPC45_FAILED", "SDK_RESPONSE_INVALID", "SDK_CLOSE_FAILED",
+        "SDK_EARLY_EXIT", "SDK_SNAPSHOT_INVALID",
+    })
+
+    def __init__(self, code="SDK_PROCESS_FAILURE", *, rpc_status=None, elapsed_ms=None, rpc_events=None,
+                 session_status=None):
+        self.code = code if code in self.ALLOWED else "SDK_PROCESS_FAILURE"
+        # Only bounded integers extracted from exact SDK stage markers are
+        # allowed to reach the optional operator diagnostic view.
+        self.session_status = (session_status if type(session_status) is int
+                               and 0 <= session_status <= 100000 else None)
+        self.rpc_status = rpc_status if type(rpc_status) is int and 0 <= rpc_status <= 100000 else None
+        self.elapsed_ms = elapsed_ms if type(elapsed_ms) is int and 0 <= elapsed_ms <= 120000 else None
+        self.rpc_events = tuple(rpc_events) if isinstance(rpc_events, tuple) and len(rpc_events) <= 8 and all(type(v) is int and 0 <= v <= 10000000 for v in rpc_events) else ()
+        super().__init__(self.code)
+
+
+def parse_session_diagnostics(output: bytes) -> int | None:
+    """Allow exactly one bounded numeric SDK session return code, no raw text."""
+    if len(output) > _MAX_PROBE_OUTPUT_BYTES:
+        return None
+    try:
+        lines = output.decode("utf-8", "strict").splitlines()
+    except UnicodeError:
+        return None
+    matches = [line[len("Profile session:"):].strip()
+               for line in lines if line.startswith("Profile session:")]
+    if len(matches) != 1:
+        return None
+    value = matches[0]
+    if not value or len(value) > 8 or not value.isascii() or not value.isdecimal():
+        return None
+    status = int(value)
+    return status if status <= 100000 else None
+
+
+def parse_rpc_diagnostics(output: bytes) -> tuple[int | None, int | None]:
+    """Extract only exact, bounded numeric RPC markers; never return raw output."""
+    if len(output) > _MAX_PROBE_OUTPUT_BYTES:
+        return None, None
+    try:
+        lines = output.decode("utf-8", "strict").splitlines()
+    except UnicodeError:
+        return None, None
+
+    def number(prefix: str, limit: int) -> int | None:
+        found = [line[len(prefix):].strip() for line in lines if line.startswith(prefix)]
+        if len(found) != 1:
+            return None
+        raw = found[0]
+        if not raw or len(raw) > 8 or not raw.isascii() or not raw.isdecimal():
+            return None
+        value = int(raw)
+        return value if value <= limit else None
+
+    return number("Batch RPC status:", 100000), number("RPC elapsed_ms:", 120000)
+
+
+
+def parse_rpc_events(output: bytes) -> tuple[int, ...]:
+    """Allowlist numeric codes from the probe's already-redacted diagnostic.
+
+    This is *not* the original vendor JSON. The probe emits only
+    ('ERROR_JSON', [integer codes]) or ('NO_JSON_DIAGNOSTIC', []).
+    """
+    if len(output) > _MAX_PROBE_OUTPUT_BYTES:
+        return ()
+    try:
+        lines = output.decode("utf-8", "strict").splitlines()
+    except UnicodeError:
+        return ()
+    markers = [line[len("Diagnostic: "):] for line in lines
+               if line.startswith("Diagnostic: ")]
+    if len(markers) != 1 or len(markers[0]) > 160:
+        return ()
+    try:
+        kind, codes = ast.literal_eval(markers[0])
+    except (ValueError, SyntaxError, TypeError, MemoryError, RecursionError):
+        return ()
+    if kind != "ERROR_JSON" or type(codes) is not list or len(codes) > 8:
+        return ()
+    if any(type(v) is not int or not 0 <= v <= 10000000 for v in codes):
+        return ()
+    if codes != sorted(set(codes)):
+        return ()
+    return tuple(codes)
+
+
+def classify_probe_failure(output: bytes) -> str:
+    """Read only literal stage markers; never echo the raw SDK output."""
+    try:
+        lines = output.decode("utf-8", "strict").splitlines()
+    except UnicodeError:
+        return "SDK_PROCESS_FAILURE"
+    stages = (
+        ("SDK startup:", "SDK_STARTUP_FAILED"),
+        ("Resources:", "SDK_RESOURCES_FAILED"),
+        ("Profile session:", "SDK_SESSION_FAILED"),
+        ("Candidate XML registered:", "SDK_XML_FAILED"),
+        ("Batch RPC status:", "SDK_RPC45_FAILED"),
+        ("Session close:", "SDK_CLOSE_FAILED"),
+        ("SDK shutdown:", "SDK_CLOSE_FAILED"),
+    )
+    for prefix, code in stages:
+        for line in lines:
+            if line.startswith(prefix):
+                number = line[len(prefix):].strip()
+                if number.isascii() and number.isdecimal() and int(number) != 0:
+                    return code
+    if any(line.startswith("Batch RPC status: 0") for line in lines):
+        return "SDK_RESPONSE_INVALID"
+    return "SDK_EARLY_EXIT"
 
 
 def parse_probe_output(output: bytes, *, device_id: str) -> dict:
@@ -47,7 +164,7 @@ def parse_probe_output(output: bytes, *, device_id: str) -> dict:
         parse_snapshot(snapshot, expected_device_id=device_id)
         return snapshot
     except (ValueError, UnicodeError, TypeError):
-        raise SDKSnapshotError("No valid SDK snapshot") from None
+        raise SDKSnapshotError("SDK_SNAPSHOT_INVALID") from None
 
 
 _MAX_PROBE_OUTPUT_BYTES = 32768
@@ -134,12 +251,23 @@ class SDKSnapshotAdapter:
                          + self._unlock_secret + "\n").encode("utf-8")
                     )
                 if proc.returncode != 0:
-                    raise SDKSnapshotError("SDK read failed")
+                    rpc_status, elapsed_ms = parse_rpc_diagnostics(out)
+                    raise SDKSnapshotError(
+                        classify_probe_failure(out),
+                        rpc_status=rpc_status,
+                        elapsed_ms=elapsed_ms,
+                        rpc_events=parse_rpc_events(out),
+                        session_status=parse_session_diagnostics(out),
+                    )
                 return parse_probe_output(out, device_id=self.device_id)
             except asyncio.CancelledError:
                 raise
+            except SDKSnapshotError:
+                raise
+            except TimeoutError:
+                raise SDKSnapshotError("SDK_TIMEOUT") from None
             except Exception:
-                raise SDKSnapshotError("SDK read failed") from None
+                raise SDKSnapshotError("SDK_PROCESS_FAILURE") from None
             finally:
                 if proc is not None and proc.returncode is None:
                     proc.kill()

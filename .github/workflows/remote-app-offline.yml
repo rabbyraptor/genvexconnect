@@ -30,14 +30,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Check bundled runtime matches validated source
-        run: |
-          for src in genvex-nabto-remote/runtime/*.py; do
-            file=$(basename "$src")
-            if [ "$file" != app_bootstrap.py ] && [ "$file" != profile_provision.py ] && [ "$file" != offline_ipc_network_smoke.py ] && [ "$file" != diagnostic_http_server.py ]; then
-              cmp "$src" "experimental/genvex_remote/$file"
-            fi
-          done
+      - name: Check bundled runtime matches canonical source
+        run: python scripts/check_remote_runtime_parity.py --check
       - name: Compile native runtime and App bootstrap
         run: python -m compileall -q genvex-nabto-remote/runtime
       - name: Run fake-credential bootstrap tests (no real profile)

@@ -58,6 +58,25 @@ class BootstrapTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     app.read_options(self.opt_path)
 
+    def test_persistent_session_opt_in_is_strict_boolean(self):
+        for value in (True, False):
+            with self.subTest(value=value):
+                self.opts["persistent_session"] = value
+                self.opt_path.write_text(json.dumps(self.opts))
+                self.assertEqual(app.read_options(self.opt_path)["persistent_session"], value)
+        for value in ("true", 1, None):
+            with self.subTest(invalid=value):
+                self.opts["persistent_session"] = value
+                self.opt_path.write_text(json.dumps(self.opts))
+                with self.assertRaises(ValueError):
+                    app.read_options(self.opt_path)
+
+    def test_diagnostic_and_persistent_are_mutually_exclusive(self):
+        self.opts = {"diagnostic_only": True, "persistent_session": True}
+        self.opt_path.write_text(json.dumps(self.opts))
+        with self.assertRaises(ValueError):
+            app.read_options(self.opt_path)
+
     def test_short_poll_interval_rejected(self):
         self.opts["poll_seconds"] = 5
         self.opt_path.write_text(json.dumps(self.opts))

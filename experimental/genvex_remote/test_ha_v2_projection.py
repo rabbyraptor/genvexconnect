@@ -26,7 +26,8 @@ class HAV2ProjectionTests(unittest.TestCase):
             fan_raw=raw, now=self.now,
         )
         return project_v2_sensors(
-            snapshot, expected_device_id="123456789012", now=self.now
+            snapshot, expected_device_id="123456789012", now=self.now,
+            include_fan_duty=True,
         )
 
     def test_7_stable_sensor_keys_and_correct_values(self):
@@ -83,6 +84,45 @@ class HAV2ProjectionTests(unittest.TestCase):
              "rotor_rpm", "alarm_word_1_raw", "alarm_word_2_raw",
              "bypass_active_raw", "bypass_analog_raw", "frost_protection_temp"}
         ))
+
+
+
+    def test_explicit_five_sensor_mode_retains_v1_unique_ids(self):
+        snapshot = make_v2_from_v1(
+            self.base, expected_device_id="123456789012",
+            fan_raw=(6000, 5800), now=self.now,
+        )
+        rows = project_v2_sensors(
+            snapshot, expected_device_id="123456789012",
+            now=self.now, include_fan_duty=False,
+        )
+        self.assertEqual(len(rows), 5)
+        default_rows = project_v2_sensors(
+            snapshot, expected_device_id="123456789012", now=self.now
+        )
+        self.assertEqual(default_rows, rows)
+        self.assertEqual(
+            [row.unique_id("123456789012") for row in rows],
+            ["123456789012_" + key for key in (
+                "supply_air", "outdoor_air", "exhaust_air",
+                "extract_air", "humidity",
+            )],
+        )
+        self.assertTrue(all(row.available for row in rows))
+        self.assertEqual(rows[0].value, 6.7)
+        self.assertTrue(all("fan_duty" not in row.key for row in rows))
+
+    def test_projection_gate_rejects_non_boolean_configuration(self):
+        snapshot = make_v2_from_v1(
+            self.base, expected_device_id="123456789012",
+            fan_raw=(6000, 5800), now=self.now,
+        )
+        for flag in (0, 1, None, "true", []):
+            with self.subTest(flag=flag), self.assertRaises(ValueError):
+                project_v2_sensors(
+                    snapshot, expected_device_id="123456789012",
+                    now=self.now, include_fan_duty=flag,
+                )
 
 
 if __name__ == "__main__":
