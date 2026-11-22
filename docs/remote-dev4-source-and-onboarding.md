@@ -1,13 +1,13 @@
 # DEV4 onboarding and source-parity work — 22 November 2026
 
-**Status:** source-only development plan and offline primitives; not yet an installable end-user onboarding flow.
-**Branch:** `dev4-source-parity-onboarding-20261122`; merge only after CI and DEV4 source reconciliation.
+**Status:** DEV4 source reconciliation candidate, offline tests and onboarding primitives; not yet an installable end-user onboarding flow.
+**Branch:** `dev4-source-parity-onboarding-20261122`; merge only after CI, deployed-source comparison and review.
 
 ## Grounded current state
 
 - HAOS has operator-verified five read-only measurements plus a sixth Dataalder sensor, a private bearer-authenticated App snapshot endpoint, and intermittent Nabto RPC45 code 26 / event 1000015 under a persistent worker. See [STATUS.md](STATUS.md).
-- The running `0.1.0-dev4` App contains `persistent_sdk_adapter.py` and `persistent_rpc45_worker.py`, **which are missing from the checked-in `genvex-nabto-remote/runtime/` snapshot** (currently version `0.1.0-dev2`). Source changes alone cannot claim DEV4 reproducibility.
-- The running container contains temporary diagnostic additions for timing, worker PID, numeric SDK response status and JSON event metadata. The shared source-level timing/status logging in this branch is only a *partial* source reconciliation; capturing the nested Nabto event safely requires inspecting the deployed worker before porting code.
+- The original base branch `remote-nabto-connection` contains an earlier App source snapshot (`dev2`). The complete DEV4 persistent adapter, native worker, startup mode-switch and related offline tests were recovered from the existing GitHub branch `feature/dev4-persistent-session` and staged into this candidate, with source manifest set to `0.1.0-dev4`. Whether these files match the **currently deployed** container after its temporary patches still requires independent comparison.
+- The source candidate now includes metadata-only RPC45 timing/worker PID logs, integer SDK status, and bounded extraction of the nested numeric event (e.g. `1000015`) into a private file, plus fake-SDK tests. It deliberately does **not** copy the live container's ad-hoc diagnostic implementation verbatim; the shipped source implementation must be tested and compared before live deployment.
 - Persistent runtime options: `persistent_session: true`, `poll_seconds: 60`. Existing HA entity IDs and five-value snapshot schema v1 must remain stable.
 
 ## Source gate — 3A + 2E + 5C
@@ -15,7 +15,7 @@
 1. Use `experimental/genvex_remote/` as the canonical location for runtime modules shared with the App. `python scripts/check_remote_runtime_parity.py --check` checks bundled copies; `--sync` explicitly regenerates only shared modules. App-only bootstrap/profile/worker files are exempt.
 2. Log only UTC timestamp, RPC45 success/failure, elapsed seconds, optional SDK integer status/elapsed milliseconds and worker PID. Do not log raw SDK responses, exceptions, passwords, hostnames, profile paths or identity fields. No extra retries or changes to polling semantics.
 3. Source-packaging now uses deterministic gzip headers and zeroed tar timestamps. The `remote-app-offline` workflow tests parity, no-secret packages and byte reproducibility.
-4. **Remaining DEV4 gate:** obtain and review the complete deployed `persistent_sdk_adapter.py`, `persistent_rpc45_worker.py`, `polling_runtime.py`, `app_bootstrap.py`, `snapshot_state.py` and `config.yaml` (code only; no options/profile/secret material), compare to source, port the strict worker frames/error JSON redaction and persistent lifecycle, and run offline parity/worker tests. Then build an App image from the tested commit and verify restart/snapshot/grace behavior on HAOS. Do not label an image DEV4 until the source is reconciled.
+4. **Remaining DEV4 gate:** the persistent SDK worker is now in source, with its strict RPC frames and tests. Run the offline suite and native ARM64 image build from this branch. Then compare the candidate files to the **installed** source using `scripts/export_haos_dev4_sources_readonly.sh` (code only; no options/profile/secret material), review deliberate differences, and verify fresh snapshots, restart and grace behavior on HAOS before deployment. The source manifest saying `dev4` is not proof that the tested artifact matches the installed App.
 
 ## Onboarding goal — 2D + 3B
 
@@ -46,4 +46,4 @@ Target user experience: install separate Remote App/integration, enter the autho
 
 ## Execution order
 
-**First:** obtain deployed DEV4 sources and merge/retest the missing persistent worker. **Second:** reproducible package + image/CI proof. **Third:** complete the authenticated pairing and credential lifecycle design with a fake HAOS test. This is the blocking order for a trustworthy installable release; sensor v2 expansion can remain separate.
+**First:** complete CI and compare this DEV4 candidate with deployed source. **Second:** prove reproducible package and ARM64 image + App/HA snapshots under fake and live lifecycle gates. **Third:** complete authenticated pairing and credential lifecycle with a fake HAOS test. This is the blocking order for a trustworthy installable release; sensor v2 expansion can remain separate.
