@@ -86,6 +86,21 @@ class LocalAppPackageTests(unittest.TestCase):
         self.assertIn("--build-arg BUILD_VERSION=0.1.0-dev2", workflow)
         self.assertIn('if [ "$IMAGE_VERSION" != 0.1.0-dev2 ]; then', workflow)
 
+    def test_source_archive_is_byte_reproducible(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dest = Path(directory)
+            with (
+                patch.object(packager, "DEST", dest),
+                patch.object(packager, "ARCHIVE", dest / "source.tar.gz"),
+            ):
+                first = packager.create_archive().read_bytes()
+                checksum = (dest / "APP_SOURCE_SHA256SUMS").read_text()
+                second = packager.create_archive().read_bytes()
+                self.assertEqual(first, second)
+                self.assertEqual(
+                    checksum, (dest / "APP_SOURCE_SHA256SUMS").read_text()
+                )
+
     def test_allowlist_excludes_credentials_and_unknown_files(self):
         paths = packager.archive_sources()
         rels = {p.relative_to(packager.SOURCE).as_posix() for p in paths}
