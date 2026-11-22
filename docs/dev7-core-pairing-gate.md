@@ -59,3 +59,33 @@ passing them does not establish production pairing.
 
 The existing manual IPC-token option and five-sensor v1 runtime remain
 unchanged on the installed HAOS.
+
+
+## Existing-entry migration on combined integration candidate PR #9
+
+The original DEV7 config flow only covered *new* integrations and would abort
+for the already-configured device. PR #9 adds an explicit existing-entry
+`OptionsFlowWithReload` accessible from the Genvex Remote integration's
+Configure menu, so an existing entry can opt in to Core pairing without
+recreating devices/entities. No integration updates occur merely by opening
+the options dialog.
+
+When the user opts in, the flow first obtains and validates the active App's
+IPC token through Home Assistant Core's trusted Supervisor client, then
+removes the legacy manually saved token from `ConfigEntry.data` and sets
+`pair_from_app=True` in `ConfigEntry.options`. Setup/reload checks options
+before the old entry-data flag; the token is fetched afresh from Supervisor
+during reload. If Supervisor lookup fails, the existing manual entry stays
+unchanged. Returning to manual mode requires a valid token if the old one
+has been removed.
+
+The new `test_pairing_options.py` executes the options flow against fake
+HA config-entry APIs and tests opt-in, failed pairing, preserved unique entry,
+manual fallback, reverse pairing, nonboolean flags, and invalid token.
+A setup test verifies that existing entries select their options-provided
+pairing mode. All tests run within existing offline App/HA candidate CI.
+
+**This is source-only:** Actual OptionsFlowWithReload behavior and Supervisor
+options visibility still need a reviewed live installation/test on the user's
+HA Core 2026.11.1. Existing installed integration uses manual pairing and has
+not been modified.
