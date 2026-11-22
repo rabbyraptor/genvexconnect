@@ -3,6 +3,9 @@ from __future__ import annotations
 
 import unittest
 from pathlib import Path
+from unittest.mock import patch
+
+import dev8_register_evidence as evidence
 
 from dev8_register_evidence import (
     BASELINE_ADDRESSES, OBSERVED_CANDIDATE_RAW, SEVEN_ADDRESSES,
@@ -115,6 +118,15 @@ class RegisterEvidenceTests(unittest.TestCase):
             "frost_protection_temp", "fan_rpm_supply", "fan_rpm_extract",
             "rotor_rpm", "reheat_pwm", "preheat_pwm",
         })
+
+    def test_source_address_reorder_cannot_mislabel_archived_samples(self):
+        source = list_source_only_candidates()
+        with patch.object(evidence, "list_source_only_candidates",
+                          return_value=tuple(reversed(source))):
+            with self.assertRaises(EvidenceError):
+                inventory()
+            with self.assertRaises(EvidenceError):
+                decode_candidate_raw_batch(OBSERVED_CANDIDATE_RAW)
 
     def test_projection_opt_in_rejects_non_boolean_input(self):
         for invalid in (0, 1, None, "true", [], {}):
