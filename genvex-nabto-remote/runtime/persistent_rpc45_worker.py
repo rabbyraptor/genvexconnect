@@ -18,6 +18,8 @@ import time
 from pathlib import Path
 from urllib.parse import quote
 
+from raw_registers_v3 import OPTIONAL_ADDRESSES, make_raw_v3
+
 READY = "GENVEX_PERSISTENT_READY="
 RESULT = "GENVEX_PERSISTENT_RESULT="
 SENSORS = (
@@ -73,22 +75,48 @@ def rpc_url(host: str) -> bytes:
             + quote(json.dumps(body, separators=(",", ":")), safe="")).encode()
 
 
-def decode_batch(raw: str) -> dict[str, float] | None:
+def raw_rpc_url(host: str) -> bytes:
+    """Read only the twelve previously observed candidate addresses."""
+    if OPTIONAL_ADDRESSES != (
+        24, 18, 19, 35, 36, 41, 42, 53, 40, 114, 115, 50
+    ):
+        raise ValueError("Unexpected raw register list")
+    body = {"request": {"datapoints": [
+        {"obj": 0, "address": address} for address in OPTIONAL_ADDRESSES
+    ], "trailer": 1}}
+    return ("nabto://" + host + "/candidate_read_datapoints.json?json="
+            + quote(json.dumps(body, separators=(",", ":")), safe="")).encode()
+
+
+def decode_raw_rpc(raw: str, count: int) -> tuple[int, ...] | None:
+    """Reject partial, reordered-count or malformed signed int16 responses."""
     try:
-        values = json.loads(raw)["response"]["values"]
-        if type(values) is not list or len(values) != len(SENSORS):
+        if type(raw) is not str or len(raw) > 4096:
             return None
-        converted = {}
-        for item, (_, key, divisor, offset) in zip(values, SENSORS):
-            if type(item) is not dict:
+        values = json.loads(raw)["response"]["values"]
+        if type(values) is not list or len(values) != count:
+            return None
+        decoded = []
+        for item in values:
+            if type(item) is not dict or set(item) != {"value"}:
                 return None
-            value = item.get("value")
+            value = item["value"]
             if type(value) is not int or not -32768 <= value <= 32767:
                 return None
-            converted[key] = (value + offset) / divisor
-        return converted
+            decoded.append(value)
+        return tuple(decoded)
     except (ValueError, KeyError, TypeError, IndexError):
         return None
+
+
+def decode_batch(raw: str) -> dict[str, float] | None:
+    values = decode_raw_rpc(raw, len(SENSORS))
+    if values is None:
+        return None
+    return {
+        key: (value + offset) / divisor
+        for value, (_, key, divisor, offset) in zip(values, SENSORS)
+    }
 
 
 def numeric_error_event(raw: str) -> int | None:
@@ -209,6 +237,7 @@ def main() -> int:
             emit(READY, {"ok": True})
             ready = True
             url = rpc_url(host)
+            optional_url = raw_rpc_url(host)
             while True:
                 command = sys.stdin.buffer.readline(16)
                 if not command or command == b"CLOSE\n":
@@ -230,16 +259,45 @@ def main() -> int:
                 if values is None:
                     emit(RESULT, {"ok": False, "status": 0, "elapsed_ms": elapsed})
                     continue
-                emit(RESULT, {
-                    "ok": True,
-                    "snapshot": {
+                measured_at = datetime.now(timezone.utc)
+                if command == b"POLL3\\n":
+                    baseline_raw = decode_raw_rpc(raw, len(SENSORS))
+                    extra_raw = None
+                    response2 = P()
+                    try:
+                        # Optional RPC is serial. Its failure must not lose
+                        # the already validated mandatory five measurements.
+                        extra_status = invoke(session, optional_url, ct.byref(response2))
+                        extra_body = take(response2)
+                        if extra_status == 0:
+                            extra_raw = decode_raw_rpc(
+                                extra_body, len(OPTIONAL_ADDRESSES),
+                            )
+                        else:
+                            record_error_event(extra_status, extra_body)
+                    except Exception:
+                        extra_raw = None
+                    try:
+                        document = make_raw_v3(
+                            device_id=host.split(".")[0],
+                            measured_at=measured_at,
+                            baseline_raw=baseline_raw,
+                            additional_raw=extra_raw,
+                        )
+                    except Exception:
+                        emit(RESULT, {
+                            "ok": False, "status": 0, "elapsed_ms": elapsed,
+                        })
+                        continue
+                else:
+                    document = {
                         "schema_version": 1,
                         "device_id": host.split(".")[0],
-                        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+                        "timestamp_utc": measured_at.isoformat(),
                         "health": "ok",
                         "values": values,
-                    },
-                })
+                    }
+                emit(RESULT, {"ok": True, "snapshot": document})
         return 0
     except Exception:
         if not ready:
