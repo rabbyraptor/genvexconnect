@@ -16,19 +16,25 @@ spec.loader.exec_module(gate)
 
 
 class DEV5PostInstallTests(unittest.TestCase):
-    def test_expected_hashes_match_real_packaged_dev5_sources(self):
+    def test_historic_dev5_manifest_rejects_dev6_changed_source(self):
+        """DEV5 installed-source attestation must not approve DEV6 code."""
         source = ROOT / "genvex-nabto-remote"
         self.assertEqual(len(gate.EXPECTED), 20)
-        # The checkout also has DOCS.md and tests; only the packaged
-        # App source tree has exactly the twenty allowlisted files.
-        self.assertEqual(gate.inspect_source(source, gate.EXPECTED, False), 20)
+        unchanged = {
+            rel: digest for rel, digest in gate.EXPECTED.items()
+            if rel != "runtime/polling_service.py"
+        }
+        self.assertEqual(gate.inspect_source(source, unchanged, False), 19)
+        with self.assertRaises(gate.GateBlocked) as caught:
+            gate.inspect_source(source, gate.EXPECTED, False)
+        self.assertEqual(str(caught.exception), "SOURCE_HASH_MISMATCH")
         with tempfile.TemporaryDirectory() as tmp:
             staged = Path(tmp) / "genvex_nabto_remote"
-            for rel in gate.EXPECTED:
+            for rel in unchanged:
                 target = staged / rel
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_bytes((source / rel).read_bytes())
-            self.assertEqual(gate.inspect_source(staged, gate.EXPECTED, True), 20)
+            self.assertEqual(gate.inspect_source(staged, unchanged, True), 19)
 
 
     def test_detect_one_changed_file(self):
