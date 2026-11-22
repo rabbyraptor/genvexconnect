@@ -34,3 +34,20 @@ Scripts:
 4. Leave the six-minute Nabto connection investigation documented but separate. The DEV5 change does not claim to cure event `1000015`.
 
 The Core Supervisor token parser and private IPC storage are **offline onboarding groundwork only**. Automatic pairing and Nabto certificate enrollment are not activated in DEV5.
+
+
+## Actual DEV5 source/Supervisor transaction — operator result
+
+**22 November 2026, pinned commit `65ba9cb79ca9785aee8eb760435b00926ac1a687`: PASS.**
+
+The operator ran both `--preflight` and `--apply` from Steam Deck, with deterministic source archive SHA256 `3bb6cde83eb986175b640059efdc8262b5778fe730b0a0973617594527977e0e` and 20 packaged source files. The apply output confirmed:
+
+- `DEV4_STOPPED_AND_RECHECKED: PASS` and `SOURCE_SWAP_DEV5: PASS`.
+- `DEV4_SOURCE_BACKUP: RETAINED` and `DEV5_OFFERED: PASS`.
+- `SUPERVISOR_UPDATE_WITH_BACKUP: REQUESTED`.
+- `INSTALLED_DEV5_STOPPED: PASS`, `PERSISTENT_OPTIONS_UNCHANGED: PASS`.
+- `DEV5_UPGRADE_RESULT: PASS`, `STEAM_DECK_EXIT_CODE: 0`.
+
+**Separate backup and post-install acceptance is pending.** A backup request is not a verified backup. The code-only gate `scripts/dev5_post_install_verify.py` checks exact Git blob hashes for all 20 installed source files against the pinned commit, the preserved DEV4 source, Supervisor App version/state/options, backup inventory expansion beyond 8, a recent partial/full backup containing the DEV4 App, and six pre-existing Home Assistant entity-registry entries. Run it from Steam Deck through `scripts/run_dev5_post_install_from_deck.sh <verified-commit>`. It has no service-start/stop/update operations.
+
+Do **not** interpret the stopped DEV5 state as a failed installation. Start and snapshot/Dataalder smoke verification are separate gates after the backup verification.
