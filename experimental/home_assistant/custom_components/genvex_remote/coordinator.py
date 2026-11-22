@@ -17,13 +17,15 @@ class GenvexRemoteCoordinator(DataUpdateCoordinator[dict[str, float]]):
     """Keep a validated measurement through short remote disconnects."""
 
     def __init__(
-        self, hass: HomeAssistant, device_id: str, reader: SnapshotReader,
+        self, hass: HomeAssistant, device_id: str, reader: SnapshotReader, *,
+        config_entry=None,
     ) -> None:
         super().__init__(
             hass,
             logger=logging.getLogger(__name__),
             name=f"{DOMAIN}_{device_id}",
             update_interval=timedelta(seconds=POLL_SECONDS),
+            **({"config_entry": config_entry} if config_entry is not None else {}),
         )
         self.device_id = device_id
         self.reader = reader
