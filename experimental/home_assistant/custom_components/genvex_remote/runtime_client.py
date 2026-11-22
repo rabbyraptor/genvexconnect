@@ -45,6 +45,9 @@ class HTTPSession(Protocol):
     def get(self, url: str, *, headers: dict[str, str], allow_redirects: bool = False) -> HTTPRequestContext: ...
 
 
+SNAPSHOT_REQUEST_TIMEOUT_SECONDS = 20
+
+
 class AuthenticatedSnapshotReader:
     """Fail-closed HTTP consumer, usable only after trusted provisioning.
 
@@ -68,7 +71,7 @@ class AuthenticatedSnapshotReader:
         import asyncio
         import json
         try:
-            async with asyncio.timeout(8):
+            async with asyncio.timeout(SNAPSHOT_REQUEST_TIMEOUT_SECONDS):
                 async with self._session.get(
                     self._url,
                     headers={"Authorization": "Bearer " + self._token,
