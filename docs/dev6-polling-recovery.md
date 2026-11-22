@@ -15,6 +15,15 @@ when an unexpected ordinary exception escapes, then continues at the next
 scheduled interval. Cancellation still propagates to shutdown. No exception
 message, credentials, or raw SDK response is printed.
 
+## Package version and source attestation
+
+This branch advances the App manifest and ARM64 CI build tag to
+`0.1.0-dev6`. The historical DEV5 post-install verifier remains pinned to
+the exact installed DEV5 blobs; a DEV6 checkout must fail the old DEV5
+full-source attestation. Eighteen unchanged DEV5 source files are still
+checked against the original fingerprints in the offline regression suite.
+The DEV5 upgrade and rollback scripts remain historical, not DEV6 installers.
+
 ## Offline gate
 
 ```sh
