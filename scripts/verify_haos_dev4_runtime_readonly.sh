@@ -44,7 +44,7 @@ for name in names:
         source = (root / name).read_bytes()
         ast.parse(source, filename=name)
         sha = hashlib.sha1(
-            b"blob " + str(len(source)).encode() + b"\\x00" + source
+            b"blob " + str(len(source)).encode() + bytes([0]) + source
         ).hexdigest()
     except (OSError, SyntaxError):
         print("SOURCE_SYNTAX: FAIL", name)
