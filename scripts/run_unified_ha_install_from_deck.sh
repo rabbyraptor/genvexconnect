@@ -10,15 +10,57 @@ if [[ $# != 2 || "$1" != "--apply" || ! "$2" =~ ^[0-9a-f]{40}$ ]]; then
 fi
 
 PINNED_COMMIT="$2"
-HOST="root@rabbyshome.duckdns.org"
+TRUSTED_NAME="rabbyshome.duckdns.org"
+# Operator-set local address avoids public DuckDNS port refusal.
+TARGET_HOST="${GENVEX_HAOS_HOST:-$TRUSTED_NAME}"
+HOST="root@$TARGET_HOST"
 PORT=22222
 WORK=$(mktemp -d /tmp/genvex-unified-ha.XXXXXX)
 OUT="$WORK/operator-result.log"
 REMOTE_DIR=""
+SSH_EXTRA=()
+
+prepare_ssh_target() {
+  if [[ "$TARGET_HOST" == "$TRUSTED_NAME" ]]; then
+    echo "SSH_TARGET: hostname:$TARGET_HOST:$PORT"
+    return 0
+  fi
+  if [[ ! "$TARGET_HOST" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]]; then
+    echo "SSH_TARGET_INVALID: override requires literal IPv4" >&2
+    return 2
+  fi
+
+  # Use only the *already trusted* DuckDNS host key. Never accept new
+  # unverified IP host keys or disable strict SSH host key checking.
+  local source_file pinned="$WORK/pinned_host_keys"
+  : > "$pinned"
+  for source_file in "$HOME/.ssh/known_hosts" "$HOME/.ssh/known_hosts2"; do
+    [[ -f "$source_file" ]] || continue
+    ssh-keygen -F "[$TRUSTED_NAME]:$PORT" -f "$source_file" 2>/dev/null |
+      awk -v target="[$TARGET_HOST]:$PORT" \
+        '$1 !~ /^#/ && $3 != "" && ($2 ~ /^ssh-/ || $2 ~ /^ecdsa-sha2-/) {
+          print target, $2, $3
+        }' >> "$pinned" || true
+  done
+  if [[ ! -s "$pinned" ]]; then
+    echo "SSH_TRUST_PIN_MISSING: no previously trusted $TRUSTED_NAME:$PORT key in ~/.ssh/known_hosts" >&2
+    return 2
+  fi
+  sort -u "$pinned" -o "$pinned"
+  SSH_EXTRA=(
+    -o "UserKnownHostsFile=$pinned"
+    -o "GlobalKnownHostsFile=/dev/null"
+    -o StrictHostKeyChecking=yes
+    -o CheckHostIP=no
+  )
+  echo "SSH_TARGET: local:$TARGET_HOST:$PORT"
+  echo "SSH_TRUST_PIN: PREVIOUSLY_VERIFIED_HOST_KEY"
+}
 
 ssh_cmd() {
   ssh -T -p "$PORT" -o BatchMode=yes -o ConnectTimeout=6 \
-      -o ConnectionAttempts=5 -o ServerAliveInterval=30 "$HOST" "$@"
+      -o ConnectionAttempts=5 -o ServerAliveInterval=30 \
+      "${SSH_EXTRA[@]}" "$HOST" "$@"
 }
 
 cleanup() {
@@ -32,6 +74,7 @@ trap cleanup EXIT
 run() {
   echo "===== UNIFIED GENVEX REMOTE HA INSTALL ====="
   echo "SOURCE_COMMIT: $PINNED_COMMIT"
+  prepare_ssh_target || return $?
 
   curl --fail --silent --show-error --location --max-time 120 \
     "https://codeload.github.com/rabbyraptor/genvexconnect/tar.gz/$PINNED_COMMIT" \
