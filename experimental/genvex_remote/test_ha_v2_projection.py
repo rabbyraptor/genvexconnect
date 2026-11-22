@@ -26,7 +26,8 @@ class HAV2ProjectionTests(unittest.TestCase):
             fan_raw=raw, now=self.now,
         )
         return project_v2_sensors(
-            snapshot, expected_device_id="123456789012", now=self.now
+            snapshot, expected_device_id="123456789012", now=self.now,
+            include_fan_duty=True,
         )
 
     def test_7_stable_sensor_keys_and_correct_values(self):
@@ -96,6 +97,10 @@ class HAV2ProjectionTests(unittest.TestCase):
             now=self.now, include_fan_duty=False,
         )
         self.assertEqual(len(rows), 5)
+        default_rows = project_v2_sensors(
+            snapshot, expected_device_id="123456789012", now=self.now
+        )
+        self.assertEqual(default_rows, rows)
         self.assertEqual(
             [row.unique_id("123456789012") for row in rows],
             ["123456789012_" + key for key in (
