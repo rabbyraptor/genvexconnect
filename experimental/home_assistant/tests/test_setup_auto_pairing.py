@@ -121,6 +121,7 @@ class SetupAutoPairingTests(unittest.IsolatedAsyncioTestCase):
         self.hass = types.SimpleNamespace(data={}, config_entries=ConfigEntries())
         self.entry = types.SimpleNamespace(
             entry_id="test-entry",
+            options={},
             data={
                 "device_id": "123456789012",
                 "runtime_endpoint": "http://local-genvex-nabto-remote:18275/v1/snapshot",
@@ -146,6 +147,17 @@ class SetupAutoPairingTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(await self.integration.async_setup_entry(self.hass, self.entry))
         self.assertEqual(self.tokens, ["S" * 43])
         self.assertEqual(self.lookups, [])
+
+    async def test_existing_manual_entry_can_be_migrated_by_options(self):
+        self.entry.data = {
+            "device_id": "123456789012",
+            "runtime_endpoint": "http://local-genvex-nabto-remote:18275/v1/snapshot",
+        }
+        self.entry.options = {"pair_from_app": True}
+        self.assertTrue(await self.integration.async_setup_entry(self.hass, self.entry))
+        self.assertEqual(self.tokens, ["N" * 43])
+        self.assertEqual(self.lookups, ["123456789012"])
+        self.assertNotIn("runtime_token", self.entry.data)
 
     async def test_unavailable_auto_pair_fails_without_stale_token(self):
         self.missing = True
