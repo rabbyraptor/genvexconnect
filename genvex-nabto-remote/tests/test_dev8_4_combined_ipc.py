@@ -182,7 +182,8 @@ class CombinedTransportTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.audit_path.read_text().splitlines().count("POLL3"), 1)
         self.assertEqual((await self.request("/v3/snapshot", token=None))[0], 401)
         self.assertEqual((await self.request("/v3/snapshot", token="Y"*43))[0], 401)
-        self.assertEqual((await self.request("/v3/snapshot", method="PUT"))[0], 404)
+        # urllib adds Content-Length: 0 for PUT, rejected by the body-free API.
+        self.assertEqual((await self.request("/v3/snapshot", method="PUT"))[0], 400)
         self.assertEqual((await self.request("/v4/snapshot"))[0], 404)
 
         self.assertTrue(await self.state.refresh())
