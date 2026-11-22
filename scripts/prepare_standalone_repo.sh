@@ -83,6 +83,36 @@ case "$MODE" in
       --path .github/workflows/remote-dev-mcp-offline.yml \
       --path .github/workflows/remote-nabto-offline.yml >/dev/null
 
+    # Old research docs still refer to upstream's LAN component.
+    # Keep the attribution but resolve links to the upstream repository,
+    # rather than reintroducing those unrelated files in the new tree.
+    python3 - "$REPO" <<'PATCH_DOCUMENT_LINKS'
+from pathlib import Path
+import sys
+root = Path(sys.argv[1])
+upstream = "https://github.com/superrob/genvexconnect"
+fixes = {
+    "docs/README.md": {
+        "(../custom_components/genvex_connect/)":
+            f"({upstream}/tree/main/custom_components/genvex_connect/)",
+    },
+    "docs/optima270-nabto-read-command-reference-da.md": {
+        "(../custom_components/genvex_connect/translations/da.json)":
+            f"({upstream}/blob/main/custom_components/genvex_connect/translations/da.json)",
+        "(../custom_components/genvex_connect/sensor.py)":
+            f"({upstream}/blob/main/custom_components/genvex_connect/sensor.py)",
+    },
+}
+for name, replacements in fixes.items():
+    path = root / name
+    contents = path.read_text(encoding="utf-8")
+    for previous, replacement in replacements.items():
+        if previous not in contents:
+            raise SystemExit(f"Missing expected legacy documentation link: {name}")
+        contents = contents.replace(previous, replacement)
+    path.write_text(contents, encoding="utf-8")
+PATCH_DOCUMENT_LINKS
+
     cp "$TMP/LICENSE" "$REPO/LICENSE"
     cat > "$REPO/README.md" <<'STANDALONE_README'
 # Genvex Remote
@@ -175,7 +205,7 @@ STANDALONE_CONFIG
       sed -i 's/^      - remote-nabto-connection$/      - main/' "$workflow"
     done
 
-    git -C "$REPO" add README.md LICENSE repository.yaml .gitignore .github/workflows
+    git -C "$REPO" add README.md LICENSE repository.yaml .gitignore .github/workflows docs
     git -C "$REPO" commit --quiet -m \
       "chore: establish independent Genvex Remote repository from filtered history" ||
       die "Configure Git user.name and user.email, then retry"
