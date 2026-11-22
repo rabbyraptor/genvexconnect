@@ -206,9 +206,11 @@ STANDALONE_CONFIG
     done
 
     git -C "$REPO" add README.md LICENSE repository.yaml .gitignore .github/workflows docs
-    git -C "$REPO" commit --quiet -m \
+    git -C "$REPO" -c user.name=rabbyraptor \
+      -c user.email=55085876+rabbyraptor@users.noreply.github.com \
+      commit --quiet -m \
       "chore: establish independent Genvex Remote repository from filtered history" ||
-      die "Configure Git user.name and user.email, then retry"
+      die "Failed to create initial standalone commit"
     DIR="$REPO"
     verify
     DIR="$2"
@@ -226,12 +228,21 @@ STANDALONE_CONFIG
     verify
     [[ -z "$(git -C "$DIR" remote)" ]] ||
       die "Unexpected remote already configured; inspect before publication"
-    REFS="$(git ls-remote "$DESTINATION")" ||
-      die "Create an empty GitHub repository and configure Git authentication first"
+    # Reuse existing HTTPS credentials, or an existing SSH key.
+    if REFS="$(GIT_TERMINAL_PROMPT=0 git ls-remote "$DESTINATION" 2>/dev/null)"; then
+      REMOTE="$DESTINATION"
+      printf "GIT_AUTH: HTTPS\n"
+    elif REFS="$(GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND='ssh -o BatchMode=yes -o ConnectTimeout=10' \
+      git ls-remote git@github.com:rabbyraptor/genvex-remote.git 2>/dev/null)"; then
+      REMOTE="git@github.com:rabbyraptor/genvex-remote.git"
+      printf "GIT_AUTH: SSH\n"
+    else
+      die "Private Git push authorization unavailable; configure GitHub HTTPS or SSH credentials"
+    fi
     [[ -z "$REFS" ]] ||
       die "Destination GitHub repository is not empty; refusing push"
-    git -C "$DIR" remote add origin "$DESTINATION"
-    if ! git -C "$DIR" push -u origin main; then
+    git -C "$DIR" remote add origin "$REMOTE"
+    if ! GIT_TERMINAL_PROMPT=0 git -C "$DIR" push -u origin main; then
       git -C "$DIR" remote remove origin
       die "Publish failed; verify GitHub credentials and repo permissions"
     fi
