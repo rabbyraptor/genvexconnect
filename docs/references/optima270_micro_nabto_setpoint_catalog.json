@@ -1,0 +1,367 @@
+{
+  "schema_version": "genvex_optima270_legacy_setpoints_v1",
+  "scope": "Source-extracted Optima 270 legacy Micro Nabto model; not manufacturer-confirmed remote write interface",
+  "source": {
+    "model": "https://github.com/superrob/genvexnabto/blob/main/src/genvexnabto/models/optima270.py",
+    "opcode": "https://github.com/superrob/genvexnabto/blob/main/src/genvexnabto/protocol/payload.py",
+    "read_format": "https://github.com/superrob/genvexnabto/blob/main/src/genvexnabto/protocol/cmd_setpoint_readlist.py",
+    "write_format": "https://github.com/superrob/genvexnabto/blob/main/src/genvexnabto/protocol/cmd_setpoint_writelist.py",
+    "status": "community_reverse_engineered_not_official_vendor_specification"
+  },
+  "commands": [
+    {
+      "id": 17,
+      "hex": "0x11",
+      "type": "PING",
+      "current_remote_status": "verified"
+    },
+    {
+      "id": 45,
+      "hex": "0x2d",
+      "type": "DATAPOINT_READLIST",
+      "current_remote_status": "verified"
+    },
+    {
+      "id": 42,
+      "hex": "0x2a",
+      "type": "SETPOINT_READLIST",
+      "current_remote_status": "not_tested"
+    },
+    {
+      "id": 43,
+      "hex": "0x2b",
+      "type": "SETPOINT_WRITELIST",
+      "current_remote_status": "not_tested_no_transmit"
+    },
+    {
+      "id": 2,
+      "hex": "0x02",
+      "type": "KEEP_ALIVE",
+      "current_remote_status": "source_only"
+    }
+  ],
+  "wire_format_source_only": {
+    "setpoint_readlist": "3-byte 0x00 prefix, 1-byte opcode 0x2a, uint16-BE count, repeated (uint8 read_obj, uint16-BE read_address), 0x01 terminator",
+    "setpoint_writelist": "3-byte 0x00 prefix, 1-byte opcode 0x2b, uint16-BE count, repeated (uint8 write_obj, uint32-BE write_address, uint16-BE unscaled raw value), 0x01 terminator",
+    "default_read_obj": 0,
+    "default_write_obj": 0,
+    "unscale_formula": "raw = int((display_value * divider) - offset)",
+    "display_formula": "display_value = (raw + offset) / divider",
+    "scope_note": "These byte layouts are extracted from the community LAN UDP client; they are not confirmed to be the production Nabto Client SDK's XML RPC query request schema."
+  },
+  "setpoints": [
+    {
+      "key": "fan_speed",
+      "label": "Ventilatortrin",
+      "read_address": 7,
+      "write_address": 24,
+      "read_obj": 0,
+      "write_obj": 0,
+      "divider": 1,
+      "offset": 0,
+      "raw_min": 0,
+      "raw_max": 4,
+      "step": 1,
+      "default_read": true,
+      "evidence": "public_optima270_model_only",
+      "remote_read_verified": false,
+      "remote_write_verified": false,
+      "write_enabled": false
+    },
+    {
+      "key": "temp_setpoint",
+      "label": "Temperatursetpunkt",
+      "read_address": 1,
+      "write_address": 12,
+      "read_obj": 0,
+      "write_obj": 0,
+      "divider": 10,
+      "offset": 100,
+      "raw_min": 0,
+      "raw_max": 200,
+      "step": 0.5,
+      "default_read": true,
+      "evidence": "public_optima270_model_only",
+      "remote_read_verified": false,
+      "remote_write_verified": false,
+      "write_enabled": false
+    },
+    {
+      "key": "bypass_openoffset",
+      "label": "Bypass åbneoffset (EE1)",
+      "read_address": 21,
+      "write_address": 52,
+      "read_obj": 0,
+      "write_obj": 0,
+      "divider": 10,
+      "offset": 0,
+      "raw_min": 10,
+      "raw_max": 100,
+      "step": 0.1,
+      "default_read": true,
+      "evidence": "public_optima270_model_only",
+      "remote_read_verified": false,
+      "remote_write_verified": false,
+      "write_enabled": false
+    },
+    {
+      "key": "bypass_turnoff",
+      "label": "Bypass slukgrænse (EE2)",
+      "read_address": 29,
+      "write_address": 68,
+      "read_obj": 0,
+      "write_obj": 0,
+      "divider": 1,
+      "offset": 0,
+      "raw_min": 0,
+      "raw_max": 20,
+      "step": 1,
+      "default_read": true,
+      "evidence": "public_optima270_model_only",
+      "remote_read_verified": false,
+      "remote_write_verified": false,
+      "write_enabled": false
+    },
+    {
+      "key": "bypass_force_speed",
+      "label": "Bypass tvangshastighed (EE3)",
+      "read_address": 57,
+      "write_address": 124,
+      "read_obj": 0,
+      "write_obj": 0,
+      "divider": 1,
+      "offset": 0,
+      "raw_min": 0,
+      "raw_max": 100,
+      "step": 1,
+      "default_read": true,
+      "evidence": "public_optima270_model_only",
+      "remote_read_verified": false,
+      "remote_write_verified": false,
+      "write_enabled": false
+    },
+    {
+      "key": "bypass_force_temp",
+      "label": "Bypass tvangstemperatur (EE4)",
+      "read_address": 58,
+      "write_address": 126,
+      "read_obj": 0,
+      "write_obj": 0,
+      "divider": 10,
+      "offset": 0,
+      "raw_min": 0,
+      "raw_max": 50,
+      "step": 0.1,
+      "default_read": true,
+      "evidence": "public_optima270_model_only",
+      "remote_read_verified": false,
+      "remote_write_verified": false,
+      "write_enabled": false
+    },
+    {
+      "key": "reheating",
+      "label": "Eftervarme (A1)",
+      "read_address": 3,
+      "write_address": 16,
+      "read_obj": 0,
+      "write_obj": 0,
+      "divider": 1,
+      "offset": 0,
+      "raw_min": 0,
+      "raw_max": 1,
+      "step": 1,
+      "default_read": true,
+      "evidence": "public_optima270_model_only",
+      "remote_read_verified": false,
+      "remote_write_verified": false,
+      "write_enabled": false
+    },
+    {
+      "key": "humidity_control",
+      "label": "Fugtstyring (A2)",
+      "read_address": 6,
+      "write_address": 22,
+      "read_obj": 0,
+      "write_obj": 0,
+      "divider": 1,
+      "offset": 0,
+      "raw_min": 0,
+      "raw_max": 1,
+      "step": 1,
+      "default_read": true,
+      "evidence": "public_optima270_model_only",
+      "remote_read_verified": false,
+      "remote_write_verified": false,
+      "write_enabled": false
+    },
+    {
+      "key": "boost_enable",
+      "label": "Boost aktiveret",
+      "read_address": 30,
+      "write_address": 70,
+      "read_obj": 0,
+      "write_obj": 0,
+      "divider": 1,
+      "offset": 0,
+      "raw_min": 0,
+      "raw_max": 1,
+      "step": 1,
+      "default_read": true,
+      "evidence": "public_optima270_model_only",
+      "remote_read_verified": false,
+      "remote_write_verified": false,
+      "write_enabled": false
+    },
+    {
+      "key": "boost_time",
+      "label": "Boostvarighed (A3)",
+      "read_address": 70,
+      "write_address": 150,
+      "read_obj": 0,
+      "write_obj": 0,
+      "divider": 1,
+      "offset": 0,
+      "raw_min": 1,
+      "raw_max": 120,
+      "step": 1,
+      "default_read": true,
+      "evidence": "public_optima270_model_only",
+      "remote_read_verified": false,
+      "remote_write_verified": false,
+      "write_enabled": false
+    },
+    {
+      "key": "filter_days",
+      "label": "Filterdage",
+      "read_address": 100,
+      "write_address": 210,
+      "read_obj": 0,
+      "write_obj": 0,
+      "divider": 1,
+      "offset": 0,
+      "raw_min": 0,
+      "raw_max": 65535,
+      "step": 1,
+      "default_read": true,
+      "evidence": "public_optima270_model_only",
+      "remote_read_verified": false,
+      "remote_write_verified": false,
+      "write_enabled": false
+    },
+    {
+      "key": "filter_reset",
+      "label": "Filterreset",
+      "read_address": 50,
+      "write_address": 110,
+      "read_obj": 0,
+      "write_obj": 0,
+      "divider": 1,
+      "offset": 0,
+      "raw_min": 0,
+      "raw_max": 2,
+      "step": 1,
+      "default_read": false,
+      "evidence": "public_optima270_model_only",
+      "remote_read_verified": false,
+      "remote_write_verified": false,
+      "write_enabled": false
+    }
+  ],
+  "excluded": [
+    {
+      "key": "bypass_min_on",
+      "read_address": 59,
+      "write_address": 128,
+      "status": "commented_out_in_source",
+      "reason": "Source comments: seems locked down"
+    },
+    {
+      "key": "supply_air_level1",
+      "read_address": 10,
+      "write_address": 30,
+      "status": "commented_out_in_source",
+      "reason": "Source comments: gateway write locked"
+    },
+    {
+      "key": "supply_air_level2",
+      "read_address": 11,
+      "write_address": 32,
+      "status": "commented_out_in_source",
+      "reason": "Source comments: gateway write locked"
+    },
+    {
+      "key": "supply_air_level3",
+      "read_address": 12,
+      "write_address": 34,
+      "status": "commented_out_in_source",
+      "reason": "Source comments: gateway write locked"
+    },
+    {
+      "key": "supply_air_level4",
+      "read_address": 8,
+      "write_address": 26,
+      "status": "commented_out_in_source",
+      "reason": "Source comments: gateway write locked"
+    },
+    {
+      "key": "extract_air_level1",
+      "read_address": 13,
+      "write_address": 36,
+      "status": "commented_out_in_source",
+      "reason": "Source comments: gateway write locked"
+    },
+    {
+      "key": "extract_air_level2",
+      "read_address": 14,
+      "write_address": 38,
+      "status": "commented_out_in_source",
+      "reason": "Source comments: gateway write locked"
+    },
+    {
+      "key": "extract_air_level3",
+      "read_address": 15,
+      "write_address": 40,
+      "status": "commented_out_in_source",
+      "reason": "Source comments: gateway write locked"
+    },
+    {
+      "key": "extract_air_level4",
+      "read_address": 9,
+      "write_address": 28,
+      "status": "commented_out_in_source",
+      "reason": "Source comments: gateway write locked"
+    }
+  ],
+  "independent_crosschecks": {
+    "modbus_source": "https://github.com/jbj/genvex-optima-270/blob/main/genvex-optima-270.yaml",
+    "modbus_holding_register_matches": [
+      {
+        "modbus_holding_address": 1,
+        "key": "temp_setpoint",
+        "status": "independent_same_read_address_not_nabto_write_verification"
+      },
+      {
+        "modbus_holding_address": 3,
+        "key": "reheating",
+        "status": "independent_same_read_address_not_nabto_write_verification"
+      },
+      {
+        "modbus_holding_address": 6,
+        "key": "humidity_control",
+        "status": "independent_same_read_address_not_nabto_write_verification"
+      },
+      {
+        "modbus_holding_address": 7,
+        "key": "fan_speed",
+        "status": "independent_same_read_address_not_nabto_write_verification"
+      }
+    ],
+    "official_controller_manual": "https://www.genvex.com/download/18.2632f14918aa7daec381f25/1770731370045/Optima-270-operating-instructions.pdf",
+    "official_el4_modbus_modify": {
+      "0": "modbus_setpoint_writes_disabled",
+      "1": "modbus_setpoint_writes_limited",
+      "2": "modbus_setpoint_writes_full",
+      "applies_to": "Modbus only; no proven effect on Micro Nabto RPC43"
+    }
+  }
+}
