@@ -74,6 +74,8 @@ class ConfigFlowPairingTests(unittest.IsolatedAsyncioTestCase):
         config_entries.ConfigFlow = ConfigFlowBase
         homeassistant = types.ModuleType("homeassistant")
         homeassistant.config_entries = config_entries
+        homeassistant.core = types.ModuleType("homeassistant.core")
+        homeassistant.core.callback = lambda func: func
         helpers = types.ModuleType("homeassistant.helpers")
         selector = types.ModuleType("homeassistant.helpers.selector")
 
@@ -96,6 +98,7 @@ class ConfigFlowPairingTests(unittest.IsolatedAsyncioTestCase):
             f"{NAMESPACE}.core_supervisor_loader": core,
             "homeassistant": homeassistant,
             "homeassistant.config_entries": config_entries,
+            "homeassistant.core": homeassistant.core,
             "homeassistant.helpers": helpers,
             "homeassistant.helpers.selector": selector,
             "voluptuous": voluptuous,
