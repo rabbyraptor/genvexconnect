@@ -14,11 +14,11 @@ import sys
 MAX_LINES = 10000
 MAX_LINE_BYTES = 2048
 _CYCLE = re.compile(
-    r"(?:^|\\s)RPC45 "
-    r"(?P<timestamp>\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d(?:\\.\\d+)?(?:Z|[+-]\\d\\d:\\d\\d)) "
+    r"(?:^|\s)RPC45 "
+    r"(?P<timestamp>\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?(?:Z|[+-]\d\d:\d\d)) "
     r"(?P<state>OK|FEJL) "
-    r"(?P<duration>\\d+(?:\\.\\d{1,3})?)s "
-    r"PID_BEFORE=(?P<before>None|\\d{1,9}) PID_AFTER=(?P<after>None|\\d{1,9})$"
+    r"(?P<duration>\d+(?:\.\d{1,3})?)s "
+    r"PID_BEFORE=(?P<before>None|\d{1,9}) PID_AFTER=(?P<after>None|\d{1,9})$"
 )
 
 
