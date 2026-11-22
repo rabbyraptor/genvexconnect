@@ -36,6 +36,7 @@ jobs:
           DEST="$RUNNER_TEMP/genvex-remote-standalone"
           test ! -d "$DEST/custom_components/genvex_connect"
           test ! -e "$DEST/hacs.json"
+          (cd "$DEST" && python scripts/check_repository_links.py)
           (cd "$DEST" && python scripts/check_remote_runtime_parity.py --check)
           (cd "$DEST" && python -m unittest discover -s genvex-nabto-remote/tests -p 'test_*.py')
           (cd "$DEST" && python -m unittest discover -s experimental/home_assistant/tests -p 'test_*.py')
