@@ -24,7 +24,7 @@ if not source.is_file() or b'version: "0.1.0-dev5"' not in source.read_bytes().s
     raise SystemExit("BLOCKED: DEV5_SOURCE_MANIFEST")
 result = subprocess.run(
     ["ha", "apps", "info", slug, "--raw-json"],
-    capture_output=True, text=True, timeout=60
+    stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=60
 )
 if result.returncode:
     raise SystemExit("BLOCKED: SUPERVISOR_INFO")
@@ -47,7 +47,7 @@ print("DEV5_PRESTART: PASS")
 PY
 
 echo "START_DEV5: REQUESTED"
-ha apps start local_genvex_nabto_remote >/dev/null
+ha apps start local_genvex_nabto_remote </dev/null >/dev/null
 echo "START_DEV5: RETURNED"
 
 python3 - <<'PY'
@@ -57,7 +57,7 @@ import subprocess
 slug = "local_genvex_nabto_remote"
 result = subprocess.run(
     ["ha", "apps", "info", slug, "--raw-json"],
-    capture_output=True, text=True, timeout=60
+    stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=60
 )
 if result.returncode:
     raise SystemExit("BLOCKED: SUPERVISOR_POSTSTART")
@@ -207,11 +207,27 @@ echo "===== DEV5 RECENT RPC45 METADATA ====="
 docker logs --since 5m app_local_genvex_nabto_remote 2>&1 |
   grep -E '^RPC45 [0-9]{4}-|^RPC45_DIAGNOSTIC rpc_status=' |
   tail -8 || true
+echo "DEV5_FIRST_START_FULL_GATE: PASS"
 echo "===== COMPLETE ====="
 REMOTE
 }
 
 if run >"$OUT" 2>&1; then RC=0; else RC=$?; fi
+if [[ "$RC" -eq 0 ]]; then
+  for marker in \
+    "SUPERVISOR_DEV5_STARTED: PASS" \
+    "DEV5_DIAGNOSTIC_IMAGE_PARITY: PASS" \
+    "DEV5_LIVE_RESULT: PASS" \
+    "HA_REGISTRY: PASS" \
+    "DEV5_FIRST_START_FULL_GATE: PASS" \
+    "===== COMPLETE ====="; do
+    if ! grep -Fqx -- "$marker" "$OUT"; then
+      RC=3
+      echo "BLOCKED: FIRST_START_INCOMPLETE" >> "$OUT"
+      break
+    fi
+  done
+fi
 printf '\033[3J\033[2J\033[H'
 cat "$OUT"
 echo "STEAM_DECK_EXIT_CODE: $RC"
