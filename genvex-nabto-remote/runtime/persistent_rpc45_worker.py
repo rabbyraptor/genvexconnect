@@ -98,9 +98,9 @@ def decode_raw_rpc(raw: str, count: int) -> tuple[int, ...] | None:
             return None
         decoded = []
         for item in values:
-            if type(item) is not dict or set(item) != {"value"}:
+            if type(item) is not dict:
                 return None
-            value = item["value"]
+            value = item.get("value")
             if type(value) is not int or not -32768 <= value <= 32767:
                 return None
             decoded.append(value)
