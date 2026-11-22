@@ -44,13 +44,18 @@ _OPTIONAL_FIELDS = (
 
 def project_v2_sensors(
     payload: Any, *, expected_device_id: str, now: datetime | None = None,
+    include_fan_duty: bool = True,
 ) -> tuple[SensorProjection, ...]:
     """Build a fresh deterministic HA-oriented view, no side effects.
 
     v2 parser fails closed on baseline errors; absence of optional *pair*
     gives unavailable fan entities (value None), never fabricated zeroes.
     No entities for unverified RPM/bypass/alarm/rotor semantics.
+    The caller can request a v1-compatible five-sensor projection without
+    registering optional fan-duty entities before live UI verification.
     """
+    if type(include_fan_duty) is not bool:
+        raise ValueError("Fan duty projection gate must be boolean")
     baseline, fans = parse_v2(
         payload, expected_device_id=expected_device_id, now=now
     )
@@ -59,9 +64,10 @@ def project_v2_sensors(
                          baseline[key], True)
         for key, name, unit, device_class in _BASE_FIELDS
     ]
-    rows.extend(
-        SensorProjection(key, name, unit, device_class, "measurement",
-                         fans.get(key), key in fans)
-        for key, name, unit, device_class in _OPTIONAL_FIELDS
-    )
+    if include_fan_duty:
+        rows.extend(
+            SensorProjection(key, name, unit, device_class, "measurement",
+                             fans.get(key), key in fans)
+            for key, name, unit, device_class in _OPTIONAL_FIELDS
+        )
     return tuple(rows)
