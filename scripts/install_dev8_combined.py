@@ -50,6 +50,20 @@ def command(args: list[str], timeout: int = 120) -> str:
     return completed.stdout
 
 
+def tar_bytes(args: list[str], timeout: int = 60) -> bytes:
+    """Read archive contents as bytes; preserve Danish translation UTF-8."""
+    try:
+        done = subprocess.run(
+            args, capture_output=True, stdin=subprocess.DEVNULL,
+            timeout=timeout,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        raise ReleaseBlocked("TAR_UNAVAILABLE") from None
+    if done.returncode:
+        raise ReleaseBlocked("TAR_FAILED") from None
+    return done.stdout
+
+
 def ha_info(*args: str) -> dict:
     try:
         data = json.loads(command(["ha", *args, "--raw-json"], 60))
@@ -106,12 +120,7 @@ def verify_bundle(archive: Path, sha: str) -> dict[str, bytes]:
     for name, detail in zip(names, details):
         if not allowed_member(name) or not detail.startswith("-"):
             raise ReleaseBlocked("BUNDLE_UNEXPECTED_MEMBER")
-        body = command(["tar", "-xOzf", str(archive), name], 50).encode(
-            "latin1", "surrogateescape",
-        )
-        # The tar subprocess returns *text* in command(), which cannot safely
-        # round-trip arbitrary byte sequences. All source members are UTF-8,
-        # so require byte-preserving ASCII/UTF-8 re-encoding below.
+        body = tar_bytes(["tar", "-xOzf", str(archive), name], 50)
         if not 1 <= len(body) <= MAX_MEMBER:
             raise ReleaseBlocked("BUNDLE_MEMBER_SIZE_INVALID")
         files[name] = body
