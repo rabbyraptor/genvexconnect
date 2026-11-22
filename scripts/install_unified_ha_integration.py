@@ -11,12 +11,10 @@ import hashlib
 import json
 from pathlib import Path, PurePosixPath
 import shutil
-import ssl
+import socket
 import subprocess
 import sys
 import time
-from urllib.error import HTTPError, URLError
-from urllib.request import urlopen
 
 HOME = Path("/mnt/data/supervisor/homeassistant")
 COMPONENTS = HOME / "custom_components"
@@ -129,24 +127,45 @@ def ha_cli(*args: str, timeout: int = 240) -> str:
 
 
 def core_api_ready(port: int, use_ssl: bool) -> bool:
-    """Probe Core's loopback REST API; no credentials are sent or required."""
+    """Probe the Core listener without importing the absent HAOS _ssl module.
+
+    The HAOS host Python 3.12 does not ship an _ssl extension. For ordinary
+    HTTP Core, require a genuine /api/ HTTP status. For HTTPS Core, require
+    the configured loopback port to accept connections (no host TLS library).
+    """
     if type(port) is not int or not 1 <= port <= 65535:
         return False
     if type(use_ssl) is not bool:
         return False
-    protocol = "https" if use_ssl else "http"
-    endpoint = f"{protocol}://127.0.0.1:{port}/api/"
     try:
-        # A 401 is the normal unauthenticated response from a ready Core API.
-        # TLS is loopback-only and may use HA's own self-signed certificate.
-        ctx = ssl._create_unverified_context() if use_ssl else None
-        with urlopen(endpoint, timeout=4, context=ctx) as response:
-            return response.status == 200
-    except HTTPError as error:
-        return error.code in (401, 403)
-    except (URLError, TimeoutError, OSError, ValueError):
+        with socket.create_connection(("127.0.0.1", port), timeout=4) as conn:
+            conn.settimeout(4)
+            if use_ssl:
+                # A TCP listener is the strongest available host-side check
+                # without the optional _ssl module. The version is checked
+                # separately through Supervisor's ha core info response.
+                return True
+            conn.sendall(
+                b"GET /api/ HTTP/1.0\r\n"
+                b"Host: 127.0.0.1\r\n"
+                b"Connection: close\r\n\r\n"
+            )
+            line = bytearray()
+            while b"\n" not in line and len(line) < 128:
+                chunk = conn.recv(128 - len(line))
+                if not chunk:
+                    return False
+                line.extend(chunk)
+            status = bytes(line).split(b"\n", 1)[0].strip()
+            return status in (
+                b"HTTP/1.0 200 OK", b"HTTP/1.1 200 OK",
+                b"HTTP/1.0 401 Unauthorized",
+                b"HTTP/1.1 401 Unauthorized",
+                b"HTTP/1.0 403 Forbidden",
+                b"HTTP/1.1 403 Forbidden",
+            )
+    except (OSError, TimeoutError):
         return False
-
 
 def check_core_started() -> None:
     """Wait for a responding Core API, not a nonexistent /core/info state key."""
@@ -184,6 +203,11 @@ def apply(path: Path, sha256: str) -> None:
         raise InstallBlocked("INSTALLED_COMPONENT_MANIFEST_INVALID") from None
     if old_manifest.get("domain") != "genvex_remote":
         raise InstallBlocked("INSTALLED_COMPONENT_DOMAIN_INVALID")
+
+    # Prove this host can query the *current* Core before replacing its
+    # files. Fail here rather than trigger an avoidable rollback after restart.
+    check_core_started()
+    print("CORE_API_PREFLIGHT: PASS", flush=True)
 
     STAGE.mkdir(mode=0o700)
     try:
