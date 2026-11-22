@@ -10,6 +10,7 @@ from threading import Thread
 from typing import Callable
 
 from snapshot_api import handle_read_request
+from snapshot_api_v3 import V3_PATH, handle_v3_read_request
 
 
 class _BoundedHTTPServer(ThreadingHTTPServer):
@@ -22,13 +23,16 @@ class SnapshotHTTPServer:
     """Start/stop a minimal authenticated snapshot endpoint."""
 
     def __init__(self, *, bind_host: str, port: int, token: str,
-                 device_id: str, snapshot_provider: Callable[[], dict | None]):
+                 device_id: str, snapshot_provider: Callable[[], dict | None],
+                 v3_snapshot_provider: Callable[[], dict | None] | None = None):
         if bind_host not in ("127.0.0.1", "0.0.0.0"):
             raise ValueError("Invalid private bridge binding")
         if bind_host == "0.0.0.0" and port != 18275:
             raise ValueError("Only the fixed internal port may bind on container interfaces")
         if not isinstance(port, int) or not (1024 <= port <= 65535 or (port == 0 and bind_host == "127.0.0.1")):
             raise ValueError("Invalid bridge port")
+        if v3_snapshot_provider is not None and not callable(v3_snapshot_provider):
+            raise ValueError("Invalid v3 provider")
         self._thread = None
         self._server = None
 
@@ -60,16 +64,20 @@ class SnapshotHTTPServer:
                     expected_token=token,
                     device_id=device_id,
                 )
-                status, payload = handle_read_request(**request, snapshot=None)
+                if self.path == V3_PATH and v3_snapshot_provider is not None:
+                    handler, provider = handle_v3_read_request, v3_snapshot_provider
+                else:
+                    handler, provider = handle_read_request, snapshot_provider
+                status, payload = handler(**request, snapshot=None)
                 if status != 503:
                     self._json_reply(status, payload)
                     return
                 try:
-                    snapshot = snapshot_provider()
+                    snapshot = provider()
+                    status, payload = handler(**request, snapshot=snapshot)
                 except Exception:
                     self._json_reply(503, b'{"error":"unavailable"}')
                     return
-                status, payload = handle_read_request(**request, snapshot=snapshot)
                 self._json_reply(status, payload)
 
             def do_GET(self): self._handle()
