@@ -47,12 +47,18 @@ if [[ -z "$GENVEX_NABTO_IDENTITY" ]]; then
   printf '\n'
 fi
 if [[ -z "$GENVEX_NABTO_HOST" ]]; then
-  read -r -s -p 'Device hostname (12-digit ID.remote.lscontrol.dk, input hidden): ' GENVEX_NABTO_HOST
+  read -r -s -p 'Device hostname (device-label.remote.lscontrol.dk, input hidden): ' GENVEX_NABTO_HOST
   printf '\n'
 fi
 export GENVEX_NABTO_IDENTITY GENVEX_NABTO_HOST
 
-if ! python3 "$TMP/scripts/reconstruct_rpc42_readonly.py" --address 7 > "$LOG" 2>&1; then
+# Only print presence, never print actual account/device identifiers.
+{
+  [[ -n "$GENVEX_NABTO_IDENTITY" ]] && echo 'RPC42_IDENTITY_INPUT: PRESENT' || echo 'RPC42_IDENTITY_INPUT: MISSING'
+  [[ -n "$GENVEX_NABTO_HOST" ]] && echo 'RPC42_HOST_INPUT: PRESENT' || echo 'RPC42_HOST_INPUT: MISSING'
+} > "$LOG"
+
+if ! python3 "$TMP/scripts/reconstruct_rpc42_readonly.py" --address 7 >> "$LOG" 2>&1; then
   EXIT_CODE=2
   exit "$EXIT_CODE"
 fi
