@@ -44,10 +44,26 @@ def numeric_error_event(raw: str) -> int | None:
         pass
     return None
 
+def validate_target(identity: str, host: str) -> str | None:
+    """Classify target without logging identifiers.
+
+    Legacy device labels need not be twelve digits. DNS labels are opaque.
+    """
+    if not identity:
+        return "IDENTITY_MISSING"
+    if not re.fullmatch(r"[A-Za-z0-9_.+-]+@[A-Za-z0-9.-]+", identity):
+        return "IDENTITY_FORMAT_INVALID"
+    if not host:
+        return "HOST_MISSING"
+    if not re.fullmatch(r"[A-Za-z0-9-]{1,64}\.remote\.lscontrol\.dk", host, re.IGNORECASE):
+        return "HOST_FORMAT_INVALID"
+    return None
+
+
 def main() -> int:
-    if not (re.fullmatch(r"[A-Za-z0-9_.+-]+@[A-Za-z0-9.-]+", IDENTITY)
-            and re.fullmatch(r"[0-9]{12}\.remote\.lscontrol\.dk", HOST)):
-        report("PREFLIGHT", "MISSING_IDENTITY_OR_HOST_ENV")
+    problem = validate_target(IDENTITY, HOST)
+    if problem is not None:
+        report("PREFLIGHT", problem)
         return 2
     cert, key = PROFILE / "client.crt", PROFILE / "client-encrypted.key"
     if not (cert.is_file() and key.is_file() and LIB.is_file() and XML.is_file()):
