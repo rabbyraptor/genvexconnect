@@ -60,3 +60,14 @@ Operator provided a code-only TAR from `/opt/genvex-remote/runtime/` containing 
 
 This confirms that the recovered DEV4 implementation matches the deployed source everywhere except the explicitly introduced diagnostics. It does **not** prove that a rebuilt candidate has been installed, restarted, or that automatic onboarding is operational.
 
+## Installed DEV4 read-only gate — 22 November 2026 (operator PASS)
+
+The operator ran `scripts/verify_haos_dev4_runtime_readonly.sh` against the live HAOS App and supplied the terminal result:
+
+- `SOURCE_SYNTAX: PASS 10`; `INSTALLED_BASELINE_MATCH: 10 of 10`; `CHANGED_FILES: none`. These are comparisons to the **captured installed baseline** (not byte equality against the three deliberately revised diagnostic source files in this PR).
+- `PERSISTENT_SESSION: True`, `POLL_SECONDS: 60`, `PERSISTENT_WORKER_COUNT: 1`.
+- Internal authenticated `/v1/snapshot` HTTP status **200**, five strict v1 readings, snapshot age **0.5 s** at observation time. The command did not print the token or readings.
+- Recent RPC45: ordinary persistent calls around **0.03–0.06 s**. At **2026-11-22T10:36:37Z** status **26** took **5.03 s**; at **10:42:50Z** status **26** took **12.22 s**. Both were followed by successful reads within the following minute, and the same persistent PID **93** survived. The six-minute-style intermittent error remains unresolved, as separately recorded in `STATUS.md`.
+- Test exit code **0**. This validates the **installed** App, not a live installation/restart of this PR's new image.
+
+**Next gate:** Stage a **versioned** update candidate from the tested GitHub source and validate backup, artifact provenance, supervisor/App state and rollback path before any live replacement. The old DEV3→DEV4 upgrade script only accepts installed DEV3 and **must not** be reused for this already-running DEV4 installation. A rebuild with unchanged Supervisor version `0.1.0-dev4` is not a reliable update trigger; any actual candidate deployment needs a new version and explicit acceptance tests.
