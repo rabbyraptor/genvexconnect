@@ -3,17 +3,18 @@
     "step": {
       "user": {
         "title": "Genvex Remote (experimental read-only)",
-        "description": "Requires a separately installed private Genvex Nabto runtime App. Enter its internal snapshot endpoint and matching IPC token. Do not enter your Nabto account password here.",
+        "description": "Requires the separate Genvex Remote App. Select Core pairing to retrieve the IPC token from the started App, or enter an IPC token manually. Never enter your Nabto account password.",
         "data": {
           "device_id": "Device ID",
-          "runtime_endpoint": "Private App snapshot URL",
-          "runtime_token": "Internal IPC bearer token"
+          "runtime_token": "Internal IPC bearer token",
+          "pair_from_app": "Pair automatically via Home Assistant Supervisor"
         }
       }
     },
     "error": {
       "invalid_device_id": "Enter exactly 12 ASCII digits.",
-      "invalid_runtime_config": "Enter the fixed Genvex Remote App URL (local-genvex-nabto-remote:18275) and a valid internal token."
+      "invalid_runtime_config": "Select Core pairing or enter a valid internal IPC token.",
+      "app_pairing_unavailable": "Cannot retrieve an IPC token from the started Genvex Remote App through Supervisor."
     },
     "abort": {
       "already_configured": "This device is already configured."
