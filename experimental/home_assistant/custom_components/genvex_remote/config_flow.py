@@ -7,12 +7,11 @@ from homeassistant import config_entries
 import voluptuous as vol
 from homeassistant.helpers.selector import TextSelector, TextSelectorConfig, TextSelectorType
 
-from .const import (CONF_DEVICE_ID, CONF_RUNTIME_ENDPOINT, CONF_RUNTIME_TOKEN, DOMAIN, valid_device_id)
+from .const import (CONF_DEVICE_ID, CONF_PAIR_FROM_APP, CONF_RUNTIME_ENDPOINT, CONF_RUNTIME_TOKEN, DOMAIN, valid_device_id)
 from .core_supervisor_loader import async_fetch_paired_token
 from .runtime_client import EXPECTED_APP_ENDPOINT
 from .supervisor_pairing import SupervisorPairingUnavailable
 
-CONF_PAIR_FROM_APP = "pair_from_app"
 
 
 class GenvexRemoteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -48,13 +47,20 @@ class GenvexRemoteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     else:
                         await self.async_set_unique_id(device_id)
                         self._abort_if_unique_id_configured()
+                        # Core-paired entries never persist a copy of the
+                        # App's IPC secret. Setup resolves it again from
+                        # trusted Supervisor state on every entry reload.
+                        entry_data = {
+                            CONF_DEVICE_ID: device_id,
+                            CONF_RUNTIME_ENDPOINT: EXPECTED_APP_ENDPOINT,
+                        }
+                        if user_input.get(CONF_PAIR_FROM_APP) is True:
+                            entry_data[CONF_PAIR_FROM_APP] = True
+                        else:
+                            entry_data[CONF_RUNTIME_TOKEN] = token
                         return self.async_create_entry(
                             title=f"Genvex Remote {device_id[-4:]}",
-                            data={
-                                CONF_DEVICE_ID: device_id,
-                                CONF_RUNTIME_ENDPOINT: EXPECTED_APP_ENDPOINT,
-                                CONF_RUNTIME_TOKEN: token,
-                            },
+                            data=entry_data,
                         )
         return self.async_show_form(
             step_id="user",
