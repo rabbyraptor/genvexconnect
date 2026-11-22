@@ -65,3 +65,38 @@ retained options, stopped update and shell clear-output behavior.
 - DEV8 fan-duty projection remains disabled by default until gateway values
   are compared against the official Genvex Connect UI.
 - No pull request is merged automatically by this procedure.
+
+
+## Actual HAOS execution record — 22 November 2026
+
+Operator used pinned commit \`47c761fa70bdd03541b730ea2f468c305622c241\`.
+
+- \`--preflight\`: \`DEV6_PREFLIGHT: PASS\`, 20 source files, checksum
+  \`834b3e728613ddd4d0cca782111dbc5ddb47bd19657881aa8f585b6d60b455e9\`,
+  Steam Deck exit 0.
+- \`--apply\`: \`DEV6_UPGRADE_RESULT: PASS\`,
+  \`PERSISTENT_OPTIONS_UNCHANGED: PASS\`, retained DEV5 source,
+  Supervisor backup requested, resulting App STOPPED, Steam Deck exit 0.
+- Operator \`ha apps start local_genvex_nabto_remote\`:
+  version \`0.1.0-dev6\`, state \`started\`, boot \`manual\`,
+  \`DEV6_FIRST_START: PASS\`, SSH exit 0.
+- HAOS Development MCP confirmed new \`0.1.0-dev6\` container
+  started \`2026-11-22T17:19:28.514948765Z\`, restart count 0.
+- RPC45 poll results at UTC 17:19:37 (OK 6.81 s on initial SDK
+  worker PID 93), 17:20:37 (OK 0.04 s, PID 93), and
+  17:21:37 (OK 0.03 s, PID 93).
+- All 13 available deployed runtime Python files compared byte-for-byte
+  against the pinned DEV6 GitHub source; **13/13 matched**.
+- Home Assistant Core 2026.11.1 entry \`genvex_remote\` remains loaded,
+  five sensor measurements plus Data age remain available; near the
+  third poll Data age was 0.2 minutes.
+- Historical Genvex coordinator error at 13:09 UTC was already present;
+  no new coordinator error observed in first post-upgrade checks.
+
+A separate automatically scheduled observation check at 18:31 local
+time was requested to assess consecutive RPC45 cycles, worker reuse
+and sensor freshness beyond the initial three reads.
+
+**Result:** live *first-start* gate PASS. Longer-window stability and
+DEV7 Core pairing are pending independent acceptance. No other
+deployment or Core integration reload performed.
