@@ -98,6 +98,19 @@ class LocalAppPackageTests(unittest.TestCase):
         self.assertNotIn('root / "options.json"', text)
         self.assertNotIn('root / "ipc-token"', text)
 
+    def test_dev4_readonly_gate_has_no_mutating_commands(self):
+        script = ROOT / "scripts/verify_haos_dev4_runtime_readonly.sh"
+        syntax = subprocess.run(["bash", "-n", str(script)], capture_output=True)
+        self.assertEqual(syntax.returncode, 0, syntax.stderr.decode())
+        text = script.read_text()
+        self.assertIn("SNAPSHOT_AGE_SECONDS", text)
+        self.assertIn("SOURCE_SYNTAX: PASS", text)
+        self.assertIn("PERSISTENT_SESSION:", text)
+        self.assertIn("bytes([0]) + source", text)
+        for forbidden in ("docker restart", "ha apps update", "ha apps restart",
+                          "ha apps install", "docker cp", "ha apps stop"):
+            self.assertNotIn(forbidden, text)
+
     def test_source_archive_is_byte_reproducible(self):
         with tempfile.TemporaryDirectory() as directory:
             dest = Path(directory)
