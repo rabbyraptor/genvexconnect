@@ -70,6 +70,7 @@ OBSERVED_CANDIDATE_RAW = (
     0, 6000, 5800, 2432, 2268, 0, 0, 0, 0, 0, 0, 10,
 )
 BASELINE_ADDRESSES = (20, 21, 22, 23, 26)
+CANDIDATE_ADDRESSES = (24, 18, 19, 35, 36, 41, 42, 53, 40, 114, 115, 50)
 SEVEN_ADDRESSES = BASELINE_ADDRESSES + (18, 19)
 
 
@@ -80,6 +81,8 @@ def decode_candidate_raw_batch(raw: Sequence[int]) -> dict[str, int]:
     'not installed' or a physically meaningful -30 C.
     """
     candidates = list_source_only_candidates()
+    if tuple(item.address for item in candidates) != CANDIDATE_ADDRESSES:
+        raise EvidenceError("Unexpected candidate address order")
     if type(raw) not in (tuple, list) or len(raw) != len(candidates):
         raise EvidenceError("Unexpected candidate batch length")
     if any(type(item) is not int or not -32768 <= item <= 32767 for item in raw):
@@ -99,6 +102,11 @@ def inventory() -> tuple[RegisterEvidence, ...]:
         for entry in OPTIMA_270.readings
     )
     candidates = list_source_only_candidates()
+    if (
+        tuple(item.address for item in candidates) != CANDIDATE_ADDRESSES
+        or len(OBSERVED_CANDIDATE_RAW) != len(candidates)
+    ):
+        raise EvidenceError("Unexpected candidate evidence shape")
     fan_keys = frozenset(("fan_duty_supply", "fan_duty_extract"))
     # A read of these two was also observed in the seven-item HAOS/QEMU
     # batch. Their scale matches a prior (non-concurrent) official UI view.
