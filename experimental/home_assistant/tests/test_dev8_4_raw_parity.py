@@ -5,7 +5,7 @@ All inputs are synthetic. No SDK, App, gateway or HAOS process is started.
 from __future__ import annotations
 
 from datetime import datetime, timezone
-import importlib.util
+from contextlib import contextmanager
 from pathlib import Path
 import random
 import sys
@@ -18,13 +18,23 @@ from dev_remote.raw_snapshot_v3 import validate_raw_v3
 ROOT = Path(__file__).resolve().parents[3]
 BACKEND = ROOT / "experimental" / "genvex_remote"
 APP = ROOT / "genvex-nabto-remote" / "runtime"
-sys.path.insert(0, str(BACKEND))
-sys.path.insert(0, str(APP))
-from raw_registers_v3 import (
-    ALL_REGISTERS, BASE_KEYS, OPTIONAL_KEYS, make_raw_v3,
-    parse_raw_v3,
-)
-from dev8_register_evidence import inventory, OBSERVED_CANDIDATE_RAW
+@contextmanager
+def temporarily_import_from(path):
+    """Avoid polluting unittest discovery with the backend's test_*.py files."""
+    sys.path.insert(0, str(path))
+    try:
+        yield
+    finally:
+        sys.path.remove(str(path))
+
+
+with temporarily_import_from(APP):
+    from raw_registers_v3 import (
+        ALL_REGISTERS, BASE_KEYS, OPTIONAL_KEYS, make_raw_v3,
+        parse_raw_v3,
+    )
+with temporarily_import_from(BACKEND):
+    from dev8_register_evidence import inventory, OBSERVED_CANDIDATE_RAW
 
 
 class RawRegisterParityTests(unittest.TestCase):
