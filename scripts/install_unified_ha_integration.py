@@ -7,7 +7,6 @@ Does not read, edit or print credentials or HA config-entry storage.
 """
 from __future__ import annotations
 
-import ast
 import hashlib
 import json
 import os
@@ -68,13 +67,21 @@ def check_archive(path: Path, expected_sha256: str) -> list[tuple[str, bytes]]:
                 body = fh.read(MAX_MEMBER_SIZE + 1)
                 if len(body) != member.size:
                     raise InstallBlocked("ARCHIVE_MEMBER_INVALID")
-                if rel.suffix == ".py":
-                    ast.parse(body.decode("utf-8", "strict"), filename=str(rel))
-                else:
-                    json.loads(body.decode("utf-8", "strict"))
+                # The HAOS host's Python may be older than HA Core's Python.
+                # Validate UTF-8 here; the pinned CI suite checks Python syntax
+                # and the subsequent HA Core check validates the installed code.
+                try:
+                    decoded = body.decode("utf-8", "strict")
+                except UnicodeError:
+                    raise InstallBlocked("ARCHIVE_UTF8_INVALID") from None
+                if rel.suffix == ".json":
+                    try:
+                        json.loads(decoded)
+                    except ValueError:
+                        raise InstallBlocked("ARCHIVE_JSON_INVALID") from None
                 result.append((str(rel), body))
-    except (tarfile.TarError, UnicodeError, SyntaxError, ValueError, OSError):
-        raise InstallBlocked("ARCHIVE_CONTENT_INVALID") from None
+    except (tarfile.TarError, OSError):
+        raise InstallBlocked("ARCHIVE_CONTAINER_INVALID") from None
     required = {
         "genvex_remote/__init__.py", "genvex_remote/manifest.json",
         "genvex_remote/config_flow.py", "genvex_remote/pairing_options.py",
