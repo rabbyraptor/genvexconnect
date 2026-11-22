@@ -269,6 +269,36 @@ assert callable(module.core_api_ready)
             self.assertIn(command, source)
         self.assertNotIn("tarfile.open(", source)
 
+    def test_operator_local_ssh_requires_prior_trusted_host_key(self):
+        """An IP override must never accept an unknown local SSH identity."""
+        import os
+        path = ROOT / "scripts/run_unified_ha_install_from_deck.sh"
+        with tempfile.TemporaryDirectory() as home:
+            run = subprocess.run(
+                ["bash", str(path), "--apply", "0" * 40],
+                env={**os.environ, "HOME": home,
+                     "GENVEX_HAOS_HOST": "192.168.0.119"},
+                capture_output=True, text=True, timeout=15,
+            )
+        self.assertEqual(run.returncode, 2, run.stdout + run.stderr)
+        self.assertIn("SSH_TRUST_PIN_MISSING", run.stdout)
+        self.assertNotIn("TRANSFER: PASS", run.stdout)
+
+    def test_operator_local_ssh_reuses_trusted_original_host_identity(self):
+        """The pinned IP is not allowed to silently bypass host key checks."""
+        path = ROOT / "scripts/run_unified_ha_install_from_deck.sh"
+        source = path.read_text()
+        for text in (
+            "GENVEX_HAOS_HOST",
+            'ssh-keygen -F "[$TRUSTED_NAME]:$PORT"',
+            'UserKnownHostsFile=$pinned',
+            "StrictHostKeyChecking=yes",
+            "GlobalKnownHostsFile=/dev/null",
+            "SSH_TRUST_PIN: PREVIOUSLY_VERIFIED_HOST_KEY",
+        ):
+            self.assertIn(text, source)
+        self.assertNotIn("StrictHostKeyChecking=no", source)
+
     def test_operator_launcher_clears_screen_and_pins_source(self):
         path = ROOT / "scripts/run_unified_ha_install_from_deck.sh"
         result = subprocess.run(["bash", "-n", str(path)], capture_output=True)
