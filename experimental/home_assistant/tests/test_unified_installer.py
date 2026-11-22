@@ -188,6 +188,20 @@ assert callable(module.core_api_ready)
         )
         self.assertEqual(process.returncode, 0, process.stderr)
 
+    def test_core_preflight_rejects_bad_host_probe_before_source_change(self):
+        """No source swap or restart if host cannot query a running Core."""
+        with (patch.object(installer, "core_api_ready", return_value=False),
+              patch.object(installer.time, "sleep")):
+            with self.assertRaises(installer.InstallBlocked) as caught:
+                installer.apply(self.archive, self.sha)
+        self.assertEqual(str(caught.exception), "CORE_API_NOT_READY")
+        self.assertTrue((self.existing / "original.py").is_file())
+        self.assertFalse(
+            (self.components / ".genvex_remote_pre_unified_backup").exists()
+        )
+        self.assertNotIn(("core", "check"), self.calls)
+        self.assertNotIn(("core", "restart"), self.calls)
+
     def test_wrong_archive_sha_refused_without_mutation(self):
         with self.assertRaises(installer.InstallBlocked) as caught:
             installer.apply(self.archive, "0" * 64)
