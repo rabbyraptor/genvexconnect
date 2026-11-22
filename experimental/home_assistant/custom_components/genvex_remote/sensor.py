@@ -13,7 +13,10 @@ from .const import DOMAIN, SENSORS
 
 async def async_setup_entry(hass, entry, async_add_entities):
     coordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities([\n        *(GenvexRemoteSensor(coordinator, spec) for spec in SENSORS),\n        GenvexRemoteDataAge(coordinator),\n    ])
+    async_add_entities([
+        *(GenvexRemoteSensor(coordinator, spec) for spec in SENSORS),
+        GenvexRemoteDataAge(coordinator),
+    ])
 
 
 class GenvexRemoteSensor(CoordinatorEntity, SensorEntity):
