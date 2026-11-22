@@ -46,6 +46,7 @@ class ConfigFlowPairingTests(unittest.IsolatedAsyncioTestCase):
         constants.CONF_DEVICE_ID = "device_id"
         constants.CONF_RUNTIME_ENDPOINT = "runtime_endpoint"
         constants.CONF_RUNTIME_TOKEN = "runtime_token"
+        constants.CONF_PAIR_FROM_APP = "pair_from_app"
         constants.DOMAIN = "genvex_remote"
         constants.valid_device_id = (
             lambda value: type(value) is str
@@ -127,7 +128,8 @@ class ConfigFlowPairingTests(unittest.IsolatedAsyncioTestCase):
             "device_id": DEVICE, "pair_from_app": True,
         })
         self.assertEqual(result["type"], "create_entry")
-        self.assertEqual(result["data"]["runtime_token"], TOKEN)
+        self.assertEqual(result["data"]["pair_from_app"], True)
+        self.assertNotIn("runtime_token", result["data"])
         self.assertEqual(self.calls, [(self.flow.hass, DEVICE)])
 
     async def test_missing_token_without_optin_is_rejected(self):
