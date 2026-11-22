@@ -31,7 +31,7 @@ OPTIONS = {
 }
 
 OLD_MANIFEST = (
-    b'version: "0.1.0-dev6"\nboot: manual_only\nhost_network: false\n'
+    b'version: "0.1.0-dev5"\nboot: manual_only\nhost_network: false\n'
     b'  persistent_session: bool\n'
 )
 NEW_MANIFEST = (
@@ -58,8 +58,8 @@ class FakeUpdateTests(unittest.TestCase):
         self.archive_fixture()
         self.sha = hashlib.sha256(self.archive.read_bytes()).hexdigest()
         self.state = {
-            "version": "0.1.0-dev6",
-            "version_latest": "0.1.0-dev6",
+            "version": "0.1.0-dev5",
+            "version_latest": "0.1.0-dev5",
             "update_available": False,
             "state": "started",
             "boot": "manual",
