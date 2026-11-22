@@ -57,7 +57,16 @@ class PollingService:
             adapter = getattr(self.state, "_poller", None)
             before_pid = getattr(getattr(adapter, "_proc", None), "pid", None)
             started = time.monotonic()
-            ok = await self.state.refresh()
+            try:
+                ok = await self.state.refresh()
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                # An unexpected internal failure must not terminate the
+                # scheduled poll loop or leave the last snapshot available.
+                # Never log the exception: it may contain SDK secrets.
+                self.state.invalidate()
+                ok = False
             elapsed = time.monotonic() - started
             after_pid = getattr(getattr(adapter, "_proc", None), "pid", None)
             timestamp = datetime.now(timezone.utc).isoformat()
