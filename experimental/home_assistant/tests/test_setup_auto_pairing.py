@@ -15,6 +15,7 @@ NAMESPACE = "offline_genvex_setup"
 class SetupAutoPairingTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.tokens = []
+        self.token_loaders = []
         self.lookups = []
         self.latest_token = "N" * 43
         self.missing = False
@@ -52,6 +53,7 @@ class SetupAutoPairingTests(unittest.IsolatedAsyncioTestCase):
         class FakeCoordinator:
             def __init__(self, hass, device_id, reader):
                 outer.tokens.append(reader._token)
+                outer.token_loaders.append(reader._token_loader)
 
             async def async_config_entry_first_refresh(self):
                 return None
@@ -61,10 +63,11 @@ class SetupAutoPairingTests(unittest.IsolatedAsyncioTestCase):
         client = types.ModuleType(f"{NAMESPACE}.runtime_client")
 
         class FakeReader:
-            def __init__(self, session, *, endpoint, token):
+            def __init__(self, session, *, endpoint, token, token_loader=None):
                 if endpoint != "http://local-genvex-nabto-remote:18275/v1/snapshot":
                     raise ValueError
                 self._token = token
+                self._token_loader = token_loader
 
         client.AuthenticatedSnapshotReader = FakeReader
         homeassistant = types.ModuleType("homeassistant")
@@ -136,6 +139,8 @@ class SetupAutoPairingTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(await self.integration.async_setup_entry(self.hass, self.entry))
         self.assertEqual(self.tokens, ["N" * 43, "M" * 43])
         self.assertEqual(self.lookups, ["123456789012"] * 2)
+        self.assertTrue(all(callable(loader) for loader in self.token_loaders))
+        self.assertEqual(await self.token_loaders[0](), "M" * 43)
         self.assertNotIn("runtime_token", self.entry.data)
 
     async def test_manual_token_entry_skips_supervisor_lookup(self):
@@ -147,6 +152,7 @@ class SetupAutoPairingTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(await self.integration.async_setup_entry(self.hass, self.entry))
         self.assertEqual(self.tokens, ["S" * 43])
         self.assertEqual(self.lookups, [])
+        self.assertIsNone(self.token_loaders[0])
 
     async def test_existing_manual_entry_can_be_migrated_by_options(self):
         self.entry.data = {
