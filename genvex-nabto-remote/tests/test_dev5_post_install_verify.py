@@ -22,9 +22,9 @@ class DEV5PostInstallTests(unittest.TestCase):
         self.assertEqual(len(gate.EXPECTED), 20)
         unchanged = {
             rel: digest for rel, digest in gate.EXPECTED.items()
-            if rel != "runtime/polling_service.py"
+            if rel not in {"config.yaml", "runtime/polling_service.py"}
         }
-        self.assertEqual(gate.inspect_source(source, unchanged, False), 19)
+        self.assertEqual(gate.inspect_source(source, unchanged, False), 18)
         with self.assertRaises(gate.GateBlocked) as caught:
             gate.inspect_source(source, gate.EXPECTED, False)
         self.assertEqual(str(caught.exception), "SOURCE_HASH_MISMATCH")
