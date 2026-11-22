@@ -44,3 +44,26 @@ MCP and HAOS that the App remains running, five-value schema v1 snapshots
 continue after simulated failures, the worker is re-used or recycled as
 expected, and the HA Data age entity follows its configured grace policy.
 This PR neither performs a live write nor enables additional sensors.
+
+## Recurrent failure analysis (offline, 22 November)
+
+The running DEV5 reported status-26 failures followed by successful reads
+while retaining the same worker PID. Four observed completion times were
+approximately 13:54:56, 14:01:10, 14:07:24 and 14:13:39 UTC, yielding
+intervals of approximately 374, 374 and 375 seconds. These observations
+**do not prove** a Nabto protocol timer or identify the underlying network
+fault.
+
+`scripts/analyze_rpc45_metadata.py` accepts sanitized, ordered RPC45 cycle
+lines over stdin and emits only summary counts, failure completion intervals,
+next-cycle recoveries and worker-PID reuse; unknown lines and raw SDK error
+metadata are never echoed. It does not call HAOS or the gateway.
+
+```sh
+python3 scripts/analyze_rpc45_metadata.py < sanitized-rpc45.log
+python3 -m unittest discover -s genvex-nabto-remote/tests \\
+  -p 'test_rpc45_diagnostic_analysis.py' -v
+```
+
+In follow-up troubleshooting, compare actual failure times with remote router
+and gateway connectivity records rather than infer the cause from periodicity.
