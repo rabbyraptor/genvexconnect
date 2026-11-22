@@ -182,6 +182,31 @@ class TokenRecoveryTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.session.calls.count(OLD), 3)
         self.assertEqual(self.session.calls.count(NEW), 3)
 
+    async def test_app_restart_recovers_without_token_rotation(self):
+        self.session.accepted_token = OLD
+        self.session.down = True
+        reader = self.reader()
+        with self.assertRaises(RuntimeUnavailable):
+            await reader.async_fetch_snapshot("123456789012")
+        self.assertEqual(self.lookups, 0)
+        self.session.down = False
+        self.assertEqual(await reader.async_fetch_snapshot("123456789012"),
+                         {"source": "live"})
+        self.assertEqual(self.lookups, 0)
+        self.assertEqual(self.session.calls, [OLD, OLD])
+
+    async def test_app_restart_then_token_rotation_recovers_next_poll(self):
+        self.session.down = True
+        reader = self.reader()
+        with self.assertRaises(RuntimeUnavailable):
+            await reader.async_fetch_snapshot("123456789012")
+        self.assertEqual(self.lookups, 0)
+        self.session.down = False
+        self.assertEqual(await reader.async_fetch_snapshot("123456789012"),
+                         {"source": "live"})
+        self.assertEqual(self.session.calls, [OLD, OLD, NEW])
+        self.assertEqual(self.lookups, 1)
+
     async def test_cancellation_of_supervisor_lookup_propagates(self):
         started = asyncio.Event()
 
