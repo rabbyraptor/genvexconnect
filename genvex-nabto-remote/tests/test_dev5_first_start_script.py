@@ -24,7 +24,7 @@ class DEV5FirstStartScriptTests(unittest.TestCase):
         # Python inside docker exec starts as "python3 - <<'PY'" too.
         docker_blocks = re.findall(r"^docker exec -i .*? python3 - <<'PY'\n(.*?)^PY$",
                                    source, flags=re.MULTILINE | re.DOTALL)
-        self.assertEqual(len(blocks), 2)
+        self.assertEqual(len(blocks), 3)
         self.assertEqual(len(docker_blocks), 1)
         for code in blocks + docker_blocks:
             ast.parse(code)
