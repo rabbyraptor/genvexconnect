@@ -42,21 +42,34 @@ fi
 
 export GENVEX_NABTO_IDENTITY="${GENVEX_NABTO_IDENTITY:-}"
 export GENVEX_NABTO_HOST="${GENVEX_NABTO_HOST:-}"
+
+# Read directly from controlling terminal to avoid silent noninteractive EOF.
+prompt_tty() {
+  local label="$1" name="$2" reply
+  if [[ ! -r /dev/tty ]]; then
+    echo "RPC42_INPUT_ERROR: INTERACTIVE_TTY_REQUIRED" >> "$LOG"
+    return 2
+  fi
+  printf "%s" "$label" >/dev/tty
+  if ! IFS= read -r reply </dev/tty; then
+    echo "RPC42_INPUT_ERROR: INPUT_CANCELLED" >> "$LOG"
+    return 2
+  fi
+  printf -v "$name" "%s" "$reply"
+}
 if [[ -z "$GENVEX_NABTO_IDENTITY" ]]; then
-  read -r -s -p 'Nabto client identity (email, input hidden): ' GENVEX_NABTO_IDENTITY
-  printf '\n'
+  echo "INPUT_STAGE: NABTO_IDENTITY" >> "$LOG"
+  prompt_tty "Nabto identity (email): " GENVEX_NABTO_IDENTITY || { EXIT_CODE=2; exit "$EXIT_CODE"; }
 fi
 if [[ -z "$GENVEX_NABTO_HOST" ]]; then
-  read -r -s -p 'Device hostname (device-label.remote.lscontrol.dk, input hidden): ' GENVEX_NABTO_HOST
-  printf '\n'
+  echo "INPUT_STAGE: NABTO_HOST" >> "$LOG"
+  prompt_tty "Device hostname (label.remote.lscontrol.dk): " GENVEX_NABTO_HOST || { EXIT_CODE=2; exit "$EXIT_CODE"; }
 fi
 export GENVEX_NABTO_IDENTITY GENVEX_NABTO_HOST
-
-# Only print presence, never print actual account/device identifiers.
 {
-  [[ -n "$GENVEX_NABTO_IDENTITY" ]] && echo 'RPC42_IDENTITY_INPUT: PRESENT' || echo 'RPC42_IDENTITY_INPUT: MISSING'
-  [[ -n "$GENVEX_NABTO_HOST" ]] && echo 'RPC42_HOST_INPUT: PRESENT' || echo 'RPC42_HOST_INPUT: MISSING'
-} > "$LOG"
+  [[ -n "$GENVEX_NABTO_IDENTITY" ]] && echo "RPC42_IDENTITY_INPUT: PRESENT" || echo "RPC42_IDENTITY_INPUT: MISSING"
+  [[ -n "$GENVEX_NABTO_HOST" ]] && echo "RPC42_HOST_INPUT: PRESENT" || echo "RPC42_HOST_INPUT: MISSING"
+} >> "$LOG"
 
 if ! python3 "$TMP/scripts/reconstruct_rpc42_readonly.py" --address 7 >> "$LOG" 2>&1; then
   EXIT_CODE=2
