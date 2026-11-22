@@ -18,7 +18,7 @@ PLATFORMS = (Platform.SENSOR,)
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Fetch only authenticated snapshots from an explicitly configured App."""
-    if entry.data.get(CONF_PAIR_FROM_APP) is True:
+    if entry.options.get(CONF_PAIR_FROM_APP, entry.data.get(CONF_PAIR_FROM_APP, False)) is True:
         try:
             token = await async_fetch_paired_token(
                 hass, device_id=entry.data[CONF_DEVICE_ID],
