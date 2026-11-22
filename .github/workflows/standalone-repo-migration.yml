@@ -8,6 +8,7 @@ on:
       - scripts/prepare_standalone_repo.sh
       - scripts/run_standalone_migration_from_deck.sh
       - scripts/run_dev9_rpc42_readonly_from_deck.sh
+      - scripts/run_dev9_rpc42_rpc45_sync_from_deck.sh
       - tests/test_standalone_migration_runner.py
       - .github/workflows/standalone-repo-migration.yml
   workflow_dispatch:
@@ -29,7 +30,8 @@ jobs:
           bash -n scripts/prepare_standalone_repo.sh
           bash -n scripts/run_standalone_migration_from_deck.sh
           bash -n scripts/run_dev9_rpc42_readonly_from_deck.sh
-          python -m py_compile scripts/probe_remote_setpoint42_readonly.py scripts/reconstruct_rpc42_readonly.py
+          bash -n scripts/run_dev9_rpc42_rpc45_sync_from_deck.sh
+          python -m py_compile scripts/probe_remote_setpoint42_readonly.py scripts/reconstruct_rpc42_readonly.py scripts/probe_rpc42_rpc45_sync_readonly.py
       - name: Reject false-positive publication success
         run: python -m unittest discover -s tests -p 'test_standalone_migration_runner.py' -v
       - name: Install history-filtering tool
