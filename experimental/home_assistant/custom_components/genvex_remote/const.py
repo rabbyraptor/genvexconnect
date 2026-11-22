@@ -7,6 +7,7 @@ DOMAIN = "genvex_remote"
 CONF_DEVICE_ID = "device_id"
 CONF_RUNTIME_ENDPOINT = "runtime_endpoint"
 CONF_RUNTIME_TOKEN = "runtime_token"
+CONF_PAIR_FROM_APP = "pair_from_app"
 POLL_SECONDS = 60
 
 @dataclass(frozen=True)
