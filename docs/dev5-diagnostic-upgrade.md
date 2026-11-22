@@ -66,3 +66,17 @@ Operator output on 22 November 2026 from `scripts/run_dev5_post_install_from_dec
 **Next acceptance gate:** `scripts/run_dev5_first_start_from_deck.sh` explicitly starts DEV5, verifies Supervisor version/configuration, three newly packaged diagnostic-module hashes in the running container, a fresh authenticated five-value IPC snapshot, exactly one persistent SDK worker and the six existing HA registry entities. Reports only bounded metadata; no credentials or actual sensor readings. This confirms App and IPC operation; it does not independently prove HA Core has received new entity state updates.
 
 The first-start script will not change the current polling interval or initiate direct additional RPC45 calls; it observes normal polling. If a live check fails, it returns a diagnostic category without rolling back or restarting automatically.
+
+## First-start report — Supervisor started; remaining live gate incomplete
+
+The operator executed the first-start script after the full read-only post-install backup/source/registry PASS. The output showed `DEV5_PRESTART: PASS`, `START_DEV5: RETURNED`, `SUPERVISOR_DEV5_STARTED: PASS` and exit code 0, but stopped **before** `DEV5_DIAGNOSTIC_IMAGE_PARITY`, `DEV5_LIVE_RESULT`, `HA_REGISTRY` and the end marker.
+
+**Interpretation:** Supervisor confirmed the DEV5 App was started, but the missing checks were not executed/observed. The original multi-command SSH `sh -s` script could consume subsequent stdin unexpectedly, and lacked a mandatory final-result sentinel; therefore its exit 0 did not establish live acceptance. Do not rerun the start script on an already-started App.
+
+Corrective actions:
+
+- The historical first-start script now redirects the Supervisor start command stdin to `/dev/null` and requires a final PASS sentinel to prevent a false success if input is truncated.
+- A new `scripts/run_dev5_live_verify_from_deck.sh` performs **no start/stop/update**. Instead, it uses independent SSH stdin streams for (1) Supervisor, Docker and six HA registry entries, (2) the running container's three diagnostic-source hashes, retained persistent configuration, exactly one SDK worker and fresh authenticated five-value HTTP snapshot, and (3) sanitized RPC45 logs.
+- The new wrapper rejects missing end or PASS markers even if SSH returns exit code 0. Fake SSH regression tests verify that early EOF cannot produce a false PASS.
+
+**Next live gate:** run the read-only verifier once and inspect `DEV5_RUNTIME_VERIFY: PASS` together with `DEV5_IPC_RESULT: PASS`, worker count 1 and HTTP 200. Actual post-start HA entity *state freshness* remains a separate follow-up after this passes.
