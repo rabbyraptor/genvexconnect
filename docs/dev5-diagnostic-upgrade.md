@@ -51,3 +51,18 @@ The operator ran both `--preflight` and `--apply` from Steam Deck, with determin
 **Separate backup and post-install acceptance is pending.** A backup request is not a verified backup. The code-only gate `scripts/dev5_post_install_verify.py` checks exact Git blob hashes for all 20 installed source files against the pinned commit, the preserved DEV4 source, Supervisor App version/state/options, backup inventory expansion beyond 8, a recent partial/full backup containing the DEV4 App, and six pre-existing Home Assistant entity-registry entries. Run it from Steam Deck through `scripts/run_dev5_post_install_from_deck.sh <verified-commit>`. It has no service-start/stop/update operations.
 
 Do **not** interpret the stopped DEV5 state as a failed installation. Start and snapshot/Dataalder smoke verification are separate gates after the backup verification.
+
+## DEV5 post-install source/backup gate — PASS
+
+Operator output on 22 November 2026 from `scripts/run_dev5_post_install_from_deck.sh`:
+
+- `INSTALLED_DEV5: PASS`; `DEV5_STOPPED: PASS`; `MANUAL_BOOT: PASS`; `PERSISTENT_OPTIONS: PASS`; `CONTAINER_NOT_RUNNING: PASS`.
+- `DEV5_SOURCE_20_BLOBS: PASS`: all twenty installed source files matched the exact pinned Git source blob hashes.
+- `DEV4_SOURCE_BACKUP: PASS`: rollback source preserved.
+- `BACKUP_COUNT_INCREASED: PASS` — inventory now **9**. `DEV4_SUPERVISOR_BACKUP: PASS`, backup ID **`60e96ffb`**, dated **2026-11-22T11:15:18.036512+00:00**. The backup metadata includes the DEV4 App.
+- `HA_REMOTE_CONFIG_ENTRY: PASS`; `HA_REMOTE_SIX_ENTITIES: PASS` with six registered entities.
+- `DEV5_GATE_RESULT: PASS`; Steam Deck exit code `0`.
+
+**Next acceptance gate:** `scripts/run_dev5_first_start_from_deck.sh` explicitly starts DEV5, verifies Supervisor version/configuration, three newly packaged diagnostic-module hashes in the running container, a fresh authenticated five-value IPC snapshot, exactly one persistent SDK worker and the six existing HA registry entities. Reports only bounded metadata; no credentials or actual sensor readings. This confirms App and IPC operation; it does not independently prove HA Core has received new entity state updates.
+
+The first-start script will not change the current polling interval or initiate direct additional RPC45 calls; it observes normal polling. If a live check fails, it returns a diagnostic category without rolling back or restarting automatically.
