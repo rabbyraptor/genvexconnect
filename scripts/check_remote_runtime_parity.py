@@ -21,7 +21,6 @@ APP_ONLY = frozenset({
     "offline_ipc_network_smoke.py",
     "diagnostic_http_server.py",
     "persistent_rpc45_worker.py",
-    "persistent_sdk_adapter.py",
 })
 
 
