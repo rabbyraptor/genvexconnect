@@ -77,14 +77,14 @@ class LocalAppPackageTests(unittest.TestCase):
             self.assertEqual(len(calls.read_text().splitlines()), 1)
             self.assertIn("test ! -e", calls.read_text())
 
-    def test_dev4_candidate_version_matches_arm64_image_build(self):
+    def test_dev5_candidate_version_matches_arm64_image_build(self):
         config = (ROOT / "genvex-nabto-remote/config.yaml").read_text()
         workflow = (ROOT / ".github/workflows/remote-app-image-build.yml").read_text()
-        self.assertIn('version: "0.1.0-dev4"', config)
+        self.assertIn('version: "0.1.0-dev5"', config)
         self.assertIn("boot: manual_only", config)
         self.assertIn("host_network: false", config)
-        self.assertIn("--build-arg BUILD_VERSION=0.1.0-dev4", workflow)
-        self.assertIn('if [ "$IMAGE_VERSION" != 0.1.0-dev4 ]; then', workflow)
+        self.assertIn("--build-arg BUILD_VERSION=0.1.0-dev5", workflow)
+        self.assertIn('if [ "$IMAGE_VERSION" != 0.1.0-dev5 ]; then', workflow)
 
     def test_deployed_source_export_is_allowlisted(self):
         script = ROOT / "scripts/export_haos_dev4_sources_readonly.sh"
