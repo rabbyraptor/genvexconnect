@@ -19,8 +19,8 @@ import time
 HOME = Path("/mnt/data/supervisor/homeassistant")
 COMPONENTS = HOME / "custom_components"
 TARGET = COMPONENTS / "genvex_remote"
-BACKUP = COMPONENTS / ".genvex_remote_pre_unified_backup"
-STAGE = COMPONENTS / ".genvex_remote_unified_stage"
+BACKUP = HOME / ".genvex_remote_pre_unified_backup"
+STAGE = HOME / ".genvex_remote_unified_stage"
 MAX_ARCHIVE_SIZE = 2_000_000
 MAX_MEMBER_SIZE = 150_000
 MIN_MEMBERS = 9
