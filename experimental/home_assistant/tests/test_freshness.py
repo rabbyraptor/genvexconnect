@@ -16,6 +16,7 @@ class CoordinatorBase:
 
     def __init__(self, *args, **kwargs):
         self.data = None
+        self.init_kwargs = kwargs
 
 
 class UpdateFailed(Exception):
@@ -72,6 +73,13 @@ class FreshnessTests(unittest.IsolatedAsyncioTestCase):
         }
         self.reader = Reader(self.payload)
         self.coordinator = self.Coordinator(None, "123456789012", self.reader)
+
+    async def test_installed_ha_passes_config_entry_keyword(self):
+        entry = object()
+        coordinator = self.Coordinator(
+            None, "123456789012", self.reader, config_entry=entry
+        )
+        self.assertIs(coordinator.init_kwargs["config_entry"], entry)
 
     async def test_short_outage_preserves_values_and_original_measurement(self):
         original = await self.coordinator._async_update_data()
