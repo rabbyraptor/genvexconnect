@@ -19,6 +19,7 @@ options:
   poll_seconds: 60
   diagnostic_only: false
   persistent_session: false
+  raw_registers_v3: false
 schema:
   device_id: str
   identity: str
@@ -27,3 +28,4 @@ schema:
   poll_seconds: int(60,3600)
   diagnostic_only: bool
   persistent_session: bool
+  raw_registers_v3: bool
