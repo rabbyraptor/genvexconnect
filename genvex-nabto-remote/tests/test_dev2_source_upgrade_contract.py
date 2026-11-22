@@ -4,6 +4,8 @@ from __future__ import annotations
 import importlib.util
 import hashlib
 import os
+import re
+import shutil
 from pathlib import Path
 import subprocess
 import tarfile
@@ -27,7 +29,22 @@ class Dev2UpgradeContractTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         self.artifacts = self.root / "dist"
         self.artifacts.mkdir()
+        # The historical DEV1 -> DEV2 migration contract must keep its
+        # original DEV2 fixture even when the current App advances to DEV4.
+        legacy_source = self.root / "legacy-dev2-source"
+        shutil.copytree(packager.SOURCE, legacy_source)
+        manifest = legacy_source / "config.yaml"
+        original = manifest.read_text()
+        rewritten = re.sub(
+            r'version: "0\\.1\\.0-dev[0-9]+"',
+            'version: "0.1.0-dev2"',
+            original, count=1,
+        )
+        if rewritten == original:
+            raise AssertionError("Unable to create historical DEV2 fixture")
+        manifest.write_text(rewritten)
         with (
+            patch.object(packager, "SOURCE", legacy_source),
             patch.object(packager, "DEST", self.artifacts),
             patch.object(
                 packager, "ARCHIVE",
