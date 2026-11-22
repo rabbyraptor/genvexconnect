@@ -5,7 +5,7 @@ import unittest
 
 # Reuse the independent package loader in test_snapshot.py.
 from test_snapshot import RuntimeUnavailable
-from dev_remote.runtime_client import AuthenticatedSnapshotReader
+from dev_remote.runtime_client import AuthenticatedSnapshotReader, SNAPSHOT_REQUEST_TIMEOUT_SECONDS
 
 
 class _BodyStream:
@@ -60,6 +60,11 @@ class AuthenticatedReaderTests(unittest.IsolatedAsyncioTestCase):
         return AuthenticatedSnapshotReader(
             session, endpoint=self.endpoint, token=self.token,
         ), session
+
+    def test_timeout_budget_covers_measured_cold_start(self):
+        # DEV3 first live SDK read took 10.504s; avoid an 8s cold-start failure.
+        self.assertGreater(SNAPSHOT_REQUEST_TIMEOUT_SECONDS, 10.504)
+        self.assertLessEqual(SNAPSHOT_REQUEST_TIMEOUT_SECONDS, 30)
 
     async def test_authorized_get(self):
         body = json.dumps({"schema_version": 1}).encode()
