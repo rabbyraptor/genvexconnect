@@ -8,6 +8,7 @@ The existing LAN integration remains available through HACS as documented in the
 
 - Read-only Nabto Micro RPC45 five-value remote batches work through the isolated legacy x86_64 SDK under QEMU on HAOS ARM64.
 - The separate Supervisor App `local_genvex_nabto_remote` was updated to version `0.1.0-dev2` in an operator-confirmed test on 20 November. Backup inventory `07337fa3` holds the previous `dev1` entry; successful restore was not tested.
+- On 22 November operator-verified Core → App network and authenticated HTTP snapshot tests PASS: internal App DNS, TCP port 18275, unauthenticated HTTP 401, authenticated HTTP 200, snapshot schema v1, health ok, five expected fields and exit code 0. No HA entity registration is implied.
 - On 22 November the operator's DEV4 P.6a diagnostic returned `PASS` on App `0.1.0-dev4`: manually started, non-persistent session, first probe PASS, five sensors, fresh snapshot, exit code 0. This establishes a bounded successful live snapshot, not HA entity delivery or sustained background polling.
 - On 21 November the operator's bounded DEV3 persistent-adapter run passed offline checks, SDK adapter preflight, three live 5-value RPC45 reads, worker close and DEV3 restart check. Observed read latencies: 10,504, 40 and 34 ms; process reuse was observed for reads 2 and 3.
 - Synthetic diagnostic HTTP and source tests exist. Their synthetic values are not real telemetry.
