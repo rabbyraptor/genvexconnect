@@ -48,20 +48,20 @@ run_migration() {
   bash -n "$TEMP/migrate.sh"
   if [[ ! -d "$DIR/.git" ]]; then
     [[ ! -e "$DIR" ]] || { echo "LOCAL_DIR_EXISTS_NOT_GIT"; return 2; }
-    bash "$TEMP/migrate.sh" --prepare "$DIR"
+    bash "$TEMP/migrate.sh" --prepare "$DIR" || return $?
   fi
 
-  bash "$TEMP/migrate.sh" --verify "$DIR"
+  bash "$TEMP/migrate.sh" --verify "$DIR" || return $?
   if git -C "$DIR" remote get-url origin >/dev/null 2>&1; then
     echo "ORIGIN_ALREADY_SET: check published commit"
     local upstream_sha local_sha
     local_sha="$(git -C "$DIR" rev-parse HEAD)"
-    upstream_sha="$(GIT_TERMINAL_PROMPT=0 git -C "$DIR" ls-remote origin refs/heads/main | cut -f1)"
+    upstream_sha="$(GIT_TERMINAL_PROMPT=0 git -C "$DIR" ls-remote origin refs/heads/main | cut -f1)" || return $?
     [[ -n "$upstream_sha" && "$upstream_sha" == "$local_sha" ]] ||
       { echo "ORIGIN_MAIN_MISMATCH"; return 2; }
     echo "MIGRATION_PUBLISH: ALREADY_MATCHED"
   else
-    bash "$TEMP/migrate.sh" --publish "$DIR"
+    bash "$TEMP/migrate.sh" --publish "$DIR" || return $?
   fi
   echo "MIGRATION_OPERATOR_GATE: PASS"
 }
