@@ -9,12 +9,10 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 from pathlib import Path, PurePosixPath
 import shutil
 import subprocess
 import sys
-import tarfile
 import time
 
 HOME = Path("/mnt/data/supervisor/homeassistant")
@@ -41,47 +39,62 @@ def check_archive(path: Path, expected_sha256: str) -> list[tuple[str, bytes]]:
         raise InstallBlocked("ARCHIVE_INPUT_INVALID")
     if hashlib.sha256(path.read_bytes()).hexdigest() != expected_sha256:
         raise InstallBlocked("ARCHIVE_SHA256_MISMATCH")
-    result: list[tuple[str, bytes]] = []
-    names: set[str] = set()
+    # The HAOS host's Python tarfile/gzip reader rejected the pinned archive.
+    # Use the host's proven tar CLI instead (also used by the DEV6 gate).
+    # Validate all names and regular-file types *before* reading any member;
+    # never pass unvalidated paths to tar.
+    def tar_command(*args: str) -> bytes:
+        try:
+            done = subprocess.run(
+                ["tar", *args], capture_output=True,
+                stdin=subprocess.DEVNULL, timeout=45, check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            raise InstallBlocked("ARCHIVE_TAR_UNAVAILABLE") from None
+        if done.returncode != 0:
+            raise InstallBlocked("ARCHIVE_TAR_FAILED")
+        return done.stdout
+
     try:
-        with tarfile.open(path, mode="r:gz") as tar:
-            members = tar.getmembers()
-            if not MIN_MEMBERS <= len(members) <= MAX_MEMBERS:
-                raise InstallBlocked("ARCHIVE_MEMBER_COUNT_INVALID")
-            for member in members:
-                rel = PurePosixPath(member.name)
-                parts = rel.parts
-                # One top-level component folder; at most translations/xx.json.
-                if (member.name in names or not member.isfile()
-                        or len(parts) not in (2, 3)
-                        or parts[0] != "genvex_remote"
-                        or any(p.startswith(".") or p in ("..", "") for p in parts)
-                        or (len(parts) == 3 and parts[1] != "translations")
-                        or rel.suffix not in (".py", ".json")
-                        or member.size < 1 or member.size > MAX_MEMBER_SIZE):
-                    raise InstallBlocked("ARCHIVE_MEMBER_INVALID")
-                names.add(member.name)
-                fh = tar.extractfile(member)
-                if fh is None:
-                    raise InstallBlocked("ARCHIVE_MEMBER_INVALID")
-                body = fh.read(MAX_MEMBER_SIZE + 1)
-                if len(body) != member.size:
-                    raise InstallBlocked("ARCHIVE_MEMBER_INVALID")
-                # The HAOS host's Python may be older than HA Core's Python.
-                # Validate UTF-8 here; the pinned CI suite checks Python syntax
-                # and the subsequent HA Core check validates the installed code.
-                try:
-                    decoded = body.decode("utf-8", "strict")
-                except UnicodeError:
-                    raise InstallBlocked("ARCHIVE_UTF8_INVALID") from None
-                if rel.suffix == ".json":
-                    try:
-                        json.loads(decoded)
-                    except ValueError:
-                        raise InstallBlocked("ARCHIVE_JSON_INVALID") from None
-                result.append((str(rel), body))
-    except (tarfile.TarError, OSError):
-        raise InstallBlocked("ARCHIVE_CONTAINER_INVALID") from None
+        names = tar_command("-tzf", str(path)).decode("utf-8", "strict").splitlines()
+        details = tar_command("-tvzf", str(path)).decode("utf-8", "strict").splitlines()
+    except UnicodeError:
+        raise InstallBlocked("ARCHIVE_LIST_UTF8_INVALID") from None
+
+    if (not MIN_MEMBERS <= len(names) <= MAX_MEMBERS
+            or len(names) != len(details)):
+        raise InstallBlocked("ARCHIVE_MEMBER_COUNT_INVALID")
+
+    seen: set[str] = set()
+    for name, detail in zip(names, details):
+        rel = PurePosixPath(name)
+        parts = rel.parts
+        if (name in seen or not detail.startswith("-")
+                or name != str(rel)
+                or len(parts) not in (2, 3)
+                or parts[0] != "genvex_remote"
+                or any(p.startswith(".") or p in ("..", "") for p in parts)
+                or (len(parts) == 3 and parts[1] != "translations")
+                or rel.suffix not in (".py", ".json")
+                or len(name) > 160):
+            raise InstallBlocked("ARCHIVE_MEMBER_INVALID")
+        seen.add(name)
+
+    result: list[tuple[str, bytes]] = []
+    for name in names:
+        body = tar_command("-xOzf", str(path), name)
+        if not 1 <= len(body) <= MAX_MEMBER_SIZE:
+            raise InstallBlocked("ARCHIVE_MEMBER_INVALID")
+        try:
+            decoded = body.decode("utf-8", "strict")
+        except UnicodeError:
+            raise InstallBlocked("ARCHIVE_UTF8_INVALID") from None
+        if name.endswith(".json"):
+            try:
+                json.loads(decoded)
+            except ValueError:
+                raise InstallBlocked("ARCHIVE_JSON_INVALID") from None
+        result.append((name, body))
     required = {
         "genvex_remote/__init__.py", "genvex_remote/manifest.json",
         "genvex_remote/config_flow.py", "genvex_remote/pairing_options.py",
@@ -90,7 +103,7 @@ def check_archive(path: Path, expected_sha256: str) -> list[tuple[str, bytes]]:
         "genvex_remote/runtime_client.py", "genvex_remote/coordinator.py",
         "genvex_remote/sensor.py", "genvex_remote/snapshot.py",
     }
-    if not required <= names:
+    if not required <= seen:
         raise InstallBlocked("ARCHIVE_REQUIRED_FILES_MISSING")
     manifest = json.loads(dict(result)["genvex_remote/manifest.json"])
     if (manifest.get("domain") != "genvex_remote"

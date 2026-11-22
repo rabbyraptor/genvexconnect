@@ -17,8 +17,8 @@ OUT="$WORK/operator-result.log"
 REMOTE_DIR=""
 
 ssh_cmd() {
-  ssh -T -p "$PORT" -o BatchMode=yes -o ConnectTimeout=20 \
-      -o ServerAliveInterval=30 "$HOST" "$@"
+  ssh -T -p "$PORT" -o BatchMode=yes -o ConnectTimeout=6 \
+      -o ConnectionAttempts=5 -o ServerAliveInterval=30 "$HOST" "$@"
 }
 
 cleanup() {
