@@ -126,7 +126,7 @@ class DiagnosticTests(unittest.IsolatedAsyncioTestCase):
 
         output = StringIO()
         with redirect_stdout(output):
-            service = PollingService(state, interval_seconds=0.01, on_result=on_result)
+            service = PollingService(state, interval_seconds=1, on_result=on_result)
             await service.start()
             try:
                 await asyncio.wait_for(ready.wait(), timeout=3)
