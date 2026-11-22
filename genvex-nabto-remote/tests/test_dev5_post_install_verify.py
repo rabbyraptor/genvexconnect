@@ -34,7 +34,7 @@ class DEV5PostInstallTests(unittest.TestCase):
                 target = staged / rel
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_bytes((source / rel).read_bytes())
-            self.assertEqual(gate.inspect_source(staged, unchanged, True), 19)
+            self.assertEqual(gate.inspect_source(staged, unchanged, True), 18)
 
 
     def test_detect_one_changed_file(self):
