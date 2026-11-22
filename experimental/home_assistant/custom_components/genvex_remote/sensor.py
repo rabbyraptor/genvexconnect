@@ -1,22 +1,28 @@
-"""First five remote sensor entities, all read-only."""
+"""Stable five measurements plus opt-in raw RPC45 diagnostic entities."""
 from __future__ import annotations
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
-from homeassistant.const import UnitOfTemperature, PERCENTAGE
+from homeassistant.const import UnitOfTemperature, PERCENTAGE, EntityCategory
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, SENSORS
+from .const import DOMAIN, SENSORS, RAW_REGISTERS
 
 # No controls, setters, service registrations or RPC write operations.
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
     coordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities([
+    entities = [
         *(GenvexRemoteSensor(coordinator, spec) for spec in SENSORS),
         GenvexRemoteDataAge(coordinator),
-    ])
+    ]
+    if coordinator.raw_registers_v3:
+        entities.extend(
+            GenvexRemoteRawRegister(coordinator, spec)
+            for spec in RAW_REGISTERS
+        )
+    async_add_entities(entities)
 
 
 class GenvexRemoteSensor(CoordinatorEntity, SensorEntity):
@@ -73,3 +79,40 @@ class GenvexRemoteDataAge(CoordinatorEntity, SensorEntity):
     def native_value(self) -> float | None:
         age = self.coordinator.data_age_seconds
         return round(age / 60, 1) if age is not None else None
+
+
+class GenvexRemoteRawRegister(CoordinatorEntity, SensorEntity):
+    """Uninterpreted signed int16 from exactly one known RPC45 address.
+
+    No temperature, percentage, RPM, boolean or alarm state is inferred.
+    There are 17 raw diagnostics in addition to the five legacy sensors.
+    Missing optional register data is unavailable, never reported as zero.
+    """
+
+    _attr_has_entity_name = True
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_icon = "mdi:code-brackets"
+
+    def __init__(self, coordinator, spec):
+        super().__init__(coordinator)
+        self._key = "raw_" + spec.key
+        self._attr_unique_id = (
+            f"{coordinator.device_id}_rpc45_raw_{spec.address}"
+        )
+        self._attr_name = f"RPC45 råværdi {spec.address} – {spec.label}"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, coordinator.device_id)},
+            name="Genvex Connect Remote",
+            manufacturer="Genvex",
+            model="Optima 270",
+        )
+
+    @property
+    def available(self) -> bool:
+        return super().available and self._key in (self.coordinator.data or {})
+
+    @property
+    def native_value(self) -> int | None:
+        data = self.coordinator.data
+        return data.get(self._key) if data is not None else None
