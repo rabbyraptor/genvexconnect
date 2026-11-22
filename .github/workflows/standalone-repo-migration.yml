@@ -6,6 +6,7 @@ on:
       - standalone-repo-migration
     paths:
       - scripts/prepare_standalone_repo.sh
+      - scripts/run_standalone_migration_from_deck.sh
       - .github/workflows/standalone-repo-migration.yml
   workflow_dispatch:
 
@@ -22,7 +23,9 @@ jobs:
         with:
           python-version: "3.12"
       - name: Validate migration shell syntax
-        run: bash -n scripts/prepare_standalone_repo.sh
+        run: |
+          bash -n scripts/prepare_standalone_repo.sh
+          bash -n scripts/run_standalone_migration_from_deck.sh
       - name: Install history-filtering tool
         run: python -m pip install git-filter-repo
       - name: Extract remote-only history without publishing
