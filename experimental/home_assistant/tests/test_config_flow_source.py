@@ -26,11 +26,14 @@ class OnboardingSourceTests(unittest.TestCase):
 
     def test_supervisor_pairing_requires_explicit_boolean_opt_in(self):
         source = SOURCE.read_text(encoding="utf-8")
-        self.assertIn('CONF_PAIR_FROM_APP = "pair_from_app"', source)
+        self.assertIn("CONF_PAIR_FROM_APP", source)
         self.assertIn("vol.Optional(CONF_PAIR_FROM_APP, default=False)", source)
         self.assertIn("type(user_input.get(CONF_PAIR_FROM_APP, False)) is not bool", source)
         self.assertIn("if user_input.get(CONF_PAIR_FROM_APP) is True:", source)
         self.assertIn("await async_fetch_paired_token(", source)
+        self.assertIn('entry_data[CONF_PAIR_FROM_APP] = True', source)
+        self.assertIn('entry_data[CONF_RUNTIME_TOKEN] = token', source)
+        self.assertNotIn("CONF_RUNTIME_TOKEN: token", source)
         self.assertIn('errors["base"] = "app_pairing_unavailable"', source)
 
     def test_error_translations_present(self):
