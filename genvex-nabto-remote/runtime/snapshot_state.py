@@ -35,7 +35,17 @@ class SnapshotState:
             except asyncio.CancelledError:
                 self.invalidate()
                 raise
-            except Exception:
+            except Exception as exc:
+                # Do not log SDK exception text, credentials or raw response.
+                status = getattr(exc, "rpc_status", None)
+                elapsed_ms = getattr(exc, "elapsed_ms", None)
+                if (type(status) is int and 0 <= status <= 100000
+                        and type(elapsed_ms) is int and 0 <= elapsed_ms <= 120000):
+                    print(
+                        f"RPC45_DIAGNOSTIC rpc_status={status} "
+                        f"elapsed_ms={elapsed_ms}",
+                        flush=True,
+                    )
                 self.invalidate()
                 return False
             # Keep an owned, schema-projected copy; a reader must not be able
