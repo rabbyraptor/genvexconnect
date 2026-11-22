@@ -37,6 +37,10 @@ Home Assistant Core
 
 The LAN `genvex_connect` HACS integration is a **separate already-working path**. The remote implementation is **not** a phone-app translation layer: it invokes the legacy SDK RPC interface directly. A native ARM64 reverse-engineered client is not implemented; QEMU is the tested compatibility mechanism.
 
+## Data-age deployment (22 November 2026)
+
+**Operator-verified on HAOS:** source commit `08f4b94` fast-forwarded; 34 HA offline tests passed, Python syntax PASS, backup PASS, integration files deployed, Home Assistant Core restart requested successfully, and deployed source verification confirmed `GRACE_SECONDS = 600`, `GenvexRemoteDataAge`, and 20-second snapshot client timeout (exit code 0). **Runtime entity registration and live grace/recovery behavior remain to be verified.**
+
 ## Open gates / immediate next development
 
 **DEV4 milestone (22 November):** P.6a passed following the earlier P.6 `BLOCKED_PROBE` result. The observed success was a single fresh five-sensor snapshot in manually started/non-persistent mode. The App-to-HA live transport and entity lifecycle remain unverified.
