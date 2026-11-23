@@ -19,7 +19,7 @@ _source_path = str(SOURCE)
 sys.path.insert(0, _source_path)
 try:
     from register_catalog import (
-        MODEL_PROFILES, RPC45_DEFAULT_ICONS, rpc45_english_name,
+        MODEL_PROFILES, rpc45_english_name, rpc45_translation_key,
     )
 finally:
     sys.path.remove(_source_path)
@@ -58,12 +58,12 @@ def generated() -> tuple[dict, dict]:
     da_names = {key: da_sensors[key] for key in BASE_KEYS}
     seen = set(BASE_KEYS)
     for model in MODEL_PROFILES.values():
-        # DEV9's existing Optima 270 keys must never acquire a model prefix.
-        # Future model-specific entities can use their own prefixed keys.
-        prefix = "" if model.model_key == "optima270" else model.model_key + "_"
+        # The key's namespace is owned by the catalog alongside its model,
+        # so new models do not incorrectly inherit Optima 270 icon metadata.
         for spec in model.rpc45:
-            key = prefix + "raw_" + spec.key
-            if key in seen or spec.key not in RPC45_DEFAULT_ICONS:
+            key = rpc45_translation_key(model.model_key, spec.key)
+            if (key in seen or not spec.icon.startswith("mdi:")
+                    or not spec.name.strip() or not spec.label.strip()):
                 raise ValueError(f"Unresolved translation/icon metadata: {key}")
             seen.add(key)
             en_name = f"RPC45 raw {spec.address} – {rpc45_english_name(spec)}"
