@@ -14,6 +14,7 @@ on:
       - ".github/workflows/remote-app-offline.yml"
       - "scripts/package_remote_diagnostic_app.py"
       - "scripts/check_remote_contracts.py"
+      - "scripts/sync_remote_entity_localizations.py"
       - "scripts/package_dev9_combined.py"
       - "scripts/check_remote_runtime_parity.py"
   pull_request:
@@ -40,6 +41,8 @@ jobs:
         run: python scripts/check_remote_runtime_parity.py --check
       - name: Check App/HA configuration and release contract
         run: python scripts/check_remote_contracts.py
+      - name: Verify translated default names for all remote sensors
+        run: python scripts/sync_remote_entity_localizations.py --check
       - name: Compile native runtime and App bootstrap
         run: python -m compileall -q genvex-nabto-remote/runtime
       - name: Run fake-credential bootstrap tests (no real profile)
