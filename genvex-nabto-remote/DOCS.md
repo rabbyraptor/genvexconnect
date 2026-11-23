@@ -1,61 +1,34 @@
-# Genvex Remote — experimental HAOS App (Nabto Micro 4)
+# Genvex Remote — experimental HAOS App (legacy Nabto Micro)
 
-**21 November DEV3 evidence:** A bounded live SDK adapter test returned three five-value RPC45 batches with persistent worker reuse (10,504 / 40 / 34 ms); shutdown and restart checks passed. This does not mean a deployed continuous HA service. See [current status](../docs/STATUS.md).
+**Current verified baseline:** `0.1.0-dev9` on one ARM64 Home Assistant OS installation with a Genvex Optima 270 controller (23 November 2026). The App uses native Python orchestration and the proprietary x86-64 legacy Nabto SDK under QEMU; the same SDK process/session is reused across authorized polls. The separate Home Assistant `genvex_remote` integration `0.3.0` consumes strictly validated snapshots.
 
-**Status (operator-verified 21 November 2026):** The separately managed App
-`local_genvex_nabto_remote` was updated to `0.1.0-dev2` on HAOS with
-`ha apps update local_genvex_nabto_remote --backup`. The installed App
-remained **stopped**, with **manual boot**, and no dedicated running container.
-Supervisor backup `07337fa3` is listed as `partial` and its metadata
-contains the previous `0.1.0-dev1` App entry. A restore and the archive's
-integrity have **not** been tested. The existing working LAN integration and
-separate runtime-test App must remain untouched.
+The App is **not** the existing LAN integration and is **not** a phone-app proxy. This source project does not distribute a generic ARM64 Nabto Micro client.
 
-## Purpose and separation
+## Current read-only snapshot modes
 
-Native ARM64 Python coordinates read-only, serial RPC45 polling through the
-legacy x86_64 Nabto SDK under QEMU. In live mode, the App publishes snapshots
-on its dedicated private App network, at port `18275`; its HTTP endpoint is
-`/v1/snapshot` and it requires a private IPC bearer token. The App exposes
-no host-published port, uses `host_network: false`, and does not implement
-control RPC. **The live polling path has not been activated in this App.**
+| Mode | App requirements | Snapshot result |
+| --- | --- | --- |
+| v1 | Normal authenticated polling | Five scaled RPC45 measurements |
+| v3 | `persistent_session: true`, `raw_registers_v3: true` | V1 measurements plus five baseline and up to twelve optional signed-int16 RPC45 values |
+| v4 | Both above plus `fan_level_v4: true` | V3 plus RPC42 selected ventilation stage 0–4 or null |
+| diagnostic | `diagnostic_only: true` with all credentials empty and no profile/token | Deliberately synthetic `/v1/diagnostic`, never presented as live data |
 
-## Startup modes (not interchangeable)
+The three production snapshot paths are `/v1/snapshot`, `/v3/snapshot` and `/v4/snapshot`, on the App-private host `local-genvex-nabto-remote:18275`. All require the private IPC token. HTTP reads are cache lookups, **not additional Nabto polls**. Remote RPC43 writes remain unverified/disabled even though the [protocol library](../docs/micro-nabto-protocol-library.md) records source-model write addresses.
 
-- **Diagnostic-only:** Must be explicitly enabled by setting
-  `diagnostic_only: true`, with `device_id`, `identity`, `unlock_secret`
-  and `ipc_token` all empty. The bootstrap also refuses diagnostic startup
-  if a private `/data/profile` or `/data/ipc-token` path exists. It then
-  imports `diagnostic_http_server` rather than the SDK or polling runtime.
-  The only successful diagnostic path is `GET /v1/diagnostic`, which returns
-  a deliberately **synthetic, nonproduction** response. Even a request with
-  an authorization header to `/v1/snapshot` returns 404. This listener binds
-  within the App's Docker networking context; it is **not authenticated** and
-  must not be host-published. Diagnostic-only mode does not prove live Nabto
-  connectivity.
-- **Live:** Requires a valid 12-digit device ID, identity, unlock secret,
-  IPC token (at least 43 characters), and polling interval 60–3600 seconds.
-  Before starting the polling runtime, the bootstrap validates pre-existing
-  App-private `/data/profile/client.crt` and
-  `/data/profile/client-encrypted.key` files. It does **not** import,
-  generate, overwrite, or copy a profile from `/share` or another source.
-  Secure enrollment/migration is a separate unfinished and approval-gated
-  task. Password-marked Supervisor options are not hardware-backed vaults.
+An incomplete optional secondary read does not invalidate five mandatory measurements; missing optional register values become unavailable, not numeric zero. A missing RPC42 stage is null, distinct from valid stage 0.
 
-## Next approval boundary
+## Startup and isolation
 
-Offline tests for diagnostic bootstrap, IPC isolation and synthetic-only
-responses already exist. The installed `dev2` App must stay stopped while
-static/runtime-readiness checks are performed. An on-HAOS diagnostic start
-requires **separate explicit approval**, a fresh preflight that establishes
-empty credentials and no private profile/token without printing any of their
-values, a tight time/cleanup plan, and verification that the App ends stopped.
-Do not run live Nabto, migrate profiles, modify the working LAN integration,
-or treat synthetic values as real sensor readings.
+- **Live:** requires a valid twelve-digit device ID, identity, unlock secret, private IPC token, poll interval 60–3600 seconds and a provisioned App-private profile under `/data/profile`. No credentials are printed in logs or placed in RPC command arguments.
+- **Persistent:** one SDK worker session performs read-only RPC45 and, when v4 enabled, RPC42; SDK startup/shutdown and worker cancellation must be bounded.
+- **Diagnostic only:** mutually exclusive with any live credentials, existing profile/token and persistent flags. It exposes a separate explicitly synthetic endpoint and never starts the Nabto SDK.
+- App Supervisor configuration keeps manual boot, no published host port, no `host_network` privileges and a restricted private App-to-HA IPC boundary.
 
-Known gaps: secure profile onboarding, production distribution of the separate
-HA integration, live SDK/remote runtime validation, private App-to-Core DNS,
-and end-to-end soak tests. A backup inventory entry is not equivalent to a
-verified restore path.
+## Source and maintenance
 
-See [historical dev2 update plan](../docs/archive/remote-app-update-safety-plan.md), [F2 private profile notes](../docs/archive/remote-phase-f2-private-profile-design.md) and [current readiness](../docs/remote-install-readiness.md).
+- `runtime/persistent_rpc45_worker.py` implements read-only session transport and uses source-derived addresses from `register_catalog.py`.
+- `experimental/genvex_remote/register_catalog.py` is the authored source of all currently known RPC42/RPC43/RPC45 register facts. The runtime copy here is a byte-identical shipping projection.
+- `scripts/check_remote_runtime_parity.py --check`, `scripts/check_remote_contracts.py` and `scripts/package_dev9_combined.py` are the offline parity, options and packaging gates.
+- `docs/overnight-architecture-baseline.md` and `docs/overnight-refactoring-log.md` track the current refactoring branch and its results. The existing [historical status](../docs/STATUS.md) retains DEV2–DEV8 observations as historical records.
+
+The proprietary SDK's distribution terms and automated live fault-injection remain separate release decisions. Code-only checks are not evidence of successful new-model remote communication.
