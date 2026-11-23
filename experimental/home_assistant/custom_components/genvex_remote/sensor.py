@@ -12,6 +12,16 @@ from .raw_interpretation import raw_register_attributes
 # No controls, setters, service registrations or RPC write operations.
 
 
+def _genvex_device_info(device_id: str) -> DeviceInfo:
+    """Create one per-entity device link with stable existing identifiers."""
+    return DeviceInfo(
+        identifiers={(DOMAIN, device_id)},
+        name="Genvex Connect Remote",
+        manufacturer="Genvex",
+        model="Optima 270",
+    )
+
+
 async def async_setup_entry(hass, entry, async_add_entities):
     coordinator = hass.data[DOMAIN][entry.entry_id]
     entities = [
@@ -46,12 +56,7 @@ class GenvexRemoteSensor(CoordinatorEntity, SensorEntity):
             SensorDeviceClass.HUMIDITY if spec.key == "humidity"
             else SensorDeviceClass.TEMPERATURE
         )
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, coordinator.device_id)},
-            name="Genvex Connect Remote",
-            manufacturer="Genvex",
-            model="Optima 270",
-        )
+        self._attr_device_info = _genvex_device_info(coordinator.device_id)
 
     @property
     def native_value(self) -> float | None:
@@ -71,12 +76,7 @@ class GenvexRemoteDataAge(CoordinatorEntity, SensorEntity):
     def __init__(self, coordinator):
         super().__init__(coordinator)
         self._attr_unique_id = f"{coordinator.device_id}_data_age"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, coordinator.device_id)},
-            name="Genvex Connect Remote",
-            manufacturer="Genvex",
-            model="Optima 270",
-        )
+        self._attr_device_info = _genvex_device_info(coordinator.device_id)
 
     @property
     def native_value(self) -> float | None:
@@ -105,12 +105,7 @@ class GenvexRemoteRawRegister(CoordinatorEntity, SensorEntity):
             f"{coordinator.device_id}_rpc45_raw_{spec.address}"
         )
         self._attr_name = f"RPC45 råværdi {spec.address} – {spec.label}"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, coordinator.device_id)},
-            name="Genvex Connect Remote",
-            manufacturer="Genvex",
-            model="Optima 270",
-        )
+        self._attr_device_info = _genvex_device_info(coordinator.device_id)
 
     @property
     def available(self) -> bool:
@@ -138,12 +133,7 @@ class GenvexRemoteFanLevel(CoordinatorEntity, SensorEntity):
     def __init__(self, coordinator):
         super().__init__(coordinator)
         self._attr_unique_id = f"{coordinator.device_id}_rpc42_fan_level"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, coordinator.device_id)},
-            name="Genvex Connect Remote",
-            manufacturer="Genvex",
-            model="Optima 270",
-        )
+        self._attr_device_info = _genvex_device_info(coordinator.device_id)
 
     @property
     def available(self) -> bool:
