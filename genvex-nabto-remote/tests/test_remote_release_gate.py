@@ -18,12 +18,21 @@ class RemoteReleaseGateTests(unittest.TestCase):
     def test_one_gate_owns_all_required_source_checks(self):
         arguments = {name: argv for name, argv in gate.CHECKS}
         self.assertEqual(set(arguments), {
-            "repository_links", "runtime_parity",
+            "repository_links", "marketplace_scope", "runtime_parity",
             "option_contracts", "entity_localizations",
         })
         self.assertEqual(arguments["runtime_parity"][-1], "--check")
         self.assertEqual(arguments["entity_localizations"][-1], "--check")
         self.assertEqual(gate.ROOT, ROOT)
+
+    def test_marketplace_scope_checks_only_existing_lan_package(self):
+        from importlib.util import spec_from_file_location, module_from_spec
+        spec = spec_from_file_location(
+            "marketplace_scope", ROOT / "scripts/check_marketplace_scope.py"
+        )
+        module = module_from_spec(spec)
+        spec.loader.exec_module(module)
+        module.check()
 
     def test_failed_source_check_stops_without_running_followups(self):
         fake = subprocess.CompletedProcess([], 3, stdout="PRIVATE_VALUE")
