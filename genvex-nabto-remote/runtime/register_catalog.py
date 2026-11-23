@@ -26,6 +26,7 @@ class RPC45Register:
     evidence: str = "source_model_only"
     note: str = ""
     display_divisor: int | None = None
+    icon: str = ""
 
 
 @dataclass(frozen=True)
@@ -41,19 +42,19 @@ RPC42_FAN_LEVEL = RPC42Read(object_id=0, address=7, minimum=0, maximum=4)
 RPC45_BASELINE = (
     RPC45Register("supply_air", 20, "Tilluft", "baseline",
                   "Supply air", "°C", 10, -300, "temperature",
-                  "validated_scaled_measurement"),
+                  "validated_scaled_measurement", icon="mdi:thermometer"),
     RPC45Register("outdoor_air", 21, "Udeluft", "baseline",
                   "Outdoor air", "°C", 10, -300, "temperature",
-                  "validated_scaled_measurement"),
+                  "validated_scaled_measurement", icon="mdi:thermometer"),
     RPC45Register("exhaust_air", 22, "Afkastluft", "baseline",
                   "Exhaust air", "°C", 10, -300, "temperature",
-                  "validated_scaled_measurement"),
+                  "validated_scaled_measurement", icon="mdi:thermometer"),
     RPC45Register("extract_air", 23, "Fraluft", "baseline",
                   "Extract air", "°C", 10, -300, "temperature",
-                  "validated_scaled_measurement"),
+                  "validated_scaled_measurement", icon="mdi:thermometer"),
     RPC45Register("humidity", 26, "Luftfugtighed", "baseline",
                   "Humidity", "%", 1, 0, "humidity",
-                  "validated_scaled_measurement"),
+                  "validated_scaled_measurement", icon="mdi:water-percent"),
 )
 
 _FAN_NOTE = (
@@ -62,33 +63,33 @@ _FAN_NOTE = (
     "this is not measured airflow or RPM. EB9 mode remains unknown."
 )
 RPC45_OPTIONAL = (
-    RPC45Register("frost_protection_temp", 24, "Frostbeskyttelse", "optional",
+    RPC45Register("frost_protection_temp", 24, "Frostbeskyttelse", "optional", name="Frost protection", icon="mdi:snowflake-thermometer",
                   note="Frost-sensor presence unverified; raw 0 does not prove -30 C."),
     RPC45Register("fan_duty_supply", 18, "Tilluftventilator styresignal",
-                  "optional", evidence="source_model_official_ui_match",
+                  "optional", name="Supply fan control", icon="mdi:fan", evidence="source_model_official_ui_match",
                   note=_FAN_NOTE, display_divisor=100),
     RPC45Register("fan_duty_extract", 19, "Fraluftventilator styresignal",
-                  "optional", evidence="source_model_official_ui_match",
+                  "optional", name="Extract fan control", icon="mdi:fan", evidence="source_model_official_ui_match",
                   note=_FAN_NOTE, display_divisor=100),
-    RPC45Register("fan_rpm_supply", 35, "Tilluftventilator", "optional",
+    RPC45Register("fan_rpm_supply", 35, "Tilluftventilator", "optional", name="Supply fan candidate", icon="mdi:fan",
                   note=("Source labels fan RPM; Optima 270 documents RPM feedback "
                         "in EB10, but this register needs two-speed and official UI comparison.")),
-    RPC45Register("fan_rpm_extract", 36, "Fraluftventilator", "optional",
+    RPC45Register("fan_rpm_extract", 36, "Fraluftventilator", "optional", name="Extract fan candidate", icon="mdi:fan",
                   note=("Source labels fan RPM; Optima 270 documents RPM feedback "
                         "in EB10, but this register needs two-speed and official UI comparison.")),
-    RPC45Register("preheat_pwm", 41, "Forvarme", "optional",
+    RPC45Register("preheat_pwm", 41, "Forvarme", "optional", name="Preheat", icon="mdi:radiator",
                   note="Source labels preheat PWM; raw 0 does not prove heating hardware."),
-    RPC45Register("reheat_pwm", 42, "Eftervarme", "optional",
+    RPC45Register("reheat_pwm", 42, "Eftervarme", "optional", name="Reheat", icon="mdi:radiator",
                   note="Source labels reheat PWM; RPC45 address 42 is not RPC42."),
-    RPC45Register("bypass_active_raw", 53, "Bypassstatus", "optional",
+    RPC45Register("bypass_active_raw", 53, "Bypassstatus", "optional", name="Bypass status", icon="mdi:valve",
                   note="Source labels bypass status; raw 0 is not verified as closed."),
-    RPC45Register("bypass_analog_raw", 40, "Bypass analog", "optional",
+    RPC45Register("bypass_analog_raw", 40, "Bypass analog", "optional", name="Bypass analog", icon="mdi:valve",
                   note="Source labels bypass analog; physical scale remains unknown."),
-    RPC45Register("alarm_word_1_raw", 114, "Alarmregister 1", "optional",
+    RPC45Register("alarm_word_1_raw", 114, "Alarmregister 1", "optional", name="Alarm word 1", icon="mdi:alert-outline",
                   note="Undecoded alarm bitfield; raw 0 is not an alarm-free verdict."),
-    RPC45Register("alarm_word_2_raw", 115, "Alarmregister 2", "optional",
+    RPC45Register("alarm_word_2_raw", 115, "Alarmregister 2", "optional", name="Alarm word 2", icon="mdi:alert-outline",
                   note="Undecoded alarm bitfield; raw 0 is not an alarm-free verdict."),
-    RPC45Register("rotor_rpm", 50, "Rotor", "optional",
+    RPC45Register("rotor_rpm", 50, "Rotor", "optional", name="Rotor candidate", icon="mdi:rotate-3d",
                   note=("Source labels rotor speed; installed rotor hardware is unconfirmed. "
                         "The controller menu Rotorstatus is a separate 0-4 state, "
                         "so raw 10 must not be decoded as Rotorstatus.")),
@@ -100,51 +101,25 @@ RPC45_BY_ADDRESS = {spec.address: spec for spec in RPC45_ALL}
 # All shipping integrations derive default icons from here; names are translated
 # by Home Assistant's own per-user language system (not hass.config.language).
 # Entries without a dedicated mapping fall back to generic sensor semantics.
-RPC45_DEFAULT_ICONS = {
-    "supply_air": "mdi:thermometer",
-    "outdoor_air": "mdi:thermometer",
-    "exhaust_air": "mdi:thermometer",
-    "extract_air": "mdi:thermometer",
-    "humidity": "mdi:water-percent",
-    "frost_protection_temp": "mdi:snowflake-thermometer",
-    "fan_duty_supply": "mdi:fan",
-    "fan_duty_extract": "mdi:fan",
-    "fan_rpm_supply": "mdi:fan",
-    "fan_rpm_extract": "mdi:fan",
-    "preheat_pwm": "mdi:radiator",
-    "reheat_pwm": "mdi:radiator",
-    "bypass_active_raw": "mdi:valve",
-    "bypass_analog_raw": "mdi:valve",
-    "alarm_word_1_raw": "mdi:alert-outline",
-    "alarm_word_2_raw": "mdi:alert-outline",
-    "rotor_rpm": "mdi:rotate-3d",
-}
-RAW_ENGLISH_NAMES = {
-    "frost_protection_temp": "Frost protection",
-    "fan_duty_supply": "Supply fan control",
-    "fan_duty_extract": "Extract fan control",
-    "fan_rpm_supply": "Supply fan candidate",
-    "fan_rpm_extract": "Extract fan candidate",
-    "preheat_pwm": "Preheat",
-    "reheat_pwm": "Reheat",
-    "bypass_active_raw": "Bypass status",
-    "bypass_analog_raw": "Bypass analog",
-    "alarm_word_1_raw": "Alarm word 1",
-    "alarm_word_2_raw": "Alarm word 2",
-    "rotor_rpm": "Rotor candidate",
-}
+# Backward-compatible projections; no independently edited icon/name tables.
+RPC45_DEFAULT_ICONS = {spec.key: spec.icon for spec in RPC45_ALL}
+RAW_ENGLISH_NAMES = {spec.key: spec.name for spec in RPC45_OPTIONAL}
 
 
-def rpc45_default_icon(key: str) -> str:
-    """Return the default icon for an identified source-model register."""
-    if type(key) is not str or key not in {spec.key for spec in RPC45_ALL}:
-        raise KeyError("Unknown RPC45 register")
-    return RPC45_DEFAULT_ICONS.get(key, "mdi:code-brackets")
+def rpc45_default_icon(key: str, *, model_key: str = "optima270") -> str:
+    """Use model-qualified metadata rather than a global key/icon assumption."""
+    model = get_model(model_key)
+    for spec in model.rpc45:
+        if spec.key == key:
+            return spec.icon
+    raise KeyError("Unknown RPC45 register for model")
 
 
 def rpc45_english_name(spec: RPC45Register) -> str:
-    """Source-only fallback for newly imported catalog entries."""
-    return RAW_ENGLISH_NAMES.get(spec.key, spec.name or spec.key.replace("_", " ").title())
+    """Source-owned English fallback for any model's register."""
+    if not spec.name:
+        raise ValueError("Missing English register name")
+    return spec.name
 
 
 if (
@@ -409,6 +384,15 @@ def _validate_protocol_library() -> None:
     if len(MICRO_COMMAND_BY_NAME) != len(MICRO_COMMANDS):
         raise RuntimeError("Duplicate command name")
     for model in MODEL_PROFILES.values():
+        # New controller profiles must declare their own sensor metadata.
+        if (len({item.address for item in model.rpc45}) != len(model.rpc45)
+                or len({item.key for item in model.rpc45}) != len(model.rpc45)):
+            raise RuntimeError("Duplicate model RPC45 address or key")
+        for item in model.rpc45:
+            if (not item.icon.startswith("mdi:")
+                    or not item.name.strip() or not item.label.strip()
+                    or type(item.address) is not int or item.address < 0):
+                raise RuntimeError("Missing model-specific register presentation")
         if len({item.key for item in model.setpoints}) != len(model.setpoints):
             raise RuntimeError("Duplicate setpoint key")
         if len({(item.read_object, item.read_address) for item in model.setpoints}) != len(model.setpoints):
