@@ -42,6 +42,14 @@ The App/HA boundary is a *serialized snapshot contract*, not an in-process impor
 | CI and testing | `.github/workflows/remote-{nabto,app}-offline.yml`, test modules, parity checker and configuration gate | Source/App/HA offline contracts and combined release packaging | Workflows include `overnight-refactoring`; new tests lock RPC45 URL payload, register catalog order/evidence, v3/v4 snapshot projection and both pairing modes. |
 | Human technical status | **This file** for architecture ownership; `docs/overnight-refactoring-log.md` for sequential work and decisions | `docs/README.md`, `docs/STATUS.md`, older maintenance plan (several still state DEV8/DEV2) | Task 5 corrects current status entry points and labels historical DEV docs as historical; avoid treating archived gates as live baseline. |
 
+## Micro Nabto protocol library (task 3 extension, 2026-11-23)
+
+The same authoritative, import-free `experimental/genvex_remote/register_catalog.py` now holds the **known protocol operation catalog**, not just current sensor addresses: 2 KEEP_ALIVE; 17 PING; 42 SETPOINT_READLIST; 43 SETPOINT_WRITELIST; 45 DATAPOINT_READLIST. This is a bounded, source-audited inventory, **not a claim of complete proprietary Nabto coverage**.
+
+The `optima270` `ModelProfile` groups all 17 RPC45 datapoints, 12 active RPC42/RPC43 read/write setpoint-address pairs, and nine explicitly inactive source-model pairs. The lookup API `get_micro_command`, `get_model`, `get_model_register`, `get_model_setpoint` always namespaces a register by **model, RPC opcode, object and address**. The CLI `scripts/lookup_micro_nabto.py` is entirely local and displays JSON; it cannot transmit commands. All remote writes remain unverified and disabled. Evidence is crosschecked against `docs/references/optima270_micro_nabto_setpoint_catalog.json`; see [protocol library guide](micro-nabto-protocol-library.md) for exact semantics and adding models.
+
+The two shipping copies of the catalog are still byte-identical projections, enforced by `scripts/check_remote_runtime_parity.py`. Neither snapshot validators nor existing read-only pollers need any new transport operation. The model profile is structured for adding independent future controller catalogs without mixing address namespaces or claiming source-only writes have been verified.
+
 ## Verified structural observations in baseline
 
 - Git tree contains **400 files**; 23 App runtime Python files. Of these, **18** have corresponding files with identical Git blob SHA in `experimental/genvex_remote/`; the other five are intentionally App-only. This is *managed mirroring*, not 18 unrelated forks.
