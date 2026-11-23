@@ -71,6 +71,8 @@ while True:
         },
     }}
     print("GENVEX_PERSISTENT_RESULT=" + json.dumps(message), flush=True)
+    if mode == "exit-after-first" and index == 1:
+        break
 with log.open("a") as output:
     output.write("closed:" + str(os.getpid()) + "\n")
 """
@@ -153,6 +155,26 @@ class PersistentAdapterTests(unittest.IsolatedAsyncioTestCase):
                 await adapter.aclose()
             self.assertEqual(sum(x.startswith("started:") for x in log.read_text().splitlines()), 1)
             self.assertEqual(sum(x.startswith("poll:") for x in log.read_text().splitlines()), 5)
+
+    async def test_exited_worker_is_replaced_before_next_poll(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            adapter, log = self.new_adapter(tmp, "exit-after-first")
+            try:
+                first = await adapter.poll_once()
+                self.assertEqual(first["device_id"], DEVICE)
+                original = adapter._proc
+                await asyncio.wait_for(original.wait(), timeout=2)
+                self.assertEqual(original.returncode, 0)
+                second = await adapter.poll_once()
+                self.assertEqual(second["values"]["humidity"], 66.0)
+                self.assertIsNotNone(adapter._proc)
+                self.assertNotEqual(adapter._proc.pid, original.pid)
+            finally:
+                await adapter.aclose()
+            self.assertEqual(
+                sum(line.startswith("started:")
+                    for line in log.read_text().splitlines()), 2,
+            )
 
     async def test_timeout_kills_and_reaps(self):
         with tempfile.TemporaryDirectory() as tmp:
