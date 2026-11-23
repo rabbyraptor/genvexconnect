@@ -16,6 +16,7 @@ on:
       - "scripts/package_remote_diagnostic_app.py"
       - "scripts/check_remote_contracts.py"
       - "scripts/remote_release_gate.py"
+      - "scripts/check_marketplace_scope.py"
       - "scripts/sync_remote_entity_localizations.py"
       - "scripts/package_dev9_combined.py"
       - "scripts/check_remote_runtime_parity.py"
