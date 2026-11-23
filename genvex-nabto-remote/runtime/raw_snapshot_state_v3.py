@@ -14,6 +14,40 @@ from snapshot_contract import SnapshotError
 from snapshot_state import SnapshotState
 
 
+def _build_v1_v3_snapshots(
+    *, device_id: str, timestamp_utc: str,
+    baseline: dict[str, float], raw: dict[str, int],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Build both detached wire projections from one validated read.
+
+    This function owns only snapshot construction. V3 and v4 must still
+    validate their respective inputs independently before calling it.
+    Only whitelisted fields reach the HTTP snapshot cache.
+    """
+    common = {
+        "device_id": device_id,
+        "timestamp_utc": timestamp_utc,
+        "health": "ok",
+    }
+    legacy = {
+        "schema_version": 1,
+        **common,
+        "values": dict(baseline),
+    }
+    expanded = {
+        "schema_version": 3,
+        **common,
+        "values": dict(baseline),
+        "raw_values": {key: raw[key] for key in BASE_KEYS},
+        "optional": {
+            "raw_registers": {
+                key: raw[key] for key in OPTIONAL_KEYS if key in raw
+            },
+        },
+    }
+    return legacy, expanded
+
+
 class RawV3SnapshotState(SnapshotState):
     """Own v3 snapshot and project exact v1 data without new SDK reads."""
 
@@ -52,27 +86,13 @@ class RawV3SnapshotState(SnapshotState):
                 self.invalidate()
                 return False
 
-            # Detached, field-whitelisted copies. No SDK/metadata fields leak.
-            self._snapshot = {
-                "schema_version": 1,
-                "device_id": self._poller.device_id,
-                "timestamp_utc": snapshot["timestamp_utc"],
-                "health": "ok",
-                "values": dict(baseline),
-            }
-            self._raw_snapshot = {
-                "schema_version": 3,
-                "device_id": self._poller.device_id,
-                "timestamp_utc": snapshot["timestamp_utc"],
-                "health": "ok",
-                "values": dict(baseline),
-                "raw_values": {key: raw[key] for key in BASE_KEYS},
-                "optional": {
-                    "raw_registers": {
-                        key: raw[key] for key in OPTIONAL_KEYS if key in raw
-                    },
-                },
-            }
+            # The same projection function serves both v3 and v4 caches.
+            self._snapshot, self._raw_snapshot = _build_v1_v3_snapshots(
+                device_id=self._poller.device_id,
+                timestamp_utc=snapshot["timestamp_utc"],
+                baseline=baseline,
+                raw=raw,
+            )
             return True
 
     def current_v3(self) -> dict[str, Any] | None:
