@@ -1,37 +1,43 @@
 # Genvex Remote — experimental Home Assistant integration
 
-This directory contains the separately managed **`genvex_remote`** Home Assistant integration. It is **not** the existing `genvex_connect` LAN/HACS integration.
+The **`genvex_remote`** component is independent of the original `genvex_connect` LAN/HACS integration. Its current **verified deployment baseline is DEV9**: App `0.1.0-dev9`, HA component `0.3.0`, one Optima 270 / HAOS ARM64 test installation, 24/24 registered available sensor entities with v4 and raw v3 enabled.
 
-**Live development status (22 November 2026):** Version **`0.2.0`** was installed on one Home Assistant OS ARM64 system together with the separately isolated **Genvex Remote App `0.1.0-dev8`**. Following activation of raw-register mode, Home Assistant reported **23/23 available sensor entities**: five existing scaled readings, seventeen signed-int16 raw diagnostic register sensors and one data-age sensor.
+Changes on `overnight-refactoring` are source-branch work, not a deployed update.
 
-See [the dated live verification](../../docs/dev8-live-verification-2026-11-22.md) for the actual Optima 270 readings. This is a tested development deployment, **not** a publicly released standalone integration.
+## Data flow and identities
 
-## How the Home Assistant side works
+1. `config_flow.py` collects the 12-digit device ID and either a manually supplied private IPC token or automatic Supervisor pairing.
+2. `runtime_client.py` fetches the authenticated, private HTTP snapshots, using one bounded token-refresh/retry on IPC 401/403 in auto-paired mode.
+3. `coordinator.py` validates device identity, schema version, timestamp and signed raw data; it polls the App cache on a fixed interval and enforces the freshness grace policy.
+4. `sensor.py` registers five scaled readings, a data-age entity, one RPC42 selected stage and optionally seventeen raw RPC45 diagnostics. Unique IDs remain stable.
+5. The Nabto Micro SDK, encrypted session, actual RPC reads and gateway credentials remain exclusively inside the separate HAOS App.
 
-The Nabto Micro SDK and any credentials used by it stay inside the **separate Supervisor App**, running a persistent SDK worker through QEMU. The HA component does not connect to the gateway or launch Nabto:
-
-1. `config_flow.py` configures the twelve-digit device identifier and App pairing/IPC settings.
-2. `runtime_client.py` reads a strictly pinned private, bearer-token-authenticated App snapshot endpoint. Manual token mode is supported; automatic Supervisor pairing can obtain and refresh the token. On IPC 401/403, paired mode permits one bounded refresh/retry.
-3. `coordinator.py` fetches the latest snapshot every **60 seconds**, validates timestamps and device identity and applies the age/grace policy.
-4. `sensor.py` exposes five scaled measurement entities and a data-age diagnostic. When v3 mode is enabled, it also creates **17 raw-register diagnostic entities**, retaining stable original entity identifiers.
-5. `snapshot.py` validates the five-value legacy v1 schema; `raw_snapshot_v3.py` validates the optional v3 contract, including signed-int16 values.
-
-The private App endpoint is fixed to `http://local-genvex-nabto-remote:18275` with paths:
-
-| Endpoint | Content |
+| App endpoint | HA content |
 | --- | --- |
-| `/v1/snapshot` | Five scaled baseline values |
-| `/v3/snapshot` | Same five scaled values, five baseline raw values and up to twelve optional raw values |
+| `/v1/snapshot` | Five scaled sensor values |
+| `/v3/snapshot` | Five scaled + 17 raw RPC45 values (optional twelve all-or-nothing) |
+| `/v4/snapshot` | V3 plus selected RPC42 stage 0–4 or null |
 
-The v3 endpoint does **not** initiate separate RPC45 reads on HTTP request. It returns the App's validated current snapshot.
+The App serves already-validated cached samples; an HTTP GET does not trigger a fresh Nabto request.
 
-## Enabling raw mode on an already provisioned DEV8 system
+## Sensor names and icons for new/imported entities
 
-1. Enable `raw_registers_v3: true` in the **Genvex Remote App**, keeping `persistent_session: true`; restart that App.
-2. Open the **Genvex Remote** Home Assistant integration options and enable **Expose all 17 RPC45 raw values**. Keep automatic Supervisor pairing selected if that is the existing authentication mode.
-3. The integration reloads and adds 17 raw diagnostics. Their values are unscaled integers and are not yet verified physical units, alarm states or fan speeds.
+Every entity has a stable unique ID. Five baseline readings, stage and data-age sensors use native Home Assistant translation keys. All seventeen raw diagnostic sensors now use `raw_<key>` translation keys instead of an overriding hardcoded Danish name. English (`strings.json` and `translations/en.json`) and Danish (`translations/da.json`) are supplied, so Home Assistant chooses displayed default entity names according to the **user's selected UI language**; other languages use Home Assistant's normal translation fallback.
 
-Only one remote Optima 270 deployment has been live-verified. General remote profile onboarding, other controllers and proprietary SDK redistribution require separate work.
+Default semantic icons (temperature, humidity, fans, heating, bypass, alarms and diagnostics) are sourced from `register_catalog.py`. Existing user-renamed entities are not automatically renamed. To add new sensor definitions, update the canonical register catalog and regenerate language resources with:
+
+```sh
+python scripts/sync_remote_entity_localizations.py --sync
+python scripts/sync_remote_entity_localizations.py --check
+```
+
+The CI gate refuses missing catalog names/icons.
+
+## Enabling DEV9 data on an already provisioned setup
+
+Enable `persistent_session: true`, `raw_registers_v3: true` and `fan_level_v4: true` in the separate App, then enable matching **Raw registers v3** and **Fan level v4** integration options. Automatic Supervisor pairing remains supported. The stage is a **selected setpoint**, not a fan RPM, speed percentage or verified airflow reading. Raw candidate fields are unitless signed integers.
+
+Only the tested Optima 270 setup is live-verified. No additional controller or remote write support is implied. See [DEV9 architecture](../../docs/overnight-architecture-baseline.md) and [protocol library](../../docs/micro-nabto-protocol-library.md).
 
 ## Availability and recovery
 
@@ -52,4 +58,4 @@ python3 -m unittest discover -s genvex-nabto-remote/tests -p 'test_*.py' -v
 python3 scripts/check_remote_runtime_parity.py --check
 ```
 
-For the combined App/HAOS release gate, see [DEV8.4](../../docs/dev8-4-combined-release-gate.md). For the current public-facing overview, see the [root README](../../README.md). The existing LAN/HACS integration remains separate.
+For the combined App/HAOS release gate, see [historical DEV8.4](../../docs/dev8-4-combined-release-gate.md). For the current public-facing overview, see the [root README](../../README.md). The existing LAN/HACS integration remains separate.
