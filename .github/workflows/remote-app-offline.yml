@@ -13,6 +13,7 @@ on:
       - "experimental/home_assistant/**"
       - ".github/workflows/remote-app-offline.yml"
       - "scripts/package_remote_diagnostic_app.py"
+      - "scripts/check_remote_contracts.py"
   pull_request:
     paths:
       - "genvex-nabto-remote/**"
@@ -35,6 +36,8 @@ jobs:
           python-version: "3.12"
       - name: Check bundled runtime matches canonical source
         run: python scripts/check_remote_runtime_parity.py --check
+      - name: Check App/HA configuration and release contract
+        run: python scripts/check_remote_contracts.py
       - name: Compile native runtime and App bootstrap
         run: python -m compileall -q genvex-nabto-remote/runtime
       - name: Run fake-credential bootstrap tests (no real profile)
