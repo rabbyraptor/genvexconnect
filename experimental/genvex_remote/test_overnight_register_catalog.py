@@ -6,7 +6,8 @@ import unittest
 
 from register_catalog import (
     RPC42_FAN_LEVEL, RPC45_ALL, RPC45_BASELINE, RPC45_OPTIONAL,
-    RPC45_BY_ADDRESS,
+    RPC45_BY_ADDRESS, RPC45Register, MODEL_PROFILES,
+    ModelProfile, _validate_protocol_library,
 )
 from sensor_model import SENSORS
 from raw_registers_v3 import ALL_REGISTERS, BASE_ADDRESSES, OPTIONAL_ADDRESSES
@@ -53,6 +54,29 @@ class RegisterCatalogTests(unittest.TestCase):
             self.assertEqual(spec.evidence, "source_model_only")
             self.assertIsNone(spec.display_divisor)
             self.assertTrue(spec.note)
+
+    def test_invalid_new_model_identity_and_metadata_are_rejected(self):
+        for key, model_key, icon in (
+            ("newmodel", "wrong_name", "mdi:fan"),
+            ("newmodel", "newmodel", ""),
+            ("newmodel", "newmodel", 15),
+        ):
+            with self.subTest(key=key, model_key=model_key, icon=icon):
+                model = ModelProfile(
+                    model_key, "Fixture", "fixture source",
+                    (RPC45Register(
+                        "fixture", 200, "Test", "optional",
+                        name="Fixture point", icon=icon,
+                    ),),
+                    (), (),
+                )
+                MODEL_PROFILES[key] = model
+                try:
+                    with self.assertRaises(RuntimeError):
+                        _validate_protocol_library()
+                finally:
+                    MODEL_PROFILES.pop(key, None)
+        _validate_protocol_library()
 
     def test_canonical_source_matches_both_shipping_projections(self):
         root = Path(__file__).resolve().parents[2]
