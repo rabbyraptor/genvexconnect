@@ -29,6 +29,6 @@ An incomplete optional secondary read does not invalidate five mandatory measure
 - `runtime/persistent_rpc45_worker.py` implements read-only session transport and uses source-derived addresses from `register_catalog.py`.
 - `experimental/genvex_remote/register_catalog.py` is the authored source of all currently known RPC42/RPC43/RPC45 register facts. The runtime copy here is a byte-identical shipping projection.
 - `scripts/check_remote_runtime_parity.py --check`, `scripts/check_remote_contracts.py` and `scripts/package_dev9_combined.py` are the offline parity, options and packaging gates.
-- `docs/overnight-architecture-baseline.md` and `docs/overnight-refactoring-log.md` track the current refactoring branch and its results. The existing [historical status](../docs/STATUS.md) retains DEV2–DEV8 observations as historical records.
+- `../docs/overnight-architecture-baseline.md` and `../docs/overnight-refactoring-log.md` track the current refactoring branch and its results. The existing [historical status](../docs/STATUS.md) retains DEV2–DEV8 observations as historical records.
 
 The proprietary SDK's distribution terms and automated live fault-injection remain separate release decisions. Code-only checks are not evidence of successful new-model remote communication.
