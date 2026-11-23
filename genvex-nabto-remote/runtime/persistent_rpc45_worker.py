@@ -19,6 +19,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 from raw_registers_v3 import OPTIONAL_ADDRESSES, make_raw_v3
+from raw_snapshot_v4 import make_v4
 
 READY = "GENVEX_PERSISTENT_READY="
 RESULT = "GENVEX_PERSISTENT_RESULT="
@@ -40,6 +41,44 @@ SCHEMA = b"""<unabto_queries>
     <parameter name="value" type="int16"/></list>
   </response>
 </query></unabto_queries>"""
+
+
+SCHEMA42 = b"""<unabto_queries>
+<query name="candidate_read_setpoints.json" id="42">
+  <request><list name="setpoints">
+    <parameter name="obj" type="uint8"/>
+    <parameter name="address" type="uint16"/></list>
+    <parameter name="trailer" type="uint8" default="1"/>
+  </request>
+  <response format="json">
+    <parameter name="prefix_unknown" type="uint8"/>
+    <list name="values"><parameter name="value" type="uint16"/></list>
+  </response>
+</query></unabto_queries>"""
+
+
+def fan_url(host: str) -> bytes:
+    body = {"request": {
+        "setpoints": [{"obj": 0, "address": 7}], "trailer": 1,
+    }}
+    return ("nabto://" + host + "/candidate_read_setpoints.json?json="
+            + quote(json.dumps(body, separators=(",", ":")), safe="")).encode()
+
+
+def decode_fan_level(raw: str) -> int | None:
+    try:
+        if type(raw) is not str or len(raw) > 4096:
+            return None
+        response = json.loads(raw)["response"]
+        prefix, values = response["prefix_unknown"], response["values"]
+        if (type(prefix) is not int or not 0 <= prefix <= 255
+                or type(values) is not list or len(values) != 1
+                or type(values[0]) is not dict):
+            return None
+        level = values[0].get("value")
+        return level if type(level) is int and 0 <= level <= 4 else None
+    except (ValueError, TypeError, KeyError, AttributeError, IndexError):
+        return None
 
 
 def emit(prefix: str, obj: dict) -> None:
@@ -230,7 +269,12 @@ def main() -> int:
             opened = True
             stage = "SDK_XML_FAILED"
             error = P()
-            xml_status = set_interface(session, SCHEMA, ct.byref(error))
+            # Register both read-only query models in the same SDK session.
+            # V3 behavior still uses only RPC45.
+            combined_schema = SCHEMA.replace(
+                b"</unabto_queries>", b""
+            ) + SCHEMA42.split(b"<unabto_queries>", 1)[1]
+            xml_status = set_interface(session, combined_schema, ct.byref(error))
             take(error)
             if xml_status != 0:
                 raise RuntimeError()
@@ -238,12 +282,20 @@ def main() -> int:
             ready = True
             url = rpc_url(host)
             optional_url = raw_rpc_url(host)
+            level_url = fan_url(host)
             while True:
                 command = sys.stdin.buffer.readline(16)
                 if not command or command == b"CLOSE\n":
                     break
-                if command not in (b"POLL\n", b"POLL3\n"):
+                if command not in (b"POLL\n", b"POLL3\n", b"POLL4\n"):
                     break
+                level_before = None
+                if command == b"POLL4\n":
+                    lv_ptr = P()
+                    lv_status = invoke(session, level_url, ct.byref(lv_ptr))
+                    lv_reply = take(lv_ptr)
+                    if lv_status == 0:
+                        level_before = decode_fan_level(lv_reply)
                 response = P()
                 start = time.monotonic()
                 status = invoke(session, url, ct.byref(response))
@@ -260,7 +312,7 @@ def main() -> int:
                     emit(RESULT, {"ok": False, "status": 0, "elapsed_ms": elapsed})
                     continue
                 measured_at = datetime.now(timezone.utc)
-                if command == b"POLL3\n":
+                if command in (b"POLL3\n", b"POLL4\n"):
                     baseline_raw = decode_raw_rpc(raw, len(SENSORS))
                     extra_raw = None
                     response2 = P()
@@ -277,6 +329,13 @@ def main() -> int:
                             record_error_event(extra_status, extra_body)
                     except Exception:
                         extra_raw = None
+                    level_after = None
+                    if command == b"POLL4\n":
+                        lv_ptr2 = P()
+                        lv_status2 = invoke(session, level_url, ct.byref(lv_ptr2))
+                        lv_reply2 = take(lv_ptr2)
+                        if lv_status2 == 0:
+                            level_after = decode_fan_level(lv_reply2)
                     try:
                         document = make_raw_v3(
                             device_id=host.split(".")[0],
@@ -289,6 +348,12 @@ def main() -> int:
                             "ok": False, "status": 0, "elapsed_ms": elapsed,
                         })
                         continue
+                    if command == b"POLL4\n":
+                        level = (
+                            level_before if level_before is not None
+                            and level_before == level_after else None
+                        )
+                        document = make_v4(document, fan_level=level)
                 else:
                     document = {
                         "schema_version": 1,

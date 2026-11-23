@@ -1,8 +1,8 @@
 name: "Genvex Remote (experimental)"
-version: "0.1.0-dev8"
+version: "0.1.0-dev9"
 slug: "genvex_nabto_remote"
 description: "Isolated read-only Nabto 4/Micro RPC45 runtime; separate from working LAN integration."
-url: "https://github.com/rabbyraptor/genvexconnect/blob/remote-nabto-connection/docs/remote-install-readiness.md"
+url: "https://github.com/rabbyraptor/genvex-remote/blob/main/docs/dev8-live-verification-2026-11-22.md"
 startup: application
 boot: manual_only
 stage: experimental
@@ -20,6 +20,7 @@ options:
   diagnostic_only: false
   persistent_session: false
   raw_registers_v3: false
+  fan_level_v4: false
 schema:
   device_id: str
   identity: str
@@ -29,3 +30,4 @@ schema:
   diagnostic_only: bool
   persistent_session: bool
   raw_registers_v3: bool
+  fan_level_v4: bool

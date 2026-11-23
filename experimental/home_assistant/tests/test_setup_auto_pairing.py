@@ -31,6 +31,7 @@ class SetupAutoPairingTests(unittest.IsolatedAsyncioTestCase):
             "CONF_RUNTIME_TOKEN": "runtime_token",
             "CONF_PAIR_FROM_APP": "pair_from_app",
             "CONF_RAW_REGISTERS_V3": "raw_registers_v3",
+            "CONF_FAN_LEVEL_V4": "fan_level_v4",
             "DOMAIN": "genvex_remote",
         }.items():
             setattr(const, key, value)
@@ -54,7 +55,7 @@ class SetupAutoPairingTests(unittest.IsolatedAsyncioTestCase):
         outer = self
 
         class FakeCoordinator:
-            def __init__(self, hass, device_id, reader, *, raw_registers_v3=False):
+            def __init__(self, hass, device_id, reader, *, raw_registers_v3=False, fan_level_v4=False):
                 outer.tokens.append(reader._token)
                 outer.raw_modes.append(raw_registers_v3)
                 outer.token_loaders.append(reader._token_loader)
@@ -69,7 +70,8 @@ class SetupAutoPairingTests(unittest.IsolatedAsyncioTestCase):
         class FakeReader:
             def __init__(self, session, *, endpoint, token, token_loader=None):
                 if endpoint not in ("http://local-genvex-nabto-remote:18275/v1/snapshot",
-                                    "http://local-genvex-nabto-remote:18275/v3/snapshot"):
+                                    "http://local-genvex-nabto-remote:18275/v3/snapshot",
+                                    "http://local-genvex-nabto-remote:18275/v4/snapshot"):
                     raise ValueError
                 self._token = token
                 self._token_loader = token_loader
@@ -77,6 +79,7 @@ class SetupAutoPairingTests(unittest.IsolatedAsyncioTestCase):
 
         client.AuthenticatedSnapshotReader = FakeReader
         client.EXPECTED_V3_APP_ENDPOINT = "http://local-genvex-nabto-remote:18275/v3/snapshot"
+        client.EXPECTED_V4_APP_ENDPOINT = "http://local-genvex-nabto-remote:18275/v4/snapshot"
         homeassistant = types.ModuleType("homeassistant")
         homeassistant.const = types.ModuleType("homeassistant.const")
         homeassistant.const.Platform = types.SimpleNamespace(SENSOR="sensor")

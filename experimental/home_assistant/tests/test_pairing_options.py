@@ -52,6 +52,7 @@ class PairingOptionsTests(unittest.IsolatedAsyncioTestCase):
         const.CONF_RUNTIME_TOKEN = "runtime_token"
         const.CONF_PAIR_FROM_APP = "pair_from_app"
         const.CONF_RAW_REGISTERS_V3 = "raw_registers_v3"
+        const.CONF_FAN_LEVEL_V4 = "fan_level_v4"
         pairing = types.ModuleType(NAMESPACE + ".supervisor_pairing")
 
         class Unavailable(ValueError):
