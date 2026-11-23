@@ -23,6 +23,20 @@ TOKEN = DATA / "ipc-token"
 OPTIONS = DATA / "options.json"
 PROBE = Path("/opt/genvex-remote/runtime/probe_remote_snapshot.py")
 
+# These optional defaults mirror the authoritative Supervisor config.yaml.
+# scripts/check_remote_contracts.py verifies their exact alignment.
+APP_DEFAULTS = {
+    "poll_seconds": 60,
+    "diagnostic_only": False,
+    "persistent_session": False,
+    "raw_registers_v3": False,
+    "fan_level_v4": False,
+}
+REQUIRED_OPTION_KEYS = frozenset({
+    "device_id", "identity", "unlock_secret", "ipc_token",
+})
+VALID_OPTION_KEYS = REQUIRED_OPTION_KEYS | APP_DEFAULTS.keys()
+
 
 def read_options(path: Path = OPTIONS) -> dict:
     if path.is_symlink() or not path.is_file() or path.stat().st_size > 8192:
@@ -30,26 +44,21 @@ def read_options(path: Path = OPTIONS) -> dict:
     data = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(data, dict):
         raise ValueError("Invalid App options")
-    allowed = {
-        "device_id", "identity", "unlock_secret", "ipc_token",
-        "poll_seconds", "diagnostic_only", "persistent_session",
-        "raw_registers_v3", "fan_level_v4",
-    }
-    if set(data) - allowed:
+    if set(data) - VALID_OPTION_KEYS:
         raise ValueError("Unknown App option")
-    diagnostic = data.get("diagnostic_only", False)
+    diagnostic = data.get("diagnostic_only", APP_DEFAULTS["diagnostic_only"])
     if type(diagnostic) is not bool:
         raise ValueError("Diagnostic option must be a boolean")
-    persistent_session = data.get("persistent_session", False)
+    persistent_session = data.get("persistent_session", APP_DEFAULTS["persistent_session"])
     if type(persistent_session) is not bool:
         raise ValueError("Invalid persistent session option")
-    raw_v3 = data.get("raw_registers_v3", False)
+    raw_v3 = data.get("raw_registers_v3", APP_DEFAULTS["raw_registers_v3"])
     if type(raw_v3) is not bool or (raw_v3 and not persistent_session):
         raise ValueError("Raw-register mode requires a persistent session")
-    fan_v4 = data.get("fan_level_v4", False)
+    fan_v4 = data.get("fan_level_v4", APP_DEFAULTS["fan_level_v4"])
     if type(fan_v4) is not bool or (fan_v4 and not raw_v3):
         raise ValueError("Fan-level v4 requires raw v3")
-    poll = data.get("poll_seconds", 60)
+    poll = data.get("poll_seconds", APP_DEFAULTS["poll_seconds"])
     if type(poll) is not int or not 60 <= poll <= 3600:
         raise ValueError("Invalid poll interval")
 
@@ -162,10 +171,10 @@ def main() -> None:
             "probe_file": str(PROBE),
             "token_file": str(TOKEN),
             "bind_host": "0.0.0.0",
-            "poll_seconds": options.get("poll_seconds", 60),
-            "persistent_session": options.get("persistent_session", False),
-            "raw_registers_v3": options.get("raw_registers_v3", False),
-            "fan_level_v4": options.get("fan_level_v4", False),
+            "poll_seconds": options.get("poll_seconds", APP_DEFAULTS["poll_seconds"]),
+            "persistent_session": options.get("persistent_session", APP_DEFAULTS["persistent_session"]),
+            "raw_registers_v3": options.get("raw_registers_v3", APP_DEFAULTS["raw_registers_v3"]),
+            "fan_level_v4": options.get("fan_level_v4", APP_DEFAULTS["fan_level_v4"]),
         }
         print("Genvex Remote App: starting read-only polling on private App network", flush=True)
         asyncio.run(run(config))
