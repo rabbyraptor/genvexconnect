@@ -18,7 +18,7 @@ The full [v1 sequential work log](overnight-refactoring-log.md) and its conclusi
 | 5 Documentation | **Complete** | Replaced current HACS installation language with Marketplace 2026.11+, preserved historical technical file/action names |
 | 6 Reliability/error handling | **Complete** | Audited SDK lifecycle and snapshot invalidation; stronger model metadata fail-closed checks and negative tests |
 | 7 Packaging/installation | **Partially resolved** | Unified source gates now test Marketplace root LAN-vs-Remote separation; public repository Issues/topics and SDK release require independent actions |
-| 8 Integrated quality and final handoff | **In progress** | Verify final CI and publish v2 diffstat and complete report |
+| 8 Integrated quality and final handoff | **Complete** | Verified App/Remote + docs CI and published factual report |
 
 ## Actual changes grouped by decision
 
@@ -54,3 +54,12 @@ The full [v1 sequential work log](overnight-refactoring-log.md) and its conclusi
 1. Verify final branch HEAD, parities and post-documentation CI.
 2. Freeze and report Git changes **relative to `ed166488`** and optionally relative to `e0f2f462`. Do not estimate metrics.
 3. Publish `docs/overnight-v2-report.md`; mark task 8 complete only after a factual report exists.
+
+## Final audit closure — 23 November 2026
+
+- `docs/overnight-v2-report.md` published at `822f7565a5b5ed11e7c6dd11dd46d022aff08c7a` with eight-workstream review, immutable before/after checkpoint, verified regressions and detailed remaining decisions.
+- **Post-report Remote CI** [45100223178](https://github.com/rabbyraptor/genvexconnect/actions/runs/45100223178) **SUCCESS** (both cryptography matrix configurations). Formatting [45100223124](https://github.com/rabbyraptor/genvexconnect/actions/runs/45100223124) **SUCCESS** and hassfest [45100223166](https://github.com/rabbyraptor/genvexconnect/actions/runs/45100223166) **SUCCESS** on the same report code and source state.
+- **Post-code App CI** [45099966326](https://github.com/rabbyraptor/genvexconnect/actions/runs/45099966326) **SUCCESS**, 190 App + 148 HA tests, deterministic source archive and SHA256. **Post-code Remote CI** [45099966406](https://github.com/rabbyraptor/genvexconnect/actions/runs/45099966406) **SUCCESS**, both cryptography variants each 365 source + 148 HA tests.
+- Historical intermediate docs commits temporarily failed the repository-link gate because the index referenced this report before its file was committed; final report commit resolves that dependency and post-report Remote CI is green.
+- Final README revisions avoid claiming the LAN integration is *currently installable* through Marketplace while the repository-level validation fails. Marketplace [45100223177](https://github.com/rabbyraptor/genvexconnect/actions/runs/45100223177) remains **FAILED** on Issues/topics repository metadata only; task 7 remains **partially resolved** rather than falsely complete.
+- Original v1 log and report are preserved. Neither v1 nor main nor the installed HAOS was altered as part of v2; no live remote write or hardware probe was executed.
