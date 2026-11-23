@@ -5,6 +5,7 @@ on:
     branches:
       - remote-nabto-connection
       - overnight-refactoring
+      - overnight-v2
     paths:
       - "experimental/genvex_remote/**"
       - "experimental/home_assistant/**"
