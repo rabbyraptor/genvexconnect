@@ -3,7 +3,8 @@ name: Genvex Remote ARM64 App image build (no secrets)
 on:
   push:
     branches:
-      - remote-nabto-connection
+      - main
+      - development
     paths:
       - "genvex-nabto-remote/Dockerfile"
       - "genvex-nabto-remote/run.sh"
@@ -48,7 +49,7 @@ jobs:
           set -euo pipefail
           docker build --platform linux/arm64 \
             --build-arg BUILD_ARCH=aarch64 \
-            --build-arg BUILD_VERSION=0.1.0-dev8 \
+            --build-arg BUILD_VERSION=0.1.0-dev9 \
             --tag genvex-nabto-remote:ci \
             genvex-nabto-remote
       - name: Inspect image and import runtime offline
@@ -69,8 +70,8 @@ jobs:
             exit 1
           fi
           IMAGE_VERSION=$(docker image inspect genvex-nabto-remote:ci --format '{{index .Config.Labels "io.hass.version"}}')
-          if [ "$IMAGE_VERSION" != 0.1.0-dev8 ]; then
-            echo "::error::App image version does not match v0.1.0-dev8 candidate"
+          if [ "$IMAGE_VERSION" != 0.1.0-dev9 ]; then
+            echo "::error::App image version does not match v0.1.0-dev9 candidate"
             exit 1
           fi
           PORTS=$(docker image inspect genvex-nabto-remote:ci --format '{{json .Config.ExposedPorts}}')

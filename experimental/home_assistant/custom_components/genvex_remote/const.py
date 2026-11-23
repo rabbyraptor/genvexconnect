@@ -1,4 +1,4 @@
-"""Isolated future Home Assistant integration constants (not deployable yet)."""
+"""Versioned read-only Genvex Remote Home Assistant entity catalog."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -9,6 +9,7 @@ CONF_RUNTIME_ENDPOINT = "runtime_endpoint"
 CONF_RUNTIME_TOKEN = "runtime_token"
 CONF_PAIR_FROM_APP = "pair_from_app"
 CONF_RAW_REGISTERS_V3 = "raw_registers_v3"
+CONF_FAN_LEVEL_V4 = "fan_level_v4"
 POLL_SECONDS = 60
 
 @dataclass(frozen=True)
