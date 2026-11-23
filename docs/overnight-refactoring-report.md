@@ -1,5 +1,8 @@
 # Overnight refactoring — consolidated delivery report
 
+> **Historical v1 checkpoint.** Home Assistant 2026.11+ uses the built-in Marketplace. Names such as `hacs.json` and `hacs/action` remain technical compatibility names. The current follow-up findings and corrections are recorded in [overnight v2 report](overnight-v2-report.md).
+
+
 **Audit checkpoint:** `79b91632e7e7f735672df6afa6903805ef68ade2`, 23 November 2026.  
 **Branch:** `overnight-refactoring` ([GitHub](https://github.com/rabbyraptor/genvexconnect/tree/overnight-refactoring))  
 **Immutable before-state:** DEV9 `e0f2f46214a0561515f7bb4fda5841e481b3abbe`.  
