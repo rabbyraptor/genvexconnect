@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - development
+      - standalone-repo-migration
     paths:
       - "genvex-nabto-remote/**"
       - "experimental/genvex_remote/**"
