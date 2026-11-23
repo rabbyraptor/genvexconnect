@@ -41,6 +41,7 @@ class MicroProtocolCatalogTests(unittest.TestCase):
             self.assertEqual(command.name, item["type"])
             self.assertEqual(command, get_micro_command(item["type"]))
             self.assertEqual(item["hex"], f"0x{command.opcode:02x}")
+            self.assertTrue(command.source.startswith("https://github.com/"))
         self.assertFalse(get_micro_command(43).transmit_enabled)
         self.assertFalse(get_micro_command(43).remote_verified)
         self.assertTrue(get_micro_command(42).remote_verified)
@@ -88,6 +89,23 @@ class MicroProtocolCatalogTests(unittest.TestCase):
                 self.assertFalse(spec.write_enabled)
                 with self.assertRaises(ValueError):
                     spec.display_value(spec.raw_min - 1)
+                self.assertEqual(
+                    spec.source_raw_from_display(spec.display_value(spec.raw_min)),
+                    spec.raw_min,
+                )
+                self.assertFalse(spec.write_enabled)
+
+    def test_source_only_reverse_scaling_and_invalid_values(self):
+        temp = get_model_setpoint("optima270", "temp_setpoint")
+        self.assertEqual(temp.display_value(150), 25.0)
+        self.assertEqual(temp.source_raw_from_display(25.0), 150)
+        self.assertEqual(
+            get_model_setpoint("optima270", "fan_speed").source_raw_from_display(2),
+            2,
+        )
+        for invalid in (True, "25.0", float("nan"), float("inf"), -1, 10000):
+            with self.subTest(invalid=repr(invalid)), self.assertRaises(ValueError):
+                temp.source_raw_from_display(invalid)
 
     def test_source_excluded_setpoints_stay_inactive(self):
         self.assertEqual(len(OPTIMA270_INACTIVE_SETPOINTS), 9)
