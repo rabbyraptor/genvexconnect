@@ -41,14 +41,18 @@ class PollingService:
         """Stop at any point, including during a long RPC; clear cached data."""
         self._stop.set()
         task = self._task
-        if task is not None:
-            task.cancel()
-            try:
-                await task
-            except asyncio.CancelledError:
-                pass
-        self._task = None
-        self.state.invalidate()
+        try:
+            if task is not None:
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
+        finally:
+            # A crashed loop must not leave the last successful sensor
+            # snapshot available, even if its exception surfaces to caller.
+            self._task = None
+            self.state.invalidate()
 
     async def _loop(self) -> None:
         """Never overlap polls and avoid catch-up bursts after slow requests."""
