@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - remote-nabto-connection
+      - overnight-refactoring
     paths:
       - "experimental/genvex_remote/**"
       - "experimental/home_assistant/**"
