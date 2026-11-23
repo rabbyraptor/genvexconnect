@@ -99,7 +99,8 @@ def source_files() -> dict[str, bytes]:
         files["custom_components/genvex_remote/" + rel.as_posix()] = _regular(path)
 
     app_manifest = files["genvex_nabto_remote/config.yaml"].decode("utf-8")
-    if (re.search(fr'^version: "{re.escape(APP_VERSION)}"            or "  raw_registers_v3: bool" not in app_manifest
+    if (re.search(fr'^version: "{re.escape(APP_VERSION)}"$', app_manifest, re.MULTILINE) is None
+            or "  raw_registers_v3: bool" not in app_manifest
             or "  raw_registers_v3: false" not in app_manifest
             or "  fan_level_v4: bool" not in app_manifest
             or "  fan_level_v4: false" not in app_manifest
