@@ -25,7 +25,7 @@
 | Nr. | Opgave | Status |
 |---|---|---|
 | 1 | Arkitekturrevision og Single Source of Truth | **Afsluttet** |
-| 2 | Gennemgribende refaktorering | Afventer |
+| 2 | Gennemgribende refaktorering | **I gang** |
 | 3 | Fælles registerkatalog og datamodel | Afventer |
 | 4 | Konfiguration og versionsstyring | Afventer |
 | 5 | Dokumentation og oprydning | Afventer |
@@ -49,3 +49,14 @@
 - **Verifikation:** Git tree, blob-SHA-identitet og kildekode gennemgået; **ingen nye automatiserede tests kørt** (dokumentations-/beslutningsopgave).
 - **Konsekvens:** Næste opgaver kan rydde op uden at sammenblande runtime-/HA-ansvar eller gentage gamle DEV2/DEV8-statuspåstande.
 - **For opgave 2:** Læs dette logafsnit og arkitekturdokumentet; hold spejlede moduler i byte-paritet, og undgå ændringer af RPC42/45-wireformat, entity-ID'er og gældende DEV9 API. Opgave 3 ejer registerkataloget, opgave 4 flags/versioner og opgave 5 den generelle status-dokumentation.
+
+### 2026-11-23 – Opgave 2 i gang: eksekveret strukturel refaktorering (første session)
+- **Reelt implementeret (ikke blot planlagt):** v3 og v4 snapshot-cache bruger nu én intern `_build_v1_v3_snapshots`-funktion i `raw_snapshot_state_v3.py`. Begge schema-projektioner er whitelisted, kopierede og stadig selvstændigt valideret; v4-sensorens fan_level-felt, read-only flow og RPC42/RPC45-opkald er uændrede.
+- **Kodeændringer:** `experimental/genvex_remote/raw_snapshot_state_v3.py` og `raw_snapshot_state_v4.py`, byte-identiske App-kopier under `genvex-nabto-remote/runtime/`; `experimental/home_assistant/custom_components/genvex_remote/sensor.py` bygger nu identisk DeviceInfo fra én funktion i stedet for fire kopier.
+- **Ny offline regressionsdækning:** `genvex-nabto-remote/tests/test_overnight_snapshot_projection.py` verificerer v1/v3/v4 projektionens lighed, 0 ekstra SDK-læsninger, manglende frivillige råværdier, null fan step og at kopier ikke deler mutable tilstand.
+- **Commits – refaktorering:** `42de9f418bc856ea9ef2b62c227674333612bab3`, `a8f7f58273136b36ef59082eeed92a9dfc7d5845`, `28ae7784a8cb286ffa69e11f15cc18bf5eba03c3`, `59b9d91b864bd9f9d0d502a5cf6e78f9770b2303`, `e6b614038ac087cd99c400a61c37932c67e0ef9a`, `25ca35748340cd1ca61add6b39a03f7eccbb1026`.
+- **CI aktiveret på arbejdsbranch:** eksisterende to offline-workflows inkluderer nu `overnight-refactoring`. Commits `58586fa7e3cf468ad36a185dea06124c0f4ec927`, `ba41d8c1a94fcd0b71b2f5fccd838f3e32ae1034`. Denne målrettede CI-aktivering kommer før den generelle konsolidering i opgave 7.
+- **Faktisk testresultat:** Remote HAOS App candidate offline checks **SUCCESS** (Actions run `45092913548`); Remote Nabto offline-only tests, begge dependency-varianter, **SUCCESS** (run `45092916870`). Kilde/App-mirror er desuden verificeret med identiske Git blob-SHA'er for begge ændrede moduler. Formatter og hassfest-checks på refaktoreringens commits er bestået.
+- **Separat kendt CI-fejl:** HACS validation fejler på repository-topics og deaktiverede issues (begge repository-metadata uden for denne branch); dette forekom allerede ved opgave 1, og er ikke en kode-/testregression.
+- **Status:** Opgave 2 er **ikke** færdig efter første session. Fortsæt næste kørsel med at prioritere yderligere meningsfuld strukturel oprydning, uden at overtage opgave 3's registerkatalog eller opgave 4's options/versioner. Læs hele denne log igen og kontrollér CI-head før næste ændring. Eventuelle nye CI-fejl skal analyseres, før opgaven afsluttes.
+- **Konsekvens:** Mindre dubleret konstruktion af v1/v3-wireformat og HA-enhedsmetadata, mens den verificerede DEV9-adfærd og App/source-paritet bevares.
