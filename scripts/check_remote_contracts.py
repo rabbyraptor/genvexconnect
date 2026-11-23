@@ -117,8 +117,9 @@ def check() -> None:
 def main() -> int:
     try:
         check()
-    except (OSError, ValueError, KeyError, ImportError, SyntaxError):
-        print("REMOTE_CONTRACTS: FAIL")
+    except (OSError, ValueError, KeyError, ImportError, SyntaxError) as exc:
+        # Source-only contract errors cannot include runtime credentials.
+        print(f"REMOTE_CONTRACTS: FAIL {type(exc).__name__}: {exc}")
         return 1
     print("REMOTE_CONTRACTS: PASS")
     return 0
