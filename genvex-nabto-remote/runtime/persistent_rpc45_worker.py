@@ -19,16 +19,16 @@ from pathlib import Path
 from urllib.parse import quote
 
 from raw_registers_v3 import OPTIONAL_ADDRESSES, make_raw_v3
+from register_catalog import RPC42_FAN_LEVEL
+from sensor_model import SENSORS as SENSOR_MODEL
 from raw_snapshot_v4 import make_v4
 
 READY = "GENVEX_PERSISTENT_READY="
 RESULT = "GENVEX_PERSISTENT_RESULT="
-SENSORS = (
-    (20, "supply_air", 10, -300),
-    (21, "outdoor_air", 10, -300),
-    (22, "exhaust_air", 10, -300),
-    (23, "extract_air", 10, -300),
-    (26, "humidity", 1, 0),
+# Preserve the existing worker tuple shape but derive all metadata from the model.
+SENSORS = tuple(
+    (spec.address, spec.key, spec.divisor, spec.offset)
+    for spec in SENSOR_MODEL
 )
 SCHEMA = b"""<unabto_queries>
 <query name="candidate_read_datapoints.json" id="45">
@@ -59,7 +59,8 @@ SCHEMA42 = b"""<unabto_queries>
 
 def fan_url(host: str) -> bytes:
     body = {"request": {
-        "setpoints": [{"obj": 0, "address": 7}], "trailer": 1,
+        "setpoints": [{"obj": RPC42_FAN_LEVEL.object_id,
+                       "address": RPC42_FAN_LEVEL.address}], "trailer": 1,
     }}
     return ("nabto://" + host + "/candidate_read_setpoints.json?json="
             + quote(json.dumps(body, separators=(",", ":")), safe="")).encode()
@@ -76,7 +77,7 @@ def decode_fan_level(raw: str) -> int | None:
                 or type(values[0]) is not dict):
             return None
         level = values[0].get("value")
-        return level if type(level) is int and 0 <= level <= 4 else None
+        return level if type(level) is int and RPC42_FAN_LEVEL.minimum <= level <= RPC42_FAN_LEVEL.maximum else None
     except (ValueError, TypeError, KeyError, AttributeError, IndexError):
         return None
 
@@ -121,10 +122,6 @@ def rpc_url(host: str) -> bytes:
 
 def raw_rpc_url(host: str) -> bytes:
     """Read only the twelve previously observed candidate addresses."""
-    if OPTIONAL_ADDRESSES != (
-        24, 18, 19, 35, 36, 41, 42, 53, 40, 114, 115, 50
-    ):
-        raise ValueError("Unexpected raw register list")
     return _rpc45_url(host, OPTIONAL_ADDRESSES)
 
 
