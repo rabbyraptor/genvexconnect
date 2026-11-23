@@ -1,4 +1,4 @@
-"""DEV8.4.5 combined installer acceptance with fake HAOS / Supervisor.
+"""DEV9.4.5 combined installer acceptance with fake HAOS / Supervisor.
 
 Uses a real deterministic combined archive and host tar CLI but directs all
 filesystem mutations into a temporary directory. No HAOS or Nabto I/O.
@@ -24,10 +24,10 @@ def load_file(name, path):
     return obj
 
 
-pkg = load_file("dev8_package_for_host_test",
-                ROOT / "scripts/package_dev8_combined.py")
-installer = load_file("dev8_host_installer",
-                      ROOT / "scripts/install_dev8_combined.py")
+pkg = load_file("dev9_package_for_host_test",
+                ROOT / "scripts/package_dev9_combined.py")
+installer = load_file("dev9_host_installer",
+                      ROOT / "scripts/install_dev9_combined.py")
 
 
 class CombinedInstallerTests(unittest.TestCase):
@@ -42,7 +42,7 @@ class CombinedInstallerTests(unittest.TestCase):
         self.source_app.mkdir(parents=True)
         self.source_ha.mkdir(parents=True)
         (self.source_app / "config.yaml").write_text(
-            'version: "0.1.0-dev6"\n'
+            'version: "0.1.0-dev8"\n'
         )
         (self.source_app / "original.txt").write_text("OLD_APP")
         (self.source_ha / "manifest.json").write_text(
@@ -52,8 +52,8 @@ class CombinedInstallerTests(unittest.TestCase):
         self.distrib = self.root / "dist"
         self.distrib.mkdir()
         self.state = {
-            "version": "0.1.0-dev6",
-            "version_latest": "0.1.0-dev6",
+            "version": "0.1.0-dev8",
+            "version_latest": "0.1.0-dev8",
             "state": "started",
             "boot": "manual",
             "update_available": False,
@@ -91,15 +91,16 @@ class CombinedInstallerTests(unittest.TestCase):
                 self.state["state"] = "stopped"
                 return ""
             if argv == ("ha", "store", "reload"):
-                self.state["version_latest"] = "0.1.0-dev8"
+                self.state["version_latest"] = "0.1.0-dev9"
                 self.state["update_available"] = True
                 return ""
             if argv == ("ha", "apps", "update", installer.APP_SLUG, "--backup"):
                 if self.fail == "update":
                     raise installer.ReleaseBlocked("SIMULATED_APP_UPDATE_FAILED")
-                self.state["version"] = "0.1.0-dev8"
+                self.state["version"] = "0.1.0-dev9"
                 self.state["update_available"] = False
                 self.state["options"].setdefault("raw_registers_v3", False)
+                self.state["options"].setdefault("fan_level_v4", False)
                 return ""
             if argv == ("ha", "apps", "start", installer.APP_SLUG):
                 self.state["state"] = "started"
@@ -115,16 +116,16 @@ class CombinedInstallerTests(unittest.TestCase):
         self.fake_command = fake_command
         self.patches = [
             patch.object(pkg, "DIST", self.distrib),
-            patch.object(pkg, "ARCHIVE", self.distrib / "dev8.tar.gz"),
+            patch.object(pkg, "ARCHIVE", self.distrib / "dev9.tar.gz"),
             patch.object(pkg, "SUMS", self.distrib / "SUMS"),
             patch.object(installer, "BASE", self.app_base),
             patch.object(installer, "HA_HOME", self.ha_home),
             patch.object(installer, "APP_SOURCE", self.source_app),
             patch.object(installer, "HA_SOURCE", self.source_ha),
-            patch.object(installer, "APP_BACKUP", self.app_base / ".backup-dev8"),
-            patch.object(installer, "HA_BACKUP", self.ha_home / ".backup-dev8"),
-            patch.object(installer, "APP_STAGE", self.app_base / ".stage-dev8"),
-            patch.object(installer, "HA_STAGE", self.ha_home / ".stage-dev8"),
+            patch.object(installer, "APP_BACKUP", self.app_base / ".backup-dev9"),
+            patch.object(installer, "HA_BACKUP", self.ha_home / ".backup-dev9"),
+            patch.object(installer, "APP_STAGE", self.app_base / ".stage-dev9"),
+            patch.object(installer, "HA_STAGE", self.ha_home / ".stage-dev9"),
             patch.object(installer, "command", side_effect=self.fake_command),
             patch.object(installer, "core_api_ready", return_value=True),
         ]
@@ -133,7 +134,7 @@ class CombinedInstallerTests(unittest.TestCase):
             self.addCleanup(item.stop)
         self.archive, self.sha, _ = pkg.build()
 
-    def test_real_dev8_bundle_validates_without_host_mutation(self):
+    def test_real_dev9_bundle_validates_without_host_mutation(self):
         before_app = (self.source_app / "config.yaml").read_bytes()
         before_ha = (self.source_ha / "manifest.json").read_bytes()
         files = installer.verify_bundle(self.archive, self.sha)
@@ -151,14 +152,16 @@ class CombinedInstallerTests(unittest.TestCase):
 
     def test_single_bundle_upgrades_app_and_ha_once(self):
         installer.apply(self.archive, self.sha)
-        self.assertEqual(self.state["version"], "0.1.0-dev8")
+        self.assertEqual(self.state["version"], "0.1.0-dev9")
         self.assertEqual(self.state["state"], "started")
         self.assertEqual(self.state["options"]["raw_registers_v3"], False)
         self.assertEqual(
-            (self.source_ha / "manifest.json").read_text().count('"0.2.0"'), 1
+            (self.source_ha / "manifest.json").read_text().count('"0.3.0"'), 1
         )
         self.assertTrue((self.source_app / "runtime/raw_registers_v3.py").is_file())
+        self.assertTrue((self.source_app / "runtime/raw_snapshot_v4.py").is_file())
         self.assertTrue((self.source_ha / "raw_snapshot_v3.py").is_file())
+        self.assertTrue((self.source_ha / "raw_snapshot_v4.py").is_file())
         self.assertTrue((installer.APP_BACKUP / "original.txt").is_file())
         self.assertTrue((installer.HA_BACKUP / "original.py").is_file())
         self.assertFalse(installer.APP_STAGE.exists())
@@ -177,18 +180,18 @@ class CombinedInstallerTests(unittest.TestCase):
         self.fail = "update"
         with self.assertRaises(installer.ReleaseBlocked):
             installer.apply(self.archive, self.sha)
-        self.assertEqual(self.state["version"], "0.1.0-dev6")
+        self.assertEqual(self.state["version"], "0.1.0-dev8")
         self.assertEqual(self.state["state"], "started")
         self.assertTrue((self.source_app / "original.txt").is_file())
         self.assertTrue((self.source_ha / "original.py").is_file())
         self.assertFalse(installer.APP_BACKUP.exists())
         self.assertFalse(installer.HA_BACKUP.exists())
 
-    def test_core_check_failure_restores_ha_source_and_keeps_dev8_app(self):
+    def test_core_check_failure_restores_ha_source_and_keeps_dev9_app(self):
         self.fail = "core_check"
         with self.assertRaises(installer.ReleaseBlocked):
             installer.apply(self.archive, self.sha)
-        self.assertEqual(self.state["version"], "0.1.0-dev8")
+        self.assertEqual(self.state["version"], "0.1.0-dev9")
         self.assertEqual(self.state["state"], "started")
         self.assertTrue((self.source_ha / "original.py").is_file())
         self.assertFalse(installer.HA_BACKUP.exists())

@@ -35,7 +35,7 @@ class Dev2UpgradeContractTests(unittest.TestCase):
         manifest = legacy_source / "config.yaml"
         original = manifest.read_text()
         rewritten = original.replace(
-            'version: "0.1.0-dev8"',
+            'version: "0.1.0-dev9"',
             'version: "0.1.0-dev2"',
             1,
         )

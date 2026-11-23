@@ -1,4 +1,4 @@
-"""DEV8.4.4 combined versioned App+HA bundle test (offline, no HAOS)."""
+"""DEV9.4.4 combined versioned App+HA bundle test (offline, no HAOS)."""
 from __future__ import annotations
 
 import hashlib
@@ -11,8 +11,8 @@ import unittest
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
-SOURCE = ROOT / "scripts/package_dev8_combined.py"
-spec = importlib.util.spec_from_file_location("dev8_combined_packager", SOURCE)
+SOURCE = ROOT / "scripts/package_dev9_combined.py"
+spec = importlib.util.spec_from_file_location("dev9_combined_packager", SOURCE)
 pkg = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(pkg)
 
@@ -39,9 +39,10 @@ class CombinedPackageTests(unittest.TestCase):
         self.assertTrue(30 <= count <= 90)
         assert digest in pkg.SUMS.read_text()
         release = pkg.verify(archive, digest)
-        self.assertEqual(release["app_version"], "0.1.0-dev8")
-        self.assertEqual(release["home_assistant_version"], "0.2.0")
-        self.assertEqual(release["snapshot_schema"], 3)
+        self.assertEqual(release["app_version"], "0.1.0-dev9")
+        self.assertEqual(release["home_assistant_version"], "0.3.0")
+        self.assertEqual(release["snapshot_schema"], 4)
+        self.assertEqual(release["rpc42_fan_level"], {"object": 0, "address": 7, "range": [0, 4]})
         self.assertEqual(len(release["rpc45_addresses"]), 17)
 
         archive2, digest2, count2 = pkg.build()
@@ -52,14 +53,14 @@ class CombinedPackageTests(unittest.TestCase):
         archive, digest, _ = pkg.build()
         with tarfile.open(archive, "r:gz") as stream:
             names = stream.getnames()
-            self.assertIn("DEV8_RELEASE_MANIFEST.json", names)
+            self.assertIn("DEV9_RELEASE_MANIFEST.json", names)
             self.assertIn("genvex_nabto_remote/config.yaml", names)
             self.assertIn(
                 "genvex_nabto_remote/runtime/persistent_rpc45_worker.py",
                 names,
             )
             self.assertIn(
-                "custom_components/genvex_remote/raw_snapshot_v3.py",
+                "custom_components/genvex_remote/raw_snapshot_v4.py",
                 names,
             )
             self.assertIn(
@@ -81,7 +82,7 @@ class CombinedPackageTests(unittest.TestCase):
             )
         self.assertEqual(
             set(pkg.verify(archive, digest)["files"]),
-            set(names) - {"DEV8_RELEASE_MANIFEST.json"},
+            set(names) - {"DEV9_RELEASE_MANIFEST.json"},
         )
 
     def test_hash_mismatch_never_validated(self):
@@ -97,7 +98,7 @@ class CombinedPackageTests(unittest.TestCase):
         shutil.copytree(pkg.APP, duplicate)
         manifest = duplicate / "config.yaml"
         manifest.write_text(
-            manifest.read_text().replace("0.1.0-dev8", "0.1.0-dev6")
+            manifest.read_text().replace("0.1.0-dev9", "0.1.0-dev6")
         )
         with patch.object(pkg, "APP", duplicate):
             with self.assertRaises(pkg.InvalidCombinedPackage):
