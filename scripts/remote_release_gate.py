@@ -16,6 +16,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 CHECKS = (
     ("repository_links", ("scripts/check_repository_links.py",)),
+    ("marketplace_scope", ("scripts/check_marketplace_scope.py",)),
     ("runtime_parity", ("scripts/check_remote_runtime_parity.py", "--check")),
     ("option_contracts", ("scripts/check_remote_contracts.py",)),
     ("entity_localizations", ("scripts/sync_remote_entity_localizations.py", "--check")),
