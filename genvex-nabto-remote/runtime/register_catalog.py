@@ -393,16 +393,20 @@ def _validate_protocol_library() -> None:
         raise RuntimeError("Duplicate command opcode")
     if len(MICRO_COMMAND_BY_NAME) != len(MICRO_COMMANDS):
         raise RuntimeError("Duplicate command name")
-    for model in MODEL_PROFILES.values():
+    for model_key, model in MODEL_PROFILES.items():
+        if model_key != model.model_key or not model_key:
+            raise RuntimeError("Model identity does not match registry key")
         # New controller profiles must declare their own sensor metadata.
         if (len({item.address for item in model.rpc45}) != len(model.rpc45)
                 or len({item.key for item in model.rpc45}) != len(model.rpc45)):
             raise RuntimeError("Duplicate model RPC45 address or key")
         for item in model.rpc45:
-            if (not item.icon.startswith("mdi:")
-                    or not item.name.strip() or not item.label.strip()
-                    or type(item.address) is not int or item.address < 0):
-                raise RuntimeError("Missing model-specific register presentation")
+            if (type(item.icon) is not str or not item.icon.startswith("mdi:")
+                    or type(item.name) is not str or not item.name.strip()
+                    or type(item.label) is not str or not item.label.strip()
+                    or type(item.address) is not int
+                    or not 0 <= item.address <= 0xFFFFFFFF):
+                raise RuntimeError("Missing or invalid model register metadata")
         if len({item.key for item in model.setpoints}) != len(model.setpoints):
             raise RuntimeError("Duplicate setpoint key")
         if len({(item.read_object, item.read_address) for item in model.setpoints}) != len(model.setpoints):
