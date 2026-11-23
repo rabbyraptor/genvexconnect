@@ -1,7 +1,27 @@
-# Remote Nabto development status
+# Remote Nabto development status — DEV9
 
-**Updated:** 22 November 2026. **Branch:** `remote-nabto-connection`.  
-**Scope:** experimental remote Nabto Micro / Nabto 4 work for Genvex Connect Optima 270 on Home Assistant OS (ARM64). This is the current status summary; detailed dated evidence remains in [verified facts](remote-nabto-verified-facts.md) and [the archive](archive/README.md).
+**Current verified state:** 23 November 2026. **Code baseline:** DEV9 commit `e0f2f462`. **Refactoring branch:** `overnight-refactoring`. Changes here are not automatically installed on HAOS.
+
+| System | Verified state |
+| --- | --- |
+| Home Assistant OS | ARM64 host, x86-64 legacy Nabto Micro SDK under QEMU |
+| Remote App | `0.1.0-dev9`, persistent read-only SDK session |
+| HA integration | `genvex_remote` `0.3.0` |
+| RPC45 | Five scaled measurements and seventeen raw signed-int16 diagnostics |
+| RPC42 | Selected ventilation stage from obj=0, address=7; integer 0–4, null = unavailable |
+| Available entities | **24/24** on tested setup: 5 scaled + 17 raw + 1 data age + 1 stage |
+| Authentication | Private App IPC token, automatic Supervisor pairing or manual token |
+| Read/write catalog | All currently source-known RPC commands and twelve setpoint read/write address pairs are documented; **remote RPC43 writes remain unverified and disabled** |
+| Sensor metadata | New sensor entities use catalog-based default icons and Home Assistant native English/Danish translations, selected by the HA user's language |
+| Hardware scope | One known Optima 270 configuration; no general multi-model remote deployment claim |
+
+The [architecture map](overnight-architecture-baseline.md) and [task log](overnight-refactoring-log.md) are the source for the *current branch's* design and code/test changes. The [protocol library](micro-nabto-protocol-library.md) documents read-only lookups and source-evidence categories. No tests of live hardware were repeated as part of the refactoring.
+
+---
+
+## Historical chronology — preserve dates, NOT current system status
+
+The following sections were written during earlier DEV1–DEV8 investigations, including when only five sensors or an older App version were available. Their “current”, “remaining” and “not yet deployed” statements are **historical at the time they were recorded** and must not override the DEV9 summary above.
 
 ## What is verified
 
