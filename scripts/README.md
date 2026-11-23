@@ -2,6 +2,15 @@
 
 Run scripts from the **repository root** unless a script explicitly says otherwise. This directory holds current and still useful diagnostic entry points; superseded versioned scripts live in [archive/](archive/README.md).
 
+## Marketplace scope
+
+Home Assistant 2026.11+ uses the built-in Marketplace rather than a standalone
+HACS installation. The old publisher file `hacs.json` and action `hacs/action`
+remain supported technical interfaces. `scripts/check_marketplace_scope.py`
+enforces that the repository's Marketplace metadata targets the original
+`genvex_connect` LAN integration, **not** the separate Remote App/component.
+GitHub topics and Issues are repository settings, outside this branch's package.
+
 ## Current DEV9 release workflow
 
 The one supported **source-only** entry point for this branch is:
