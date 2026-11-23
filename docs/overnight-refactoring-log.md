@@ -25,9 +25,9 @@
 | Nr. | Opgave | Status |
 |---|---|---|
 | 1 | Arkitekturrevision og Single Source of Truth | **Afsluttet** |
-| 2 | Gennemgribende refaktorering | **I gang** |
-| 3 | Fælles registerkatalog og datamodel | Afventer |
-| 4 | Konfiguration og versionsstyring | Afventer |
+| 2 | Gennemgribende refaktorering | **Afsluttet** |
+| 3 | Fælles registerkatalog og datamodel | **Afsluttet** |
+| 4 | Konfiguration og versionsstyring | **Afsluttet** |
 | 5 | Dokumentation og oprydning | Afventer |
 | 6 | Robusthed og fejlhåndtering | Afventer |
 | 7 | Release- og installationssystem | Afventer |
@@ -60,3 +60,35 @@
 - **Separat kendt CI-fejl:** HACS validation fejler på repository-topics og deaktiverede issues (begge repository-metadata uden for denne branch); dette forekom allerede ved opgave 1, og er ikke en kode-/testregression.
 - **Status:** Opgave 2 er **ikke** færdig efter første session. Fortsæt næste kørsel med at prioritere yderligere meningsfuld strukturel oprydning, uden at overtage opgave 3's registerkatalog eller opgave 4's options/versioner. Læs hele denne log igen og kontrollér CI-head før næste ændring. Eventuelle nye CI-fejl skal analyseres, før opgaven afsluttes.
 - **Konsekvens:** Mindre dubleret konstruktion af v1/v3-wireformat og HA-enhedsmetadata, mens den verificerede DEV9-adfærd og App/source-paritet bevares.
+
+### 2026-11-23 – Opgave 2 afsluttet: aktiv fjernkode refaktoreret
+- **Omfang:** DEV9's aktive remote runtime- og HA-kæde, ikke den uafhængige LAN-integration eller historiske draft-filer. Den forrige sessions v1/v3/v4 snapshot-cache-fællesfunktion og HA DeviceInfo-forenkling er bevaret.
+- **Yderligere implementering:** Én `_rpc45_url`-funktion bygger nu både baseline- og optional-request i `genvex-nabto-remote/runtime/persistent_rpc45_worker.py`; fælles wire-envelope, samme adresseorden. `coordinator.py` bruger nu `_decode_payload` til v1/v3/v4-projektion med identisk raw-feltnavne og null-stage-håndtering.
+- **Nye commits:** `90937d3c52d0392e6418809ebdbf65e24964e2c2` (worker), `028b2ba8aed616ce450e3817255f31e02970cbad` (HA coordinator), `821fe95096740c4a8c60b2578d0f22b3cdec21e6` (wire/scaling regression). Se tidligere session ovenfor for de allerede committede snapshot-/DeviceInfo-filer.
+- **Offline test:** RPC45 5+12 request-address-order, JSON request-shape og fem skalerede værdier låst i `genvex-nabto-remote/tests/test_overnight_rpc45_encoding.py`. Allerede eksisterende v1/v3/v4/offline paritetstests bestået på final integreret kode i GitHub Actions App `45094049586` og Remote `45094049587`.
+- **Konsekvens:** Fjernet gentaget request-/snapshot-/devicekonstruktion, reduceret risiko for forskellige kodestier ved senere DEV-udvidelser, uden ændring af registrenes faktiske værdier, entity-ID'er eller persistent SDK-session.
+- **Afgrænsning:** Ingen bred sletning af historiske DEV-moduler; dette er ansvarligt begrænset til produktionsformet DEV9-kode. Historisk oprydning hører til opgave 5/7.
+
+### 2026-11-23 – Opgave 3 afsluttet: kanonisk registerkatalog
+- **One Source of Truth:** `experimental/genvex_remote/register_catalog.py` ejer nu de fem baseline- og 12 optional RPC45-definitioner (navn, adresse, orden, rå/skalering, labels, evidens/noter) og RPC42 read-only stage object=0/address=7/range=0–4. To byte-identiske shipping-kopier ligger i App runtime og HA-integrationen.
+- **Konkrete konsumenter:** `sensor_model.py` projicerer fem skalerede specs, `raw_registers_v3.py` projicerer optional nøgle/adresse-orden, worker projicerer sin eksisterende tuple-/queryform, HA `const.py` projicerer entity-definitioner, `raw_interpretation.py` projicerer evidensnoter, og HA `sensor.py` udstiller fan-stage fra kataloget. Ingen af disse kan fremover ændre registrenes adresser uafhængigt af authority.
+- **Drift-kontrol:** `scripts/check_remote_runtime_parity.py` check/sync omfatter nu også HA-katalogkopien. `test_overnight_register_catalog.py` fastholder 17 registeradresser, order, evidens og alle 3 kopiers byte-identitet.
+- **Væsentlige commits:** `53559b80adf7be9072237e250ef686705db309e3` (canonical), `6660e1c8548820292d815b68b14c861e560afeab` (HA projection), `c97bdfa44294a3319df487d03c9b0417350c3674` (sensor projection), `cde98013cde381dcd136748bc6f3f11741983c74` (optional projection), `f860ce7738ea457f1c68b906f4ffbea0f5e6bdf6` (HA entities), `60e537c0558eb28e6493a70b0098e002536926f4` (evidence), `d5c6aaabb05e0dbf1aa3d797c78163623cd9bf69` (parity), `e7af100b611e4928cb9df2c7f221578034862878` (tests). Øvrige App-mirrors og fan worker/sensor fremgår af git-historikken.
+- **Test:** App offline `45094049586` **SUCCESS**, Remote offline med begge cryptography-varianter `45094049587` **SUCCESS** (inklusive katalog- og paritetstests).
+- **Konsekvens:** Centraliserede wire-/sensorfakta uden at importere across HA/App HTTP boundary. Usikre fysiske fortolkninger forbliver `source_model_only`; 18/19 UI-match er stadig kun styresignalprocenter, ikke målt airflow/RPM.
+
+### 2026-11-23 – Opgave 4 afsluttet: option-, versions- og releasekontrakter
+- **Manifest-ejerskab:** App-version `0.1.0-dev9` læses fra `genvex-nabto-remote/config.yaml` og HA-version `0.3.0` fra HA `manifest.json` af `scripts/package_dev9_combined.py`; RPC45-liste og RPC42 stage i release-manifest genereres fra det kanoniske katalog i stedet for hardcodede 17 adresser.
+- **Konfiguration:** `app_bootstrap.APP_DEFAULTS` og `VALID_OPTION_KEYS` samler de eksisterende optional-defaults/keys. `scripts/check_remote_contracts.py` afviser uoverensstemmelser mellem App config.yaml, bootstraps tilladte option-keys/defaults, HA's v3/v4 optionnavne og release-metadata. Begge offline-workflows kører denne gate.
+- **Reel fejlrettelse:** `pairing_options.py` gemmer nu `fan_level_v4: true` også ved manuel IPC-token-parring, samtidig med at `raw_registers_v3` implicit aktiveres; automatisk pairing bevarer den hidtidige adfærd. Nye tests dækker begge flows.
+- **Commits:** `85f50084879ed43d67fe57dae97a863d026add80` (bootstrap defaults), `3c7da6ff394bfedeb5ab070223c743bbf0def918` (manual v4 fix), `5cd46706c0050b710461e6581aadecf319313318` (flow tests), `033787a9c359dd2b60145fc82244af8f1fbcd109` (contract gate), `db65e12181c90b67abc296bce53526c13ba03ed0` (release syntax correction), `5faf07ad751396b267e9d60f6a1c81b25037c600` (CI path filters), `89e354bfbd01a7bf2d72d29b2eeb5b1b206ec3b8` (architecture update). Se mellemcommits for oprindelig release-refaktor og dens efterfølgende CI-drevne rettelser.
+- **CI på `db65e121` efter fejlrettelser:** Remote HAOS App candidate offline checks **SUCCESS** (<https://github.com/rabbyraptor/genvexconnect/actions/runs/45094049586>), Remote Nabto offline-only begge matrix-ben **SUCCESS** (<https://github.com/rabbyraptor/genvexconnect/actions/runs/45094049587>), Formatting **SUCCESS** (`45094049651`), hassfest **SUCCESS** (`45094049592`). Begge workflows inkluderer contract gate og deterministisk DEV9 source/package check.
+- **Tidligere røde commits:** Nye release-gates afdækkede en ufuldstændig streng og efterfølgende duplikeret trailing source i pakker-scriptet; begge blev rettet og genkontrolleret med grønne offline-workflows på `db65e121`. Midlertidige røde historiske CI-runs skal ikke forveksles med final CI-state.
+- **Kendt uafhængig fejl:** HACS Validate-workflowet fejler på repository-topics og deaktiverede issues; ikke på Python-koden. Dette ligger uden for refaktoreringens branch-skift.
+- **Konsekvens:** Fremtidige versions-/registerændringer kan ikke uforvarende give andre packaged metadata, default-flags eller v4-parring, uden at parity/kontraktgates fejler. Ingen HAOS-installation eller live SDK-tests udført.
+
+### Overdragelse til opgave 5
+- Læs hele denne log og `docs/overnight-architecture-baseline.md` før ændringer. Opgave 2–4 er afsluttet; **næste uafsluttede opgave er 5 (dokumentationsrevision)**.
+- Brug `register_catalog.py` som eneste forfatterskilde til RPC45/RPC42 fakta. Begge deploymentkopier er kontrollerede mirrors. Brug App config.yaml og HA manifest.json som versionskilder. Lad ikke gammel DEV2/DEV8 status i `docs/README.md` eller `docs/STATUS.md` overskrive DEV9 fakta.
+- Bevar tidligere status for 24 sensors, automatisk parring og manual-token-valg samt read-only RPC42/RPC45. Hold App/HA schema-validatorer adskilt.
+- Opgave 7 må eventuelt konsolidere CI, men må ikke fjerne de nye parity/contract-gates eller ændre manifest-ejede versioner.
