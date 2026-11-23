@@ -42,6 +42,57 @@
       },
       "fan_level": {
         "name": "Fan level"
+      },
+      "raw_supply_air": {
+        "name": "RPC45 raw 20 – Supply air"
+      },
+      "raw_outdoor_air": {
+        "name": "RPC45 raw 21 – Outdoor air"
+      },
+      "raw_exhaust_air": {
+        "name": "RPC45 raw 22 – Exhaust air"
+      },
+      "raw_extract_air": {
+        "name": "RPC45 raw 23 – Extract air"
+      },
+      "raw_humidity": {
+        "name": "RPC45 raw 26 – Humidity"
+      },
+      "raw_frost_protection_temp": {
+        "name": "RPC45 raw 24 – Frost protection"
+      },
+      "raw_fan_duty_supply": {
+        "name": "RPC45 raw 18 – Supply fan control"
+      },
+      "raw_fan_duty_extract": {
+        "name": "RPC45 raw 19 – Extract fan control"
+      },
+      "raw_fan_rpm_supply": {
+        "name": "RPC45 raw 35 – Supply fan candidate"
+      },
+      "raw_fan_rpm_extract": {
+        "name": "RPC45 raw 36 – Extract fan candidate"
+      },
+      "raw_preheat_pwm": {
+        "name": "RPC45 raw 41 – Preheat"
+      },
+      "raw_reheat_pwm": {
+        "name": "RPC45 raw 42 – Reheat"
+      },
+      "raw_bypass_active_raw": {
+        "name": "RPC45 raw 53 – Bypass status"
+      },
+      "raw_bypass_analog_raw": {
+        "name": "RPC45 raw 40 – Bypass analog"
+      },
+      "raw_alarm_word_1_raw": {
+        "name": "RPC45 raw 114 – Alarm word 1"
+      },
+      "raw_alarm_word_2_raw": {
+        "name": "RPC45 raw 115 – Alarm word 2"
+      },
+      "raw_rotor_rpm": {
+        "name": "RPC45 raw 50 – Rotor candidate"
       }
     }
   },
