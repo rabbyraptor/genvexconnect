@@ -42,6 +42,57 @@
       },
       "fan_level": {
         "name": "Ventilatorniveau"
+      },
+      "raw_supply_air": {
+        "name": "RPC45 råværdi 20 – Tilluft"
+      },
+      "raw_outdoor_air": {
+        "name": "RPC45 råværdi 21 – Udeluft"
+      },
+      "raw_exhaust_air": {
+        "name": "RPC45 råværdi 22 – Afkastluft"
+      },
+      "raw_extract_air": {
+        "name": "RPC45 råværdi 23 – Fraluft"
+      },
+      "raw_humidity": {
+        "name": "RPC45 råværdi 26 – Luftfugtighed"
+      },
+      "raw_frost_protection_temp": {
+        "name": "RPC45 råværdi 24 – Frostbeskyttelse"
+      },
+      "raw_fan_duty_supply": {
+        "name": "RPC45 råværdi 18 – Tilluftventilator styresignal"
+      },
+      "raw_fan_duty_extract": {
+        "name": "RPC45 råværdi 19 – Fraluftventilator styresignal"
+      },
+      "raw_fan_rpm_supply": {
+        "name": "RPC45 råværdi 35 – Tilluftventilator"
+      },
+      "raw_fan_rpm_extract": {
+        "name": "RPC45 råværdi 36 – Fraluftventilator"
+      },
+      "raw_preheat_pwm": {
+        "name": "RPC45 råværdi 41 – Forvarme"
+      },
+      "raw_reheat_pwm": {
+        "name": "RPC45 råværdi 42 – Eftervarme"
+      },
+      "raw_bypass_active_raw": {
+        "name": "RPC45 råværdi 53 – Bypassstatus"
+      },
+      "raw_bypass_analog_raw": {
+        "name": "RPC45 råværdi 40 – Bypass analog"
+      },
+      "raw_alarm_word_1_raw": {
+        "name": "RPC45 råværdi 114 – Alarmregister 1"
+      },
+      "raw_alarm_word_2_raw": {
+        "name": "RPC45 råværdi 115 – Alarmregister 2"
+      },
+      "raw_rotor_rpm": {
+        "name": "RPC45 råværdi 50 – Rotor"
       }
     }
   },
