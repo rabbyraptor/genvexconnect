@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .register_catalog import RPC45_BASELINE, RPC45_ALL
+from .register_catalog import RPC45_BASELINE, RPC45_ALL, rpc45_default_icon
 
 DOMAIN = "genvex_remote"
 CONF_DEVICE_ID = "device_id"
@@ -20,9 +20,10 @@ class RemoteSensor:
     translation_key: str
     address: int
     unit: str
+    icon: str
 
 SENSORS = tuple(
-    RemoteSensor(spec.key, spec.key, spec.address, spec.unit)
+    RemoteSensor(spec.key, spec.key, spec.address, spec.unit, rpc45_default_icon(spec.key))
     for spec in RPC45_BASELINE
 )
 
@@ -31,12 +32,13 @@ class RemoteRawRegister:
     key: str
     address: int
     label: str
+    icon: str
 
 
 # Diagnostic names and addresses project the canonical register facts.
 # This does not confer physical units or meaning upon raw signed int16 data.
 RAW_REGISTERS = tuple(
-    RemoteRawRegister(spec.key, spec.address, spec.label)
+    RemoteRawRegister(spec.key, spec.address, spec.label, rpc45_default_icon(spec.key))
     for spec in RPC45_ALL
 )
 
