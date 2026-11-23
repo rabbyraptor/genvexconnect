@@ -319,6 +319,16 @@ MODEL_PROFILES = {
 }
 
 
+def rpc45_translation_key(model_key: str, key: str) -> str:
+    """Keep the current Optima 270 entity IDs; namespace future models."""
+    model = get_model(model_key)
+    if type(key) is not str or not any(item.key == key for item in model.rpc45):
+        raise KeyError("Unknown model register for sensor translation")
+    if model_key == "optima270":
+        return "raw_" + key
+    return model_key + "_raw_" + key
+
+
 def get_micro_command(opcode_or_name: int | str) -> MicroCommand:
     """Look up an identified operation, without creating a request."""
     command = (
