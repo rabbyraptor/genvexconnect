@@ -39,12 +39,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Validate repository links and archived script references
-        run: python scripts/check_repository_links.py
-      - name: Check App/HA configuration and release contract
-        run: python scripts/check_remote_contracts.py
-      - name: Verify translated default names for all remote sensors
-        run: python scripts/sync_remote_entity_localizations.py --check
+      - name: Run common remote source and localization contract gate
+        run: python scripts/remote_release_gate.py --check
       - name: Install offline cryptography test dependency
         run: python -m pip install "cryptography==${{ matrix.cryptography }}"
       - name: Run tests (no live vendor account, network or secrets)
