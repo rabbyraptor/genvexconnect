@@ -119,7 +119,12 @@ class PersistentSDKSnapshotAdapter:
 
     async def _ensure_worker(self) -> None:
         if self._proc is not None:
-            return
+            if self._proc.returncode is None:
+                return
+            # A previously valid SDK process can exit between scheduled
+            # polls. Never reuse its closed stdio or retain an old error
+            # counter when starting a replacement session.
+            await self._shutdown_worker()
         env = {
             "PATH": "/usr/local/bin:/usr/bin:/bin",
             "HOME": "/tmp",
