@@ -22,7 +22,7 @@ HA = ROOT / "experimental/home_assistant/custom_components/genvex_remote"
 
 def _yaml_map(text: str, section: str) -> dict[str, object]:
     match = re.search(
-        rf"(?m)^{re.escape(section)}:\n((?:  [a-z_]+: [^\n]*\n)+)", text,
+        rf"(?m)^{re.escape(section)}:\n((?:  [a-z0-9_]+: [^\n]*\n)+)", text,
     )
     if match is None:
         raise ValueError(f"Missing or irregular App {section} section")
