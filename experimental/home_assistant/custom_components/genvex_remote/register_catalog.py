@@ -172,6 +172,20 @@ class SetpointDefinition:
             raise ValueError("Raw setpoint outside source-model range")
         return (raw + self.offset) / self.divisor
 
+    def source_raw_from_display(self, display: float) -> int:
+        """Source-only reverse scaling; no write capability or packet encoding.
+
+        This matches the audited community model's int truncation formula.
+        """
+        from math import isfinite
+
+        if type(display) not in (int, float) or not isfinite(display):
+            raise ValueError("Invalid displayed setpoint value")
+        raw = int(display * self.divisor - self.offset)
+        if not self.raw_min <= raw <= self.raw_max:
+            raise ValueError("Setpoint outside source-model raw range")
+        return raw
+
 
 @dataclass(frozen=True)
 class InactiveSetpoint:
