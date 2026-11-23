@@ -55,7 +55,7 @@ Experimental separate HA integration (genvex_remote)
 Home Assistant Core
 ```
 
-The LAN `genvex_connect` HACS integration is a **separate already-working path**. The remote implementation is **not** a phone-app translation layer: it invokes the legacy SDK RPC interface directly. A native ARM64 reverse-engineered client is not implemented; QEMU is the tested compatibility mechanism.
+The LAN `genvex_connect` community integration is a **separate already-working path** (Marketplace on HA 2026.11+, historical HACS on older installations). The remote implementation is **not** a phone-app translation layer: it invokes the legacy SDK RPC interface directly. A native ARM64 reverse-engineered client is not implemented; QEMU is the tested compatibility mechanism.
 
 ## Data-age deployment (22 November 2026)
 
