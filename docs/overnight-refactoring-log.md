@@ -28,9 +28,10 @@
 | 2 | Gennemgribende refaktorering | **Afsluttet** |
 | 3 | Fælles registerkatalog og datamodel | **Afsluttet** |
 | 4 | Konfiguration og versionsstyring | **Afsluttet** |
-| 5 | Dokumentation og oprydning | Afventer |
-| 6 | Robusthed og fejlhåndtering | Afventer |
-| 7 | Release- og installationssystem | Afventer |
+| 5 | Dokumentation og oprydning | **Afsluttet** |
+| 6 | Robusthed og fejlhåndtering | **Afsluttet** |
+| 7 | Release- og installationssystem | **Delvist løst** (source-build/CI færdig; HACS repo-metadata og public release udestår) |
+| 8 | Afsluttende integration, kvalitetssikring og samlet rapport | **I gang** |
 
 ## Logposter
 
@@ -109,3 +110,33 @@
 - De fem `MicroCommand.source`-felter indeholder nu konkrete GitHub-URL'er til de anvendte offentlige kildeprotokoller og Nabtos ping-interface.
 - Nye/udvidede checks kontrollerer negative, boolske, uendelige og NaN-input og kilde-URL'er; ændringer i tre byte-identiske katalogkopier: `4fe5a59280c4a4e706d52796fc69604998fde6c8`, `1e90a87142247dc2c9eca3c80f2e349db6aaf595`, `afb30557d74676f2805f4165c238701082a49267`, `730165bae683ec2f958304ee6a2c8acc409363bb`, `26642846548fdec758dd03b35464a3e6679fc868`, `320ef92c8ff31f2a0929521c4416b18216d28e16`; testcommit `2a9d3732dbfdbf11c6c632aae3f4e8748ca5a1f7`, dokumentation `979a0e26c3919bb51b8ef798d85f03b08e948828`.
 - Opgave 5 er fortsat den næste uafsluttede opgave; anvend denne opslagsdokumentation frem for at duplikere en ny protocol-kommandooversigt.
+
+### 2026-11-23 – Ekstra leverance: HA-sensorers standardsprog og ikoner
+- **Baggrund:** De 17 rådiagnoser havde tidligere `_attr_name` hardcoded på dansk, hvilket overstyrede Home Assistants indbyggede entity-oversættelser. Optima 270's fem skalerede sensorer, data-alder og ventilatortrin var allerede delvist oversat.
+- **Implementeret:** Alle 17 råsensorer bruger nu stabile `raw_<key>` translation keys. Home Assistants native translations `strings.json`, `translations/en.json` og `translations/da.json` indeholder 24 entiteters standardnavne. `RPC45_DEFAULT_ICONS` i canonical `register_catalog.py` giver temperatur, fugt, ventilator, varme, bypass, alarm og rotor passende `mdi:`-ikoner. `sensor.py` bruger katalog-ikonet; alle unikke entity-ID'er er bevaret.
+- **Automatisk vedligeholdelse:** `scripts/sync_remote_entity_localizations.py --sync/--check` danner og tjekker sensor-oversættelser fra registrenes kildeprojektionsmetadata. App- og Remote-CI afviser drift; fremtidige modelprofilers nye sensorer skal eksplicit have et katalog-ikon/translation, før sync/check lykkes. Ingen eksisterende brugertilpassede HA-navne nulstilles.
+- **Test:** `experimental/home_assistant/tests/test_remote_entity_localizations.py` og de opdaterede råsensor-tests validerer DA/EN-komplethed, per-address navne, ikoner og `_attr_translation_key`. GitHub Actions App **SUCCESS** run `45096799091`: 189 App-tests + 146 HA-tests, source gates og pakning.
+- **Filer:** `experimental/genvex_remote/register_catalog.py` + to shipping-kopier, HA `const.py`, `sensor.py`, `strings.json`, `translations/da.json`, ny `translations/en.json`, scripts/sync_remote_entity_localizations.py, tests og begge workflows.
+- **Begrænsning:** HA styrer selv oversættelsesvalg og fallback pr. frontend/konfiguration. Kodebranchens ændringer er ikke installeret på HAOS.
+
+### 2026-11-23 – Opgave 5 afsluttet: dokumentationsrevision
+- **Leveret:** `README.md`, `docs/README.md` og `docs/STATUS.md` beskriver DEV9 `0.1.0-dev9`/`0.3.0`, 24 sensorer, read-only RPC42 0–4, registrenes evidensstatus og DEV9's aktualitet. Forældede DEV2/DEV8 oplysninger er tydeligt dateret og flyttet til historisk kontekst.
+- **Andre opdateringer:** `experimental/home_assistant/README.md` forklarer v1/v3/v4, stable IDs, EN/DA-oversættelser og standardikoner. `genvex-nabto-remote/DOCS.md` beskriver faktisk live v4-status og App's isolerede snapshotmodes. `scripts/README.md` forklarer canonical source release-gate, modelopslag, gamle specialværktøjer og ingen auto-deploy.
+- **Status/test:** Repository-link check og kildeparitet er inkluderet i fælles CI; HACS metadatafejl fra repoindstillinger er ikke en dokumentationsfejl. Commitspor via branch diff.
+- **Betydning:** Gældende installation blandes ikke længere sammen med tidlige DEV-milestones.
+
+### 2026-11-23 – Opgave 6 afsluttet: SDK-worker og polling-livscyklus
+- **Kodeændringer:** `persistent_sdk_adapter._ensure_worker` genstarter en QEMU/SDK-worker, som allerede har afsluttet processen, før næste planlagte læsning i stedet for at genbruge lukket stdio; `PollingService.stop` invaliderer altid cache og nulstiller taskreference via `finally`, også hvis en task fejler med en uventet undtagelse. Kanoniske moduler og App-mirrors er synkroniseret.
+- **Regression:** `genvex-nabto-remote/tests/test_dev3_persistent_adapter.py` har fake SDK-worker der afslutter efter én poll; næste poll opretter ny session. `test_dev3_polling_state.py` tester invalidate efter task-crash. Ingen live Nabto-kald eller HAOS handlinger.
+- **CI:** App `45096799091` **SUCCESS** (189 App-tests, 146 HA-tests), Remote `45096748400` **SUCCESS** (364 source-tests + 146 HA-tests i begge cryptography-matrixben); combined DEV9 source package og SHA256 lykkedes i App-run.
+- **Betydning:** Færre fejlagtige genbrugsforsøg efter worker exit; ingen stale snapshot beholdes ved uventet shutdown-fejl. Normal persistent-session-adfærd ændres ikke.
+
+### 2026-11-23 – Opgave 7 delvist løst: ensartet release- og installationsworkflow
+- **Udført:** `scripts/remote_release_gate.py --check` samler repository-link-kontrol, canonical runtime/App/HA-paritet, App/HA-konfigurationskontrakter og sensoroversættelses-gate. `--package` danner og verificerer combined DEV9-kildepakke/SHA256. De to offline-workflows bruger nu samme script; specifikke App/HA-/SDK-testkørsler bevares som separate procesgrænser.
+- **Automatisk kontrol:** `genvex-nabto-remote/tests/test_remote_release_gate.py` dækker fail-fast og alle fire checkkategorier. App CI `45096799091` **SUCCESS** med deterministisk kombineret kildepakke (49 medlemmer); Remote CI `45096748400` **SUCCESS** på begge matrixvarianter. Gamle DEV-specialscripts er bevaret som historiske og for eksisterende tests, ikke anvist som ny installvej.
+- **Hvorfor delvist løst:** GitHub HACS `Validate` er fortsat rød pga. repository-topics og issues-indstillinger, som er på repo-niveau og ikke løses ved en commit på denne branch. Et godkendt public release/SDK-redistributions- og installerflow er ikke leveret; dette kræver et særskilt releasevalg.
+- **Ingen live deployment:** Ingen ændringer af HAOS, kørende installation, HACS LAN integration eller main.
+
+### Overdragelse til opgave 8
+- Læs hele logbogen og sammenlign branch-HEAD med **immutable DEV9-base `e0f2f46214a0561515f7bb4fda5841e481b3abbe`**. Verificér aktuelle CI-resultater for App/Remote, formatter, hassfest og dokumentér separat rød HACS-metadata.
+- Fremstil `docs/overnight-refactoring-report.md` med de otte opgaver inkl. ekstra sensor-lokalisering, klar påvirkning, faktisk Git diffstat og uafsluttede forhold. Ingen påstand om live-kompatibilitet for den nye branch uden deploy.
