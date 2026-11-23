@@ -2,7 +2,7 @@
 
 Home Assistant integration development for **Genvex Connect and Nilan gateways**. The repository contains two **separate** paths:
 
-- **Genvex Connect (LAN)** — the existing, Marketplace-compatible LAN integration in [`custom_components/genvex_connect/`](custom_components/genvex_connect/), using [GenvexNabto](https://github.com/superrob/genvexnabto) to communicate with supported gateways over local UDP / legacy Micro Nabto.
+- **Genvex Connect (LAN)** — the existing, separate LAN community integration in [`custom_components/genvex_connect/`](custom_components/genvex_connect/), using [GenvexNabto](https://github.com/superrob/genvexnabto) to communicate with supported gateways over local UDP / legacy Micro Nabto.
 - **Genvex Remote (experimental)** — a separate HAOS App and `genvex_remote` Home Assistant integration for authenticated **remote, read-only** RPC45 access using the proprietary legacy Nabto Micro SDK. Successfully deployed and live-verified on one **Genvex Optima 270** running Home Assistant OS ARM64. This is **not** a public Marketplace release or a claim of remote support for every LAN-compatible controller.
 
 [![Home Assistant installs](https://img.shields.io/badge/dynamic/json?color=41BDF5&logo=home-assistant&label=integration%20usage&suffix=%20installs&cacheSeconds=15600&url=https://analytics.home-assistant.io/custom_integrations.json&query=$.genvex_connect.total)](https://github.com/rabbyraptor/genvexconnect)
@@ -36,7 +36,7 @@ Optima 270 → legacy encrypted Nabto Micro (x86-64 SDK under QEMU)
     → Home Assistant genvex_remote integration: 24 distinct entities
 ```
 
-The remote implementation communicates through the legacy SDK, **not** by proxying the phone app. The existing Marketplace-compatible LAN integration remains independent.
+The remote implementation communicates through the legacy SDK, **not** by proxying the phone app. The existing separate LAN community integration remains independent.
 
 ### Sensor names and icons
 
@@ -51,7 +51,7 @@ Newly registered/imported Remote sensors use Home Assistant's **per-user languag
 
 ## Install the existing LAN integration
 
-**Home Assistant 2026.11+:** Open **Settings → Marketplace** and look for **Genvex Connect** (or add it as a custom repository if supported). Existing older HACS installations are migrated to Marketplace by Home Assistant. The old standalone HACS installation is no longer used on 2026.11+. Alternatively, copy [`custom_components/genvex_connect/`](custom_components/genvex_connect/) into your Home Assistant `config/custom_components/` directory and restart.
+**Home Assistant 2026.11+:** Community integrations are managed under **Settings → Marketplace**; existing older HACS installations migrate automatically. This repository currently fails the Marketplace publisher validator because GitHub Issues are disabled and required topics are missing, so availability through Marketplace should not be assumed. For a manual installation, copy [`custom_components/genvex_connect/`](custom_components/genvex_connect/) into your Home Assistant `config/custom_components/` directory and restart.
 
 **Configure:** Open **Settings → Devices & services → Add integration → Genvex Connect**. Select a discovered gateway and enter the case-sensitive email associated with the official Genvex Connect app. This connects over the **local network**.
 
@@ -96,7 +96,7 @@ This is a development/test procedure, **not** a general installation guide or a 
 
 | Path | Purpose |
 | --- | --- |
-| [`custom_components/genvex_connect/`](custom_components/genvex_connect/) | Existing Marketplace-compatible LAN integration |
+| [`custom_components/genvex_connect/`](custom_components/genvex_connect/) | Existing separate LAN community integration |
 | [`experimental/genvex_remote/`](experimental/genvex_remote/) | Canonical shared remote runtime, schemas, evidence and offline tests |
 | [`genvex-nabto-remote/`](genvex-nabto-remote/) | Isolated HAOS App, native ARM64 orchestration and x86-64 SDK worker |
 | [`experimental/home_assistant/`](experimental/home_assistant/) | Separate, now live-tested `genvex_remote` HA integration and tests |
