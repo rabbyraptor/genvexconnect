@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from math import isfinite
 from typing import Sequence
 
+from register_catalog import RPC45_BASELINE
+
 @dataclass(frozen=True)
 class SensorSpec:
     key: str
@@ -18,12 +20,11 @@ class SensorSpec:
     device_class: str
     state_class: str = "measurement"
 
-SENSORS = (
-    SensorSpec("supply_air", "Supply air", 20, "°C", 10, -300, "temperature"),
-    SensorSpec("outdoor_air", "Outdoor air", 21, "°C", 10, -300, "temperature"),
-    SensorSpec("exhaust_air", "Exhaust air", 22, "°C", 10, -300, "temperature"),
-    SensorSpec("extract_air", "Extract air", 23, "°C", 10, -300, "temperature"),
-    SensorSpec("humidity", "Humidity", 26, "%", 1, 0, "humidity"),
+# Existing SensorSpec API is a projection of the canonical register facts.
+SENSORS = tuple(
+    SensorSpec(spec.key, spec.name, spec.address, spec.unit,
+               spec.divisor, spec.offset, spec.device_class)
+    for spec in RPC45_BASELINE
 )
 
 class InvalidBatch(ValueError):
