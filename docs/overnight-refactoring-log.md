@@ -31,7 +31,7 @@
 | 5 | Dokumentation og oprydning | **Afsluttet** |
 | 6 | Robusthed og fejlhåndtering | **Afsluttet** |
 | 7 | Release- og installationssystem | **Delvist løst** (source-build/CI færdig; HACS repo-metadata og public release udestår) |
-| 8 | Afsluttende integration, kvalitetssikring og samlet rapport | **I gang** |
+| 8 | Afsluttende integration, kvalitetssikring og samlet rapport | **Afsluttet** |
 
 ## Logposter
 
@@ -140,3 +140,10 @@
 ### Overdragelse til opgave 8
 - Læs hele logbogen og sammenlign branch-HEAD med **immutable DEV9-base `e0f2f46214a0561515f7bb4fda5841e481b3abbe`**. Verificér aktuelle CI-resultater for App/Remote, formatter, hassfest og dokumentér separat rød HACS-metadata.
 - Fremstil `docs/overnight-refactoring-report.md` med de otte opgaver inkl. ekstra sensor-lokalisering, klar påvirkning, faktisk Git diffstat og uafsluttede forhold. Ingen påstand om live-kompatibilitet for den nye branch uden deploy.
+
+### 2026-11-23 – Opgave 8 afsluttet: samlet QA og slutrapport
+- **Slutrapport:** `docs/overnight-refactoring-report.md`, oprettet commit `25283dac32c7e804e86fa8fcd11b035fb2d5bbc1`, indeholder alle otte workstreams, kodeændringer, konsekvenser, forskellen fra DEV9, beviste tests, kendte begrænsninger og udeståender.
+- **Målepunkt:** GitHub compare fra `e0f2f46214a0561515f7bb4fda5841e481b3abbe` til `79b91632e7e7f735672df6afa6903805ef68ade2`: 95 commits, 52 ændrede filer (17 nye, 35 modificerede, 0 slettede), +3437/-527 linjer, netto +2910. Slutrapport/logpost-commits efter audit-checkpoint er ikke inkluderet i den frosne diffstat.
+- **Final offline QA:** App run `45096799091` SUCCESS (189 App + 146 HA tests), Remote run `45096748400` SUCCESS (364 source + 146 HA tests i hvert af to matrixben), DEV9 archive+SHA256 PASS, source/HA icon+translation/parity checks PASS, formatter+hassfest PASS. Kodebranchens nye funktionalitet er ikke testet live på HAOS.
+- **Delvist løst opgave 7:** HACS Validate `45096817419` har præcis to repository-metadata-fejl (issues deaktiveret, gyldige topics mangler); public SDK release/installer kræver særskilt beslutning. Det er ført som restarbejde, ikke maskeret som bestået.
+- **Efterfølgende planlægning:** Alle planlagte 1–6 og den afsluttende 8 er færdige, 7 er dokumenteret delvist løst. Den planlagte automatisering kan sættes på pause, så den ikke ændrer den afsluttede gren efter slutrapporten.
