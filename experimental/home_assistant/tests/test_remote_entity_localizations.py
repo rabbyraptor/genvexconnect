@@ -10,17 +10,21 @@ import unittest
 ROOT = Path(__file__).resolve().parents[3]
 HA = ROOT / "experimental/home_assistant/custom_components/genvex_remote"
 SOURCE = ROOT / "experimental/genvex_remote"
-sys.path.insert(0, str(SOURCE))
-from register_catalog import RPC45_ALL, RPC45_DEFAULT_ICONS, rpc45_default_icon  # noqa: E402
+# Preserve unittest discovery's sys.path: the runtime and HA suites
+# have an intentionally duplicate legacy test module filename.
+_pre_import_path = list(sys.path)
+try:
+    sys.path.insert(0, str(SOURCE))
+    from register_catalog import RPC45_ALL, RPC45_DEFAULT_ICONS, rpc45_default_icon
 
-module_spec = importlib.util.spec_from_file_location(
-    "remote_entity_localizations", ROOT / "scripts/sync_remote_entity_localizations.py"
-)
-generator = importlib.util.module_from_spec(module_spec)
-module_spec.loader.exec_module(generator)
-# Do not leak the shared runtime path into unittest's module discovery.
-# A runtime draft test has the same filename as an HA-side draft test.
-sys.path.remove(str(SOURCE))
+    module_spec = importlib.util.spec_from_file_location(
+        "remote_entity_localizations",
+        ROOT / "scripts/sync_remote_entity_localizations.py",
+    )
+    generator = importlib.util.module_from_spec(module_spec)
+    module_spec.loader.exec_module(generator)
+finally:
+    sys.path[:] = _pre_import_path
 
 
 class RemoteEntityLocalizationTests(unittest.TestCase):
