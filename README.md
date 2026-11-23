@@ -69,6 +69,21 @@ Newly registered/imported Remote sensors use Home Assistant's **per-user languag
 
 This table describes the **LAN integration only**. Remote DEV9 has been live-verified specifically on Optima 270.
 
+### Marketplace scope (Home Assistant 2026.11+)
+
+The repository root still includes a legacy-named `hacs.json` metadata file for
+the **existing LAN integration** in `custom_components/genvex_connect/`.
+This filename is part of the built-in Marketplace publisher protocol, even
+though the standalone HACS integration has been replaced. The experimental
+`genvex_remote` component and separate Supervisor App are **not installed**
+by selecting this LAN repository in Marketplace. They require their own
+reviewed packaging and installation workflow.
+
+The CI validator at `.github/workflows/hacs.yaml` continues to call the
+historically named `hacs/action` for Marketplace repository validation.
+GitHub Issues are currently disabled and repository topics are empty, so that
+external metadata check remains red independently of the Remote App tests.
+
 ## Experimental remote development and setup
 
 The remote implementation is maintained separately; installing the LAN integration does **not** enable remote access. It requires an isolated HAOS App, a provisioned legacy client profile, an authenticated private App-to-Core connection, and the separate `genvex_remote` component. The tested DEV9 deployment uses a versioned, checksum-verified source package; refactoring-branch source changes remain separate from the installed baseline.
