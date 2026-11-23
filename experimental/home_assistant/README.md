@@ -1,6 +1,6 @@
 # Genvex Remote — experimental Home Assistant integration
 
-The **`genvex_remote`** component is independent of the original `genvex_connect` LAN/HACS integration. Its current **verified deployment baseline is DEV9**: App `0.1.0-dev9`, HA component `0.3.0`, one Optima 270 / HAOS ARM64 test installation, 24/24 registered available sensor entities with v4 and raw v3 enabled.
+The **`genvex_remote`** component is independent of the original `genvex_connect` LAN/Marketplace integration. Its current **verified deployment baseline is DEV9**: App `0.1.0-dev9`, HA component `0.3.0`, one Optima 270 / HAOS ARM64 test installation, 24/24 registered available sensor entities with v4 and raw v3 enabled.
 
 Changes on `overnight-refactoring` are source-branch work, not a deployed update.
 
@@ -58,4 +58,4 @@ python3 -m unittest discover -s genvex-nabto-remote/tests -p 'test_*.py' -v
 python3 scripts/check_remote_runtime_parity.py --check
 ```
 
-For the combined App/HAOS release gate, see [historical DEV8.4](../../docs/dev8-4-combined-release-gate.md). For the current public-facing overview, see the [root README](../../README.md). The existing LAN/HACS integration remains separate.
+For the combined App/HAOS release gate, see [historical DEV8.4](../../docs/dev8-4-combined-release-gate.md). For the current public-facing overview, see the [root README](../../README.md). The existing LAN/Marketplace integration remains separate.
