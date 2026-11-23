@@ -229,6 +229,22 @@ class PollingServiceTests(unittest.IsolatedAsyncioTestCase):
         finally:
             await service.stop()
 
+    async def test_stop_invalidates_even_if_poll_task_crashed(self):
+        state = SnapshotState(FakePoller([fresh_snapshot()]))
+        self.assertTrue(await state.refresh())
+        self.assertIsNotNone(state.current())
+        service = PollingService(state, interval_seconds=60)
+
+        async def crash():
+            raise RuntimeError("synthetic internal task crash")
+
+        service._task = asyncio.create_task(crash())
+        await asyncio.sleep(0)
+        with self.assertRaises(RuntimeError):
+            await service.stop()
+        self.assertIsNone(service._task)
+        self.assertIsNone(state.current())
+
     async def test_reject_bool_interval(self):
         with self.assertRaises(ValueError):
             PollingService(SnapshotState(FakePoller([])), interval_seconds=True)
