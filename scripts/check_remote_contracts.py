@@ -104,6 +104,14 @@ def check() -> None:
         or release.HA_VERSION != manifest["version"]
     ):
         raise ValueError("Release versions drift from manifests")
+    # This repository owns the separate experimental HA component. The
+    # previous manifest pointed at another/nonexistent GitHub repository.
+    # Check deterministic metadata offline before packaging the HA files.
+    repository_url = "https://github.com/rabbyraptor/genvexconnect"
+    if (manifest.get("documentation") != (
+            repository_url + "/blob/main/experimental/home_assistant/README.md")
+            or manifest.get("issue_tracker") != repository_url + "/issues"):
+        raise ValueError("HA manifest repository links do not match this project")
     if release.REGISTER_ADDRESSES != tuple(
         spec.address for spec in release.CATALOG.RPC45_ALL
     ):
