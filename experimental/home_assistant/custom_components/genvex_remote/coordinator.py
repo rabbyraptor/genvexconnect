@@ -41,6 +41,24 @@ class GenvexRemoteCoordinator(DataUpdateCoordinator[dict[str, float]]):
         self.last_sample_utc: datetime | None = None
         self._last_values: dict[str, float | int] | None = None
 
+    def _decode_payload(self, payload: dict) -> dict[str, float | int]:
+        """Select one strict schema; keep legacy and opt-in keys unchanged."""
+        if not self.raw_registers_v3:
+            return validate_snapshot(payload, expected_device_id=self.device_id)
+        if self.fan_level_v4:
+            baseline, raw, level = validate_v4(
+                payload, expected_device_id=self.device_id,
+            )
+        else:
+            baseline, raw = validate_raw_v3(
+                payload, expected_device_id=self.device_id,
+            )
+            level = None
+        values = baseline | {"raw_" + key: value for key, value in raw.items()}
+        if level is not None:
+            values["fan_level"] = level
+        return values
+
     @property
     def data_age_seconds(self) -> float | None:
         """Elapsed time since the original measurement, not its HTTP retrieval."""
@@ -49,26 +67,7 @@ class GenvexRemoteCoordinator(DataUpdateCoordinator[dict[str, float]]):
     async def _async_update_data(self) -> dict[str, float | int]:
         try:
             payload = await self.reader.async_fetch_snapshot(self.device_id)
-            if self.fan_level_v4:
-                baseline, raw, fan_level = validate_v4(
-                    payload, expected_device_id=self.device_id,
-                )
-                values = baseline | {
-                    "raw_" + key: value for key, value in raw.items()
-                }
-                if fan_level is not None:
-                    values["fan_level"] = fan_level
-            elif self.raw_registers_v3:
-                baseline, raw = validate_raw_v3(
-                    payload, expected_device_id=self.device_id,
-                )
-                values = baseline | {
-                    "raw_" + key: value for key, value in raw.items()
-                }
-            else:
-                values = validate_snapshot(
-                    payload, expected_device_id=self.device_id,
-                )
+            values = self._decode_payload(payload)
             measured = sample_time(payload)
             # An older cached response must never roll measurements backward.
             if self.last_sample_utc is None or measured > self.last_sample_utc:
