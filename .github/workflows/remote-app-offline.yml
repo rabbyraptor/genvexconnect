@@ -14,6 +14,8 @@ on:
       - ".github/workflows/remote-app-offline.yml"
       - "scripts/package_remote_diagnostic_app.py"
       - "scripts/check_remote_contracts.py"
+      - "scripts/package_dev9_combined.py"
+      - "scripts/check_remote_runtime_parity.py"
   pull_request:
     paths:
       - "genvex-nabto-remote/**"
