@@ -4,6 +4,9 @@
 
 ## Current authoritative references
 
+**Follow-up audit:** [Overnight v2 review of all eight workstreams](overnight-v2-report.md) supersedes the original branch's final claims where differences are documented.
+
+
 | Document | Owns |
 | --- | --- |
 | [Architecture and source-of-truth decisions](overnight-architecture-baseline.md) | Runtime/HA responsibility, trusted snapshot boundary and authority table |
