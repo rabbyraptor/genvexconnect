@@ -15,6 +15,7 @@ import shutil
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "experimental/genvex_remote"
 BUNDLED = ROOT / "genvex-nabto-remote/runtime"
+HA_CATALOG = ROOT / "experimental/home_assistant/custom_components/genvex_remote/register_catalog.py"
 APP_ONLY = frozenset({
     "app_bootstrap.py",
     "profile_provision.py",
@@ -40,19 +41,33 @@ def shared_files(source: Path = SOURCE, bundled: Path = BUNDLED) -> list[tuple[P
     return result
 
 
+def _projection_pairs(source: Path, bundled: Path) -> list[tuple[Path, Path]]:
+    """Managed runtime mirror plus the deployed HA catalog projection."""
+    pairs = shared_files(source, bundled)
+    if source == SOURCE and bundled == BUNDLED:
+        pairs.append((SOURCE / "register_catalog.py", HA_CATALOG))
+    return pairs
+
+
+def _display_target(target: Path) -> str:
+    return ("ha/register_catalog.py" if target == HA_CATALOG else target.name)
+
+
 def check(source: Path = SOURCE, bundled: Path = BUNDLED) -> list[str]:
     """Report drift by filename only, never print source contents."""
-    return [target.name for original, target in shared_files(source, bundled)
-            if original.read_bytes() != target.read_bytes()]
+    return [
+        _display_target(target) for original, target in _projection_pairs(source, bundled)
+        if original.read_bytes() != target.read_bytes()
+    ]
 
 
 def sync(source: Path = SOURCE, bundled: Path = BUNDLED) -> list[str]:
-    """Explicit source-controlled regeneration of the bundled copies."""
+    """Explicit source-controlled regeneration of deployment projections."""
     changed = []
-    for original, target in shared_files(source, bundled):
+    for original, target in _projection_pairs(source, bundled):
         if original.read_bytes() != target.read_bytes():
             shutil.copyfile(original, target)
-            changed.append(target.name)
+            changed.append(_display_target(target))
     return changed
 
 
