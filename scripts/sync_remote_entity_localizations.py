@@ -15,10 +15,14 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "experimental/genvex_remote"
 HA = ROOT / "experimental/home_assistant/custom_components/genvex_remote"
-sys.path.insert(0, str(SOURCE))
-from register_catalog import (  # noqa: E402
-    MODEL_PROFILES, RPC45_DEFAULT_ICONS, rpc45_english_name,
-)
+_source_path = str(SOURCE)
+sys.path.insert(0, _source_path)
+try:
+    from register_catalog import (
+        MODEL_PROFILES, RPC45_DEFAULT_ICONS, rpc45_english_name,
+    )
+finally:
+    sys.path.remove(_source_path)
 
 EN = HA / "strings.json"
 DA = HA / "translations/da.json"
