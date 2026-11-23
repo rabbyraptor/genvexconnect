@@ -3,9 +3,8 @@ from __future__ import annotations
 
 import asyncio
 
-from raw_registers_v3 import BASE_KEYS, OPTIONAL_KEYS
 from raw_snapshot_v4 import parse_v4
-from raw_snapshot_state_v3 import RawV3SnapshotState
+from raw_snapshot_state_v3 import RawV3SnapshotState, _build_v1_v3_snapshots
 
 
 class RawV4SnapshotState(RawV3SnapshotState):
@@ -31,22 +30,12 @@ class RawV4SnapshotState(RawV3SnapshotState):
             except Exception:
                 self.invalidate()
                 return False
-            common = {
-                "device_id": self._poller.device_id,
-                "timestamp_utc": snapshot["timestamp_utc"],
-                "health": "ok",
-                "values": dict(baseline),
-            }
-            self._snapshot = {"schema_version": 1, **common}
-            self._raw_snapshot = {
-                "schema_version": 3, **common,
-                "raw_values": {key: raw[key] for key in BASE_KEYS},
-                "optional": {
-                    "raw_registers": {
-                        key: raw[key] for key in OPTIONAL_KEYS if key in raw
-                    },
-                },
-            }
+            self._snapshot, self._raw_snapshot = _build_v1_v3_snapshots(
+                device_id=self._poller.device_id,
+                timestamp_utc=snapshot["timestamp_utc"],
+                baseline=baseline,
+                raw=raw,
+            )
             self._fan_snapshot = {
                 **self._raw_snapshot, "schema_version": 4, "fan_level": level,
             }
