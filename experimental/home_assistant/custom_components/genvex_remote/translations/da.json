@@ -1,0 +1,117 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Genvex Remote (udvikling)",
+        "description": "Kræver den særskilte Genvex Remote App. Vælg automatisk Core-parring for at hente IPC-token fra den startede App, eller indsæt et IPC-token manuelt. Brug ikke Nabto-kontoens adgangskode.",
+        "data": {
+          "device_id": "Enheds-ID",
+          "runtime_token": "Internt IPC-token",
+          "pair_from_app": "Par automatisk via Home Assistant Supervisor"
+        }
+      }
+    },
+    "error": {
+      "invalid_device_id": "Indtast præcis 12 almindelige cifre.",
+      "invalid_runtime_config": "Vælg Core-parring eller indtast et gyldigt internt IPC-token.",
+      "app_pairing_unavailable": "Kan ikke hente IPC-token fra den startede Genvex Remote App via Supervisor."
+    },
+    "abort": {
+      "already_configured": "Enheden er allerede konfigureret."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "supply_air": {
+        "name": "Indblæsning"
+      },
+      "outdoor_air": {
+        "name": "Udeluft"
+      },
+      "exhaust_air": {
+        "name": "Afkast"
+      },
+      "extract_air": {
+        "name": "Udsugning"
+      },
+      "humidity": {
+        "name": "Luftfugtighed"
+      },
+      "data_age": {
+        "name": "Dataalder"
+      },
+      "fan_level": {
+        "name": "Ventilatorniveau"
+      },
+      "raw_supply_air": {
+        "name": "RPC45 råværdi 20 – Tilluft"
+      },
+      "raw_outdoor_air": {
+        "name": "RPC45 råværdi 21 – Udeluft"
+      },
+      "raw_exhaust_air": {
+        "name": "RPC45 råværdi 22 – Afkastluft"
+      },
+      "raw_extract_air": {
+        "name": "RPC45 råværdi 23 – Fraluft"
+      },
+      "raw_humidity": {
+        "name": "RPC45 råværdi 26 – Luftfugtighed"
+      },
+      "raw_frost_protection_temp": {
+        "name": "RPC45 råværdi 24 – Frostbeskyttelse"
+      },
+      "raw_fan_duty_supply": {
+        "name": "RPC45 råværdi 18 – Tilluftventilator styresignal"
+      },
+      "raw_fan_duty_extract": {
+        "name": "RPC45 råværdi 19 – Fraluftventilator styresignal"
+      },
+      "raw_fan_rpm_supply": {
+        "name": "RPC45 råværdi 35 – Tilluftventilator"
+      },
+      "raw_fan_rpm_extract": {
+        "name": "RPC45 råværdi 36 – Fraluftventilator"
+      },
+      "raw_preheat_pwm": {
+        "name": "RPC45 råværdi 41 – Forvarme"
+      },
+      "raw_reheat_pwm": {
+        "name": "RPC45 råværdi 42 – Eftervarme"
+      },
+      "raw_bypass_active_raw": {
+        "name": "RPC45 råværdi 53 – Bypassstatus"
+      },
+      "raw_bypass_analog_raw": {
+        "name": "RPC45 råværdi 40 – Bypass analog"
+      },
+      "raw_alarm_word_1_raw": {
+        "name": "RPC45 råværdi 114 – Alarmregister 1"
+      },
+      "raw_alarm_word_2_raw": {
+        "name": "RPC45 råværdi 115 – Alarmregister 2"
+      },
+      "raw_rotor_rpm": {
+        "name": "RPC45 råværdi 50 – Rotor"
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Parring med Genvex Remote App",
+        "description": "Konfigurer Supervisor-parring og valgfri råværdi-sensorer. Råværdi-tilstand kræver, at den separate Remote-app også har raw_registers_v3 aktiveret.",
+        "data": {
+          "pair_from_app": "Par automatisk via Home Assistant Supervisor",
+          "runtime_token": "Manuelt internt IPC-token (kun ved manuel parring)",
+          "raw_registers_v3": "Vis alle 17 RPC45-råværdier (kræver v3-tilstand i Remote-appen)",
+          "fan_level_v4": "Vis valgt ventilatorniveau 0–4 via RPC42 (kræver v4 i Remote-appen)"
+        }
+      }
+    },
+    "error": {
+      "app_pairing_unavailable": "Kan ikke hente IPC-token fra den startede Genvex Remote App via Supervisor.",
+      "invalid_runtime_config": "Ugyldigt valg, eller angiv et gyldigt manuelt IPC-token."
+    }
+  }
+}

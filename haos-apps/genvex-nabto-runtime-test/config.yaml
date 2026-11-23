@@ -1,0 +1,11 @@
+name: "Genvex Nabto Runtime Test"
+version: "0.5.0"
+slug: "genvex_nabto_runtime_test"
+description: "Isolated Nabto 4 ARM64/QEMU test runtime with native offline certificate tooling; no automatic enrollment."
+url: "https://github.com/rabbyraptor/genvexconnect"
+startup: application
+boot: manual
+host_network: true
+init: false
+arch:
+  - aarch64

@@ -1,4 +1,4 @@
-name: Validate
+name: Marketplace repository validation
 
 on:
   push: 
@@ -11,7 +11,8 @@ jobs:
   validate-hacs:
     runs-on: "ubuntu-latest"
     steps:
-      - name: HACS validation
+      # Marketplace 2026.11+ continues to use the historic hacs/action tool.
+      - name: Marketplace repository checks (hacs/action)
         uses: "hacs/action@main"
         with:
           category: "integration"

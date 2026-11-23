@@ -1,0 +1,11 @@
+{
+  "domain": "genvex_remote",
+  "name": "Genvex Remote",
+  "version": "0.3.0",
+  "documentation": "https://github.com/rabbyraptor/genvexconnect/blob/main/experimental/home_assistant/README.md",
+  "issue_tracker": "https://github.com/rabbyraptor/genvexconnect/issues",
+  "codeowners": [],
+  "config_flow": true,
+  "iot_class": "cloud_polling",
+  "requirements": []
+}

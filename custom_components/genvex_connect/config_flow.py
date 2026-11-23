@@ -57,7 +57,7 @@ class ConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_pick(self, user_input=None) -> ConfigFlowResult:
         """After user has picked a device"""
-        _LOGGER.info("Async step user has picked {%s}", user_input)
+        _LOGGER.debug("Config flow advanced to device selection")
 
         selectedDeviceID = user_input[CONF_DEVICE_ID]
         if selectedDeviceID == "Manual":
@@ -102,10 +102,10 @@ class ConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_email(self, user_input=None) -> ConfigFlowResult:
         """After user has provided their email. Try to connect and see if email is correct."""
-        _LOGGER.info("Async step user has picked {%s}", user_input)
+        _LOGGER.debug("Config flow advanced to credential validation")
 
         self._authenticatedEmail = user_input[CONF_AUTHENTICATED_EMAIL]
-        _LOGGER.info("User provided email: %s", self._authenticatedEmail)
+        _LOGGER.debug("Genvex account identifier was provided (value redacted)")
         self._genvexNabto._authorized_email = self._authenticatedEmail
         self._genvexNabto.connectToDevice()
         await self._genvexNabto.waitForConnection()
@@ -149,13 +149,13 @@ class ConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_manual(self, user_input=None) -> ConfigFlowResult:
         """After user has provided their ip, port and email. Try to connect and see if email is correct."""
-        _LOGGER.info("Async step user has picked {%s}", user_input)
+        _LOGGER.debug("Config flow received user input; sensitive values redacted")
 
         self._authenticatedEmail = user_input[CONF_AUTHENTICATED_EMAIL]
         self._deviceIP = user_input[CONF_DEVICE_IP]
         self._devicePort = user_input[CONF_DEVICE_PORT]
 
-        _LOGGER.info("User provided email: %s, ip: %s, port: %s", self._authenticatedEmail, self._deviceIP, self._devicePort)
+        _LOGGER.debug("Manual device details provided: ip=%s port=%s; account identifier redacted", self._deviceIP, self._devicePort)
 
         self._genvexNabto._authorized_email = self._authenticatedEmail
         self._genvexNabto.setManualIP(self._deviceIP, self._devicePort)

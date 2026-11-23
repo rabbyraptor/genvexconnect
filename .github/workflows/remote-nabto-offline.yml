@@ -1,0 +1,52 @@
+name: Remote Nabto offline-only tests
+
+on:
+  push:
+    branches:
+      - remote-nabto-connection
+      - overnight-refactoring
+      - overnight-v2
+    paths:
+      - "experimental/genvex_remote/**"
+      - "experimental/home_assistant/**"
+      - "docs/**"
+      - "scripts/**"
+      - "README.md"
+      - ".github/workflows/remote-nabto-offline.yml"
+  pull_request:
+    paths:
+      - "experimental/genvex_remote/**"
+      - "experimental/home_assistant/**"
+      - "docs/**"
+      - "scripts/**"
+      - "README.md"
+      - ".github/workflows/remote-nabto-offline.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline:
+    name: Certificate, profile store and sensor model checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        cryptography: ["46.0.4", "47.0.0"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run common remote source and localization contract gate
+        run: python scripts/remote_release_gate.py --check
+      - name: Install offline cryptography test dependency
+        run: python -m pip install "cryptography==${{ matrix.cryptography }}"
+      - name: Run tests (no live vendor account, network or secrets)
+        run: python -m unittest discover -s experimental/genvex_remote -p "test_*.py" -v
+      - name: Run HA scaffold parser tests (no HA Core required)
+        run: python -m unittest discover -s experimental/home_assistant/tests -p "test_*.py" -v
+      - name: Compile HA scaffold source
+        run: python -m compileall -q experimental/home_assistant/custom_components/genvex_remote experimental/genvex_remote

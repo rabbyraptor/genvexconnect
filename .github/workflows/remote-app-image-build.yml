@@ -1,0 +1,109 @@
+name: Genvex Remote ARM64 App image build (no secrets)
+
+on:
+  push:
+    branches:
+      - main
+      - development
+    paths:
+      - "genvex-nabto-remote/Dockerfile"
+      - "genvex-nabto-remote/run.sh"
+      - "genvex-nabto-remote/config.yaml"
+      - "genvex-nabto-remote/runtime/**"
+      - ".github/workflows/remote-app-image-build.yml"
+      - "scripts/test_remote_app_private_docker_network.sh"
+      - "scripts/test_remote_app_private_storage_container.sh"
+  pull_request:
+    paths:
+      - "genvex-nabto-remote/**"
+      - ".github/workflows/remote-app-image-build.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  image:
+    # Native ARM64 avoids emulating ARM64 on an AMD64 workstation.
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check no private profile files are packaged
+        shell: bash
+        run: |
+          set -euo pipefail
+          for path in \
+            genvex-nabto-remote/client-encrypted.key \
+            genvex-nabto-remote/client.crt \
+            genvex-nabto-remote/options.json \
+            genvex-nabto-remote/runtime/client-encrypted.key \
+            genvex-nabto-remote/runtime/client.crt; do
+            test ! -e "$path"
+          done
+      - name: Build isolated App image on native ARM64
+        env:
+          DOCKER_BUILDKIT: "1"
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker build --platform linux/arm64 \
+            --build-arg BUILD_ARCH=aarch64 \
+            --build-arg BUILD_VERSION=0.1.0-dev9 \
+            --tag genvex-nabto-remote:ci \
+            genvex-nabto-remote
+      - name: Inspect image and import runtime offline
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "===== IMAGE METADATA ====="
+          docker image inspect genvex-nabto-remote:ci --format \
+            'Architecture={{.Architecture}} Labels={{json .Config.Labels}} ExposedPorts={{json .Config.ExposedPorts}}'
+          ARCH=$(docker image inspect genvex-nabto-remote:ci --format '{{.Architecture}}')
+          if [ "$ARCH" != arm64 ]; then
+            echo "::error::Unexpected architecture: $ARCH (expected arm64)"
+            exit 1
+          fi
+          APP_TYPE=$(docker image inspect genvex-nabto-remote:ci --format '{{index .Config.Labels "io.hass.type"}}')
+          if [ "$APP_TYPE" != app ]; then
+            echo "::error::Unexpected io.hass.type: $APP_TYPE (expected app)"
+            exit 1
+          fi
+          IMAGE_VERSION=$(docker image inspect genvex-nabto-remote:ci --format '{{index .Config.Labels "io.hass.version"}}')
+          if [ "$IMAGE_VERSION" != 0.1.0-dev9 ]; then
+            echo "::error::App image version does not match v0.1.0-dev9 candidate"
+            exit 1
+          fi
+          PORTS=$(docker image inspect genvex-nabto-remote:ci --format '{{json .Config.ExposedPorts}}')
+          if [ "$PORTS" != null ] && [ "$PORTS" != '{}' ]; then
+            echo "::error::Image declares exposed ports: $PORTS"
+            exit 1
+          fi
+          echo "===== OFFLINE IMPORT SMOKE TEST ====="
+          docker run --rm --network none --read-only --tmpfs /tmp \
+            --entrypoint python3 genvex-nabto-remote:ci \
+            -c 'import sys; sys.path.insert(0, "/opt/genvex-remote/runtime"); import app_bootstrap, polling_runtime, sdk_snapshot_adapter, polling_http_server, raw_registers_v3, raw_snapshot_state_v3, snapshot_api_v3; print("PASS: ARM64 runtime import")'
+          echo "PASS: separate ARM64 image built and inspected without credentials"
+      - name: Test fake-only profile import in native ARM64 App /data tmpfs
+        shell: bash
+        run: sh scripts/test_remote_app_private_storage_container.sh
+      - name: Test fake-only IPC and diagnostic App bootstrap on an internal Docker network
+        shell: bash
+        run: bash scripts/test_remote_app_private_docker_network.sh
+      - name: Export tested image and SHA256
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          docker save genvex-nabto-remote:ci | gzip -1 > dist/genvex-nabto-remote-arm64.tar.gz
+          (cd dist && sha256sum genvex-nabto-remote-arm64.tar.gz > SHA256SUMS)
+      - name: Upload tested image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: genvex-nabto-remote-arm64-${{ github.sha }}
+          path: |
+            dist/genvex-nabto-remote-arm64.tar.gz
+            dist/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0

@@ -1,0 +1,120 @@
+name: Genvex Remote HAOS App candidate offline checks
+
+on:
+  push:
+    branches:
+      - main
+      - development
+      - standalone-repo-migration
+      - overnight-refactoring
+      - overnight-v2
+    paths:
+      - "genvex-nabto-remote/**"
+      - "experimental/genvex_remote/**"
+      - "experimental/home_assistant/**"
+      - ".github/workflows/remote-app-offline.yml"
+      - "scripts/package_remote_diagnostic_app.py"
+      - "scripts/check_remote_contracts.py"
+      - "scripts/remote_release_gate.py"
+      - "scripts/check_marketplace_scope.py"
+      - "scripts/sync_remote_entity_localizations.py"
+      - "scripts/package_dev9_combined.py"
+      - "scripts/check_remote_runtime_parity.py"
+  pull_request:
+    paths:
+      - "genvex-nabto-remote/**"
+      - "experimental/genvex_remote/**"
+      - "experimental/home_assistant/**"
+      - ".github/workflows/remote-app-offline.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run common remote source and localization contract gate
+        run: python scripts/remote_release_gate.py --check
+      - name: Compile native runtime and App bootstrap
+        run: python -m compileall -q genvex-nabto-remote/runtime
+      - name: Run fake-credential bootstrap tests (no real profile)
+        run: python -m unittest discover -s genvex-nabto-remote/tests -p "test_*.py" -v
+      - name: Run Home Assistant transport and snapshot tests (without HA Core)
+        run: |
+          cd experimental/home_assistant/tests
+          python -m unittest discover -s . -p "test_*.py" -v
+      - name: Validate isolated App configuration
+        run: |
+          python -m pip install PyYAML
+          python - <<'PY'
+          from pathlib import Path
+          import yaml
+          config = yaml.safe_load(Path("genvex-nabto-remote/config.yaml").read_text())
+          assert config["slug"] == "genvex_nabto_remote"
+          assert config["boot"] == "manual_only"
+          assert config["stage"] == "experimental"
+          assert config["tmpfs"] is True
+          assert config["host_network"] is False
+          assert config["arch"] == ["aarch64"]
+          assert not config.get("map")
+          assert not config.get("ports")
+          assert config["schema"]["unlock_secret"] == "password"
+          assert config["schema"]["ipc_token"] == "password"
+          assert config["options"]["diagnostic_only"] is False
+          assert config["schema"]["diagnostic_only"] == "bool"
+          PY
+      - name: Package audited local Supervisor App source (no secrets)
+        run: |
+          python scripts/package_remote_diagnostic_app.py
+          cd dist
+          sha256sum -c APP_SOURCE_SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: genvex-remote-local-app-source
+          path: |
+            dist/genvex-nabto-remote-local-app-source.tar.gz
+            dist/APP_SOURCE_SHA256SUMS
+          if-no-files-found: error
+          retention-days: 14
+      - name: Package and verify combined DEV9 release
+        run: python scripts/remote_release_gate.py --package
+      - uses: actions/upload-artifact@v4
+        with:
+          name: genvex-remote-dev9-combined-${{ github.sha }}
+          path: |
+            dist/genvex-remote-dev9-combined.tar.gz
+            dist/DEV9_COMBINED_SHA256SUMS
+          if-no-files-found: error
+          retention-days: 14
+      - name: Package experimental HA integration (not a production release)
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile, ZIP_DEFLATED
+          source = Path("experimental/home_assistant/custom_components/genvex_remote")
+          dest = Path("dist/genvex_remote_ha_development.zip")
+          dest.parent.mkdir(exist_ok=True)
+          with ZipFile(dest, "w", ZIP_DEFLATED) as archive:
+              for path in sorted(source.rglob("*")):
+                  if path.is_file() and "__pycache__" not in path.parts:
+                      archive.write(path, "custom_components/genvex_remote/" + path.relative_to(source).as_posix())
+              archive.writestr(
+                  "INSTALL_NOTES.txt",
+                  "EXPERIMENTAL ONLY. Requires separate Genvex Remote HAOS App. "
+                  "Not verified against Home Assistant Core; do not replace the "
+                  "existing Genvex LAN integration.\n",
+              )
+          print("Packaged experimental separate HA integration")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: genvex-remote-ha-integration-development
+          path: dist/genvex_remote_ha_development.zip
+          retention-days: 14

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<unabto_queries xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                xsi:noNamespaceSchemaLocation="http://www.nabto.com/unabto/query_model.xsd">
+  <!-- RECONSTRUCTED READ-ONLY CANDIDATE, NOT OFFICIAL/REMOTE-VALIDATED.
+       Source: superrob/genvexnabto cmd_setpoint_readlist.py and
+       genvexnabto_modeladapter.py, plus the RPC45 working schema.
+       This interface contains NO ID 43 writer. -->
+  <query id="42" name="candidate_read_setpoints.json"
+         description="Candidate Optima 270 read-only setpoint list">
+    <request>
+      <list name="setpoints">
+        <parameter name="obj" type="uint8" />
+        <parameter name="address" type="uint16" />
+      </list>
+      <parameter name="trailer" type="uint8" default="1" />
+    </request>
+    <response format="json">
+      <!-- The community UDP response parser skips byte 0, reads the
+           list count at bytes 1:3, then uint16-BE values. The name
+           and meaning of byte 0 are NOT documented by the vendor. -->
+      <parameter name="prefix_unknown" type="uint8" />
+      <list name="values">
+        <parameter name="value" type="uint16" />
+      </list>
+    </response>
+  </query>
+</unabto_queries>

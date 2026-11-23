@@ -1,0 +1,456 @@
+# Remote Nabto 4 — verified facts and historical evidence ledger
+
+**Status:** authenticated remote Nabto RPC 17 (ping) and RPC 45 (five independent sensor reads and one five-item batch) proven on 2026-11-19; supply-air interpretation independently corroborated by the user's official Genvex Connect app screenshot.  
+**Target:** Genvex Connect / Optima 270; eventual Home Assistant OS on Raspberry Pi (Linux aarch64).  
+**Evidence level:** authenticated remote ping on Linux x86_64 Steam Deck and on Raspberry Pi HAOS ARM64/QEMU; additionally, read-only datapoint RPC ID 45 returned five successful one-sensor reads **and one successful five-sensor batch in a single RPC** on Steam Deck x86_64. RPC 45 was also successfully tested as a five-sensor **remote batch on HAOS ARM64/QEMU**, RPC status 0, one observed RPC duration 1,150 ms. This is emulation for HAOS, not native ARM64 or a production integration.  
+**Scope:** experimental remote transport only. The working local UDP integration is unchanged.
+
+This file is the **chronological evidence ledger** for independently observed tests. For the *current* project state and next gates, use [STATUS.md](STATUS.md); when milestones conflict, prefer later verified output and the dated evidence over obsolete plans.
+
+### 2026-11-19 — two additional HAOS read-only stability checks
+
+**VERIFIED:** isolated Raspberry Pi 4 HAOS/QEMU addon v0.4.0, local host-only script, profile files pre-provisioned in protected host directory, device hostname derived from 12-digit ID, **no SSH required for routine tests**. Two independent authenticated RPC 45 five-item batches, **15 seconds apart**, both returned startup/resources/session/interface/RPC **0**, response **5/5**, close/shutdown **0**. Timings **1,200 ms** and **1,260 ms** respectively (one-shot observations). Both decoded `[365,301,315,376,66]` to **6.50 °C supply, 0.10 °C outdoor, 1.50 °C exhaust, 7.60 °C extract, 66 % humidity**. This establishes two consecutive successful new sessions; it does **not** establish unattended reconnect or long-duration stability.
+
+**ENTITY PREPARATION:** isolated transport-agnostic five-sensor model and offline unit tests staged under [`experimental/genvex_remote/`](../experimental/genvex_remote/), with [separate Home Assistant entity implementation plan](remote-ha-entity-plan.md). No Home Assistant remote integration installed, no worker/bridge available, no production polling credentials provisioned. Existing LAN component untouched.
+
+### Native Python offline validation on HAOS — 2026-11-20
+
+**VERIFIED:** The user's running isolated HAOS v0.5.0 App (ARM64, Python cryptography 47.0.0) ran the full `experimental/genvex_remote` fake-provider suite: **51 tests in 6.308 seconds, all OK**. Tested encrypted candidate key and CSR handling, fake legacy CA trust, fake HTTP registration, atomic private profile store, sensor model and stale/wrong-device snapshot rejection. Test artifacts lived in a temporary location. **No real CA registration, new authenticated Nabto session or live integration is proven by this run.**
+
+### HAOS developer validation — 2026-11-20 (66/66 PASS)
+
+**VERIFIED from user-supplied terminal output** running [`scripts/run_haos_remote_dev_tests.sh`](../scripts/run_haos_remote_dev_tests.sh) in the isolated HAOS v0.5.0 test App: **57/57** certificate/profile/fake-HTTP/sensor/snapshot/serialized-polling tests passed in **7.754 seconds**; **9/9** isolated Home Assistant snapshot/parser/fail-closed-reader tests passed in **0.132 seconds**; additionally, `python3 -m compileall` passed for the new Home Assistant integration scaffold. Total **66/66** offline tests. The polling tests include no-overlap behavior, timeout/recovery, five known addresses and error redaction. The scaffold still **has not been imported/executed under real Home Assistant Core**, and the tests use synthetic readings/fake CA, not remote telemetry or actual enrollment. The existing LAN component and HAOS profile were not modified.
+
+### Authenticated remote RPC45 over Docker bridge — VERIFIED 2026-11-20
+
+**VERIFIED on the user's Raspberry Pi HAOS aarch64** with the existing Nabto runtime image run in a disposable container using `--network bridge`, `--read-only`, tmpfs, capabilities dropped and no published ports. The protected pre-existing encrypted client certificate/key was copied into the **temporary container only**; the user supplied the key-unlock passphrase through hidden terminal input. A remote Nabto 4 SDK 4.9.11/QEMU session opened successfully without Docker `host_network`:
+
+- Bridge DNS lookup: PASS.
+- SDK startup/resources/profile session/candidate XML registration: **all status 0**.
+- One authenticated read-only **RPC 45** five-address batch: **status 0**, RPC **1,212 ms**.
+- Parsed all five signed datapoint values: address 20 **367 → 6.70°C**, 21 **299 → −0.10°C**, 22 **315 → 1.50°C**, 23 **377 → 7.70°C**, 26 **65 → 65%**.
+- Session close and SDK shutdown: **0**; the temporary container was removed.
+- No new certificate was issued, no write RPC was sent, existing HAOS runtime App and LAN integration unchanged.
+
+**Conclusion:** authenticated remote RPC 45 **does not require host networking** in this tested Docker bridge configuration. This is not proof that the future Supervisor-managed App-to-Core internal HTTP connection, authorization, startup persistence, resilience or long-running polling work; those remain implementation/test gates.
+
+### Phase 2 HAOS offline suite + IPC test blocker — 2026-11-20
+
+**VERIFIED from the user's submitted HAOS test log:** `run_haos_remote_phase2_tests.sh` ran **75/75** native backend tests successfully (6.760 s), **23/23** Home Assistant test invocations successfully (0.067 s), and passed the Home Assistant scaffold Python `compileall` check. **Nine HA tests were accidentally duplicated** because `test_runtime_client.py` imported the `SnapshotTest` test case from `test_snapshot.py`; **89 distinct tests passed**. That test import has been corrected in source, but the correction is **not yet retested on HAOS**.
+
+The IPC portion created the dedicated no-internet Docker bridge successfully, but **failed before server/client HTTP testing** with Docker error `container rootfs is marked read-only` while using `docker cp` to copy scripts into a disposable read-only container. This is a deployment/test harness limitation, **not evidence that IPC authentication or data exchange passed or failed**. The script was amended to stream a tar archive via `docker exec -i ... tar -xf - -C /tmp/genvex-ipc` and deliver the temporary token via `docker exec -i ... cat > /tmp/genvex-ipc/token`, preserving the read-only rootfs. The revised IPC test is awaiting verification; no real credentials or Genvex RPC were involved.
+
+### IPC retry still received old copy behavior — 2026-11-20
+
+The user's next HAOS run again created the disposable internal Docker bridge, then printed `Successfully copied ...` and failed with `container rootfs is marked read-only`. Inspection of the **current GitHub branch source** showed the corrected test already uses tar/stdin and contains **no executable `docker cp` call**; the actual output thus indicates an older script version was executed (possibly raw-file or archive caching). This is **not** evidence of an actual authenticated IPC result. A distinct [versioned IPC v2 runner](../scripts/run_haos_ipc_two_container_test_v2.sh) was added to avoid the old raw-file URL and pins its downloaded source archive to immutable commit `6d069565b983e16e99ef7df4e4d868ce54eaa4a3`; it prints an explicit v2/tar marker and tests copied test files on tmpfs. **v2 has not yet been executed**.
+
+### Two-container private IPC with authorization — VERIFIED 2026-11-20
+
+**VERIFIED from the user's HAOS terminal output:** The [versioned IPC v2 runner](../scripts/run_haos_ipc_two_container_test_v2.sh) ran successfully on a dedicated no-internet Docker bridge, using two disposable read-only containers and tmpfs. The exact v2 marker and tar-over-exec file-staging messages appeared; both server and client scripts staged successfully. The actual HTTP handshake showed **401 without bearer token**, **401 with incorrect bearer token**, and an authorized **200 containing five validated synthetic sensor readings**. The harness printed `PASS: ISOLATED TWO-CONTAINER TOKEN IPC`. No live Nabto SDK, Genvex account, device RPC or real profile was used. This verifies the isolated test transport, not automatic secret distribution, encryption, App/Core connectivity, persistence, or actual live sensor delivery.
+
+New [source-only contract tests](../experimental/genvex_remote/test_worker_api_contract.py) now exercise synthetic RPC45 -> serial polling worker -> atomic snapshot state -> bearer-authenticated HTTP response shaping -> strict consumer parser, including no snapshot before first poll and 503 after a failed subsequent poll. **These new tests have been committed but not yet run on HAOS.**
+
+### Real RPC45 → authenticated two-container HTTP: VERIFIED 2026-11-20
+
+**VERIFIED from the user's HAOS run of** [`scripts/run_haos_live_rpc_to_ipc_test_v2.sh`](../scripts/run_haos_live_rpc_to_ipc_test_v2.sh): an isolated test Docker bridge and two disposable read-only runtime-image containers were prepared. With the pre-existing encrypted client profile and a locally entered hidden unlock passphrase, one live authorized Nabto RPC 45 five-address batch produced a validated, fresh structured snapshot; the server container's authenticated HTTP endpoint then served that **actual live snapshot** to the second container. Requests with no bearer token and with an incorrect token were rejected; a correct token returned all **5/5 actual RPC45 readings**, with device ID, timestamp and schema validation. The run concluded `PASS: REAL RPC45 -> AUTHENTICATED TWO-CONTAINER HTTP`. No vendor CA registration, write RPC, persistent API, or installed HAOS App changes. The test did not print actual readings in this result, so this record does not infer numerical values.
+
+**This is an end-to-end one-shot proof between two disposable containers**, not a real HA Core integration, deployed Supervisor App, long-running worker, unattended credential provisioning, production IPC security assessment or restart/reconnect validation.
+
+### Native HAOS polling lifecycle tests — VERIFIED 2026-11-20
+
+**VERIFIED from user-supplied HAOS console:** [`scripts/run_haos_polling_lifecycle_offline_v1.sh`](../scripts/run_haos_polling_lifecycle_offline_v1.sh) ran **84/84 Python tests successfully in 7.673 seconds** on the isolated ARM64 App and passed the Python source compilation check. This includes the offline polling lifecycle and fake RPC-to-authenticated-response tests; it does **not** prove a long-running Nabto session, unattended login, restart survival or HA Core integration.
+
+A new standalone [`sdk_snapshot_adapter.py`](../experimental/genvex_remote/sdk_snapshot_adapter.py) has since been staged as a QEMU subprocess adapter to the previously verified one-shot snapshot probe. Its [new tests](../experimental/genvex_remote/test_sdk_snapshot_adapter.py) use mock subprocesses to exercise timeouts, cancellation, strict output validation and compatibility with the existing polling lifecycle. **Those additional tests are not included in the above 84/84 result and are not yet verified on HAOS**. No running App or user profile has been changed.
+
+### HAOS SDK subprocess adapter regression — 2026-11-20
+
+The user ran the first [SDK adapter offline test runner](../scripts/archive/run_haos_sdk_adapter_offline_v1.sh): **92 tests were executed, 90 passed and 2 errored**, specifically `test_real_subprocess_mock_success` and `test_adapter_is_compatible_with_snapshot_state_and_poller`. The adapter had lost its `import json` while `parse_probe_output()` still invoked `json.loads()`; the blanket subprocess error handling masked that missing import as `SDKSnapshotError`. The missing import was restored in [`sdk_snapshot_adapter.py`](../experimental/genvex_remote/sdk_snapshot_adapter.py), a [direct parser regression test](../experimental/genvex_remote/test_sdk_snapshot_adapter.py) was added, and a separate [immutable-source v2 HAOS test runner](../scripts/archive/run_haos_sdk_adapter_offline_v2.sh) was prepared. **This fix has not yet been verified on HAOS.** No real device RPC, profile or enrolled identity was accessed in the failing test.
+
+### SDK subprocess adapter v3 on HAOS — VERIFIED 2026-11-20
+
+**VERIFIED from the user's HAOS terminal output:** the pinned [`run_haos_sdk_adapter_offline_v3.sh`](../scripts/run_haos_sdk_adapter_offline_v3.sh) completed **93 tests in 10.417 seconds, OK**, and printed `PASS: SDK ADAPTER OFFLINE TESTS AND COMPILATION`. No live device, certificate or credentials were accessed. This verifies the source-only subprocess adapter and polling tests under native ARM64; **it does not verify repeated live Nabto RPCs, daemon persistence, reboot recovery, or Home Assistant Core integration**.
+
+### Two serial live RPC45 polls on HAOS — PARTIAL SUCCESS 2026-11-20
+
+**VERIFIED from user-provided HAOS output:** [`run_haos_two_live_polls_v1.sh`](../scripts/run_haos_two_live_polls_v1.sh) used disposable bridge containers and the existing encrypted profile. Its automatic read-only SDK subprocess polling printed a validated first live batch, then **two failed polling attempts** (`Read-only poll failed; values unavailable`), followed by a validated second live batch. The two successes had distinct timestamps, and stopping the service cleared its snapshot. The runner exited `PASS: TWO SERIAL REAL NABTO RPC45 POLLS` because it only required two successful reads, **not because every attempt succeeded**. Thus: automatic polling, fail-closed behavior and eventual recovery demonstrated; stable repeated reads **NOT VERIFIED**. The failure reason is unknown from sanitized output. Do not infer that connection churn or gateway throttling caused the failures without additional evidence. No installed App or LAN integration changed.
+
+### Runtime HTTP/HA source preflight — partial result 2026-11-20
+
+The user ran the pinned `run_haos_remote_install_preflight_v2.sh` on HAOS: **102 backend tests, 101 passed, 1 errored**. `test_post_and_other_path_not_exposed` expected JSON but the HTTP handler returned Python's default HTML on a body-bearing POST. This is a test/server response-format defect, **not a Nabto RPC failure**. The handler now emits JSON `400` errors; additional regression tests check POST bodies and listener restrictions. HA offline transport test doubles were also updated for bounded reads and disabled redirects. [`run_haos_remote_install_preflight_v5.sh`](../scripts/archive/run_haos_remote_install_preflight_v5.sh) is a new pinned runner covering both backend and HA tests; **not yet run/verified on HAOS**. No live device or certificate access occurred.
+
+### Complete runtime and HA source preflight v5 — VERIFIED 2026-11-20
+
+**User-provided HAOS terminal output:** `run_haos_remote_install_preflight_v5.sh` completed **104 backend tests in 12.628 seconds, OK**, and **15 Home Assistant transport/snapshot tests in 0.070 seconds, OK**. It also passed backend/HA source compilation and JSON manifest/UI strings validation, finishing with `PASS: REMOTE RUNTIME + HA SOURCE PRE-FLIGHT`. **119/119 tests passed**. No new App was installed or started; no real device RPC or certificate access occurred. The later root-level App candidate, its bootstrap tests, and the v7 preflight are **NOT YET VERIFIED ON HAOS**. These results do not prove an installed HAOS App image, private App-to-Core network access, live 60-second polling reliability or restart behavior.
+
+### Complete runtime + HA + App source preflight v7 — VERIFIED 2026-11-20
+
+**User-provided HAOS output:** `run_haos_remote_install_preflight_v7.sh` passed **104 backend tests in 11.770 seconds**, **15 Home Assistant transport/snapshot tests in 0.072 seconds**, and **7 isolated HAOS App bootstrap tests in 0.032 seconds**: **126/126 tests passed**. The same run passed source parity (App runtime copy vs experimental backend), Python compilation and HA integration JSON manifest/UI strings checks. Printed `PASS: REMOTE RUNTIME + APP + HA SOURCE PRE-FLIGHT`. This is **source-only**; no App installed or started, no real Nabto RPC or certificate access. **App Docker image build, live private App-to-HA connection, 60-second polling stability and reboot recovery remain unverified.**
+
+### 2B – First attempted additional Optima 270 sensor, gateway lookup failed (2026-11-20)
+
+**USER-OBSERVED:** The approved Steam Deck live test loaded the existing encrypted SDK test profile, reached its single read-only RPC45 invocation for source-defined `frost_protection_temp` (object 0, address 24), and returned **SDK status 26** plus **event 1000015**. Session close and SDK shutdown both returned **0**; the runner did not retry.
+
+**SOURCE-VERIFIED INTERPRETATION:** Status 26 is `NABTO_FAILED_WITH_JSON_MESSAGE`. Event 1000015 is `MICROSERVER_NOT_KNOWN` in the official Nabto client error constants: a gateway resolution/availability failure, **not** a confirmed unsupported-address/controller rejection. A successful local `nabtoOpenSession` is not proof that the remote gateway was attached. The controller may not have received any RPC45 request. **Address 24 remains source-only/unverified**. This does not invalidate the previously verified five known RPC45 sensors.
+
+The [2B test matrix](remote-optima270-rpc45-expansion-testmatrix.md) records the redacted result and the source links. The isolated one-candidate script and tests now classify this event without copying raw response contents; no installed App or working LAN component was changed. Before any further live probe, separately confirm the operator-entered 12-digit device ID is the previously working remote hostname, and check gateway remote connectivity independently. Never publish the ID, email or key passphrase.
+
+### 2B – Remote RPC45 read of Optima 270 address 24 succeeded (2026-11-20)
+
+**VERIFIED from user-provided Steam Deck output:** After an independent manual comparison of the 12-digit device ID with the previously working full Nabto hostname, exactly one authorized read-only **RPC45** request `(obj=0,address=24,trailer=1)` succeeded: `RPC status=0`, **raw signed int16 value 0**, **312 ms** observed RPC duration; session close and SDK shutdown both returned **0**. The candidate is source-named `frost_protection_temp`.
+
+**CRITICAL LIMITATION:** Public Optima270 source scaling `(raw-300)/10` produces **−30.0 °C**, but the measured raw zero has no independently verified physical meaning. Do not interpret it as a true temperature or promote it into the verified active five-sensor HA catalog, planning or snapshot contract. Treat **transport/readability as verified**, **sensor semantics, hardware presence and physical validity as OPEN**. Possible zero-as-missing or a variant-specific value are hypotheses, not proven facts. No actual device ID, full hostname, account identity, private key or passphrase is recorded.
+
+The previous failure `status=26,event=1000015` remains an observed gateway lookup failure. The successful host-matching run resolves the immediate blocker but does not prove the earlier root cause; an earlier mistyped ID or transient gateway availability could both be consistent with the outputs. See the [full 2B matrix](remote-optima270-rpc45-expansion-testmatrix.md).
+
+### 2B – all 12 source-defined candidate addresses read successfully in a single RPC45 batch (2026-11-20)
+
+**VERIFIED from user-provided Steam Deck terminal output:** With the existing authorized encrypted profile, a single read-only RPC45 call, `obj=0`, `trailer=1`, exact ordered addresses `24,18,19,35,36,41,42,53,40,114,115,50`, returned **RPC status 0**, elapsed **358 ms** and **12/12 signed int16 values**. SDK session close and shutdown were both status 0. The values, in that same order, were **`[0,6000,5800,2432,2268,0,0,0,0,0,0,10]`**. No automatic retries, writes, scans or installed HAOS changes.
+
+**Numerical agreement with official Genvex Connect app screenshot (not concurrent):** `fan_duty_supply` addr 18 scales `6000/100=60.0%`, matching displayed supply fan **60.00%**; `fan_duty_extract` addr 19 scales `5800/100=58.0%`, matching displayed extract fan **58.00%**. Address 24 scales `(0-300)/10 = -30.0 °C`, matching both app T8 and T9, but it does **not** identify either uniquely or prove that a physical sensor is active. Raw 2432/2268 on addresses 35/36 are source-labeled RPM and plausible, but have not been independently validated. Values 0 for PWM, bypass and alarm words, and raw 10 for rotor speed, **do not** prove actual hardware presence, absence of alarms, or exact semantics.
+
+**Evidence distinction:** All **17** source-documented RPC45 datapoints (five previously live-verified plus these 12) have now been shown **remote-readable** on this controller. This is not evidence that all 17 sensors are safe to expose as physical Home Assistant entities. The active five-item `capability_catalog.py`, `verified_read_plan.py`, snapshot contract v1 and Home Assistant scaffolding are **unchanged**; the new 12 remain candidate-only pending semantics, hardware validation and versioned expansion of the snapshot. The [2B test matrix](remote-optima270-rpc45-expansion-testmatrix.md) records all values and limitations. No account email, device identifier, hostname, private profile or passphrase is copied into GitHub.
+
+## Evidence labels
+
+- **VERIFIED:** observed successfully in our controlled tests, with SDK return values or independent certificate checks.
+- **SOURCE:** demonstrated in linked upstream source code, but not necessarily reproduced on this controller.
+- **OBSERVED:** recorded in packet/application captures without proven interpretation.
+- **OPEN:** hypothesis, unresolved requirement or untested implementation.
+
+## Proven facts — 2026-11-19
+
+| Area | Status | Evidence / limitation |
+| --- | --- | --- |
+| Legacy CA registration endpoint | **VERIFIED** | HTTPS form POST to `https://lscontrol.nabto.com/service/register` with `email`, `password`, and PEM `csr`; successful response starts with status `0` and `Success` followed by a PEM X.509 certificate. Authentication uses the user's own Genvex Connect account credentials. |
+| RSA key requirement in tested SDK | **VERIFIED** | The 2048-bit certificate/key was CA-verifiable and matched, but `nabtoOpenSession` returned `18`. SDK log: `EVP_PKEY_get_size(key) is 256, it must be 128`; it expects a 128-byte RSA key in this path (RSA-1024). Do **not** generalize to every Nabto SDK version or application. |
+| 1024-bit CA-signed client identity | **VERIFIED** | RSA-1024 CSR using SHA-256 accepted; portal returned `0 / Success`. Certificate checked with original legacy Nabto CA, `openssl verify -auth_level 0`; certificate public key matches private key. A preceding 1024-bit attempt had portal status `1`, with its message not captured: reason **unknown**, not assumed to be key-size rejection. |
+| Local key protection | **VERIFIED** | Encrypted PKCS#8 key with PBES2 / PBKDF2-HMAC-SHA256 / 2048 iterations / 3DES works in tested SDK. Unlock password is a separately chosen *local key passphrase*, **not** necessarily the Genvex account password. Keep certificate/key/passphrase out of the repository and diagnostic logs. |
+| Profile naming | **VERIFIED** | SDK profile files in `<nabto-home>/users/`: `<email-with-@-replaced-by-_at_>.crt` and `.key`. SDK profile discovery alone does not establish that a session opens. |
+| SDK load on Linux x86_64 | **VERIFIED** | `libnabto_client_api.so` obtained from the isolated Nabto CLI test runtime loads with Python `ctypes.CDLL` on Steam Deck x86_64. `nabtoStartup`, `nabtoInstallDefaultStaticResources`, `nabtoOpenSession`, `nabtoStatusStr`, `nabtoRpcSetDefaultInterface`, `nabtoRpcInvoke`, `nabtoCloseSession`, `nabtoShutdown` are accessible. |
+| Open authenticated SDK session | **VERIFIED** | With the newly issued 1024-bit cert and encrypted key: `nabtoStartup = 0`, static resources `= 0`, `nabtoOpenSession = 0`, and `nabtoCloseSession = 0`. This is a local SDK session result, not on its own proof of device reachability. |
+| LS Control RPC ping definition | **SOURCE + VERIFIED** | Nabto's `cordova-lsc-test/www/js/index.js` defines query ID `17`, name `ping.json`, one uint32 input `ping`, and response fields below; the exact interface successfully installed through `nabtoRpcSetDefaultInterface = 0` in our test. |
+| **Remote authenticated RPC** | **VERIFIED** | With the same 1024-bit profile and the device's private, account-associated `<12-digit-id>.remote.lscontrol.dk` hostname: `nabtoRpcInvoke('nabto://<device>/ping.json?ping=1885957735') = 0`, yielding the gateway response below. This is the key end-to-end milestone. |
+| **HAOS ARM64 + QEMU remote RPC** | **VERIFIED** | On Raspberry Pi HAOS, isolated test app `app_local_genvex_nabto_runtime_test` ran Nabto CLI v1.3.0 / SDK 4.9.11 through `qemu-x86_64-static -L /opt/x86_64-sysroot`; encrypted RSA-1024 profile transferred securely via SSH, `ping.json` RPC returned exit status `0` and the same six numeric gateway values as the Steam Deck baseline; temporary profile removal reported `True`. The native SDK process remains x86_64 emulated. |
+| **RPC 45 / datapoint read** | **VERIFIED X86_64 + HAOS/QEMU** | SDK accepted source-derived XML (0), invoked RPC 45 for one known read-only datapoint (obj=0, address=20) (0), and decoded one signed 16-bit raw value 367 -> *candidate* supply-air temperature 6.7 °C. Official app screenshot at 22:33 showed **Supply air 6.70 °C**, matching the independently obtained remote value exactly; A five-address RPC 45 batch subsequently succeeded three times on HAOS/QEMU, including two fresh sessions 15 seconds apart. No writes. |
+| **Five-source-defined sensor remote reads** | **VERIFIED X86_64 + HAOS/QEMU** | One authenticated Nabto SDK session registered a reconstructed read-only RPC ID 45 XML and completed **5/5 individually addressed** sensor reads with status 0 and correctly decoded signed-int16 values. Addresses 20/21/22/23/26; see the result table below. Five-address batching additionally succeeded on Steam Deck and HAOS/QEMU; see verified results below. |
+| Native Linux aarch64 Nabto 4 client | **OPEN** | No native Linux aarch64 SDK/client found or validated; no completed Home Assistant remote adapter. |
+| Additional Genvex RPC operations | **PARTIALLY OPEN** | Read-only datapoint RPC **45** verified individually and as a single five-sensor batch, including on HAOS/QEMU. Other addresses, setpoint read ID 42 and all write/control operations remain untested. No complete production XML recovered. Local register addresses are distinct from application query IDs. |
+| Route details | **OPEN** | A successful remote response does **not** distinguish direct P2P from Nabto relay; do not claim which was used without separate evidence. |
+
+### End-to-end response actually received
+
+The first remote call using the independently provisioned CA-signed profile returned `nabtoRpcInvoke = 0 (operation successful)`. The diagnostic deliberately omitted `UserNames:` and other potentially sensitive data:
+
+```json
+{
+  "Pong": 1886350951,
+  "Devicenumber": 79265,
+  "Model": 2010,
+  "Version": 11,
+  "SlaveDevicenumber": 0,
+  "SlaveModel": 11
+}
+```
+
+The value `1886350951` corresponds to ASCII `pong` (`0x706f6e67`); input `1885957735` corresponds to `ping` (`0x70696e67`). The numeric device/model values are test observations, **not** a publicly reusable target or definitive mapping of all controller capabilities. Keep real account email, full device hostname, private key and credentials out of the public docs.
+
+### Working test architecture
+
+```text
+Steam Deck (Linux x86_64)
+  Python ctypes
+    -> legacy libnabto_client_api.so (SDK 4.9.11)
+      -> Nabto CA-signed RSA-1024 identity + encrypted private key
+        -> legacy Nabto remote transport (path/relay not yet established)
+          -> Genvex Connect / Optima 270
+            -> RPC 17 (ping) and RPC 45 (single Steam Deck datapoint read) -> JSON response
+```
+
+**No iPhone translation layer is required for this proven path.** The HAOS ARM64 test now proves remote RPC **under x86_64 user-mode emulation**. This is SDK-backed, **not** a pure-Python Micro Nabto implementation, native ARM64 library, licensed production bundle or completed Home Assistant integration.
+
+### Second independently executed environment: HAOS ARM64 using QEMU (2026-11-19)
+
+- Source: the user's successful output of `HAOS ARM64 NABTO QEMU TEST`.
+- All four stages returned zero: `Create temporary directory: 0`, `Create profile directory: 0`, `Transfer encrypted profile: 0`, and `Remote RPC through QEMU: 0`.
+- Returned `Pong: 1886350951`, `Devicenumber: 79265`, `Model: 2010`, `Version: 11`, `SlaveDevicenumber: 0`, `SlaveModel: 11`.
+- `Temporary files removed: True`; existing HA integration unchanged.
+- Execution path: Steam Deck orchestration / encrypted SSH profile transfer -> HAOS Docker test container -> QEMU Linux x86_64 SDK + CLI -> remote Nabto 4 `ping.json`.
+- **Important limits:** this test does not quantify latency, CPU, RAM, reboot persistence, reconnection, transport route, deployment security, SDK redistribution rights, or production viability; test credentials live transiently in the CLI process command line while it runs.
+
+## Reproducible technical details (sanitized)
+
+- Legacy client SDK: Nabto **4.9.11** from Nabto CLI **v1.3.0**, Linux x86_64 ELF shared library.
+- CLI test environment on HAOS: isolated `haos-apps/genvex-nabto-runtime-test`, Linux x86_64 CLI through `qemu-x86_64-static` and an x86_64 sysroot. The separate SDK-loaded Python test succeeded on the Steam Deck without QEMU.
+- Provision: OpenSSL RSA-1024 private key and SHA-256 CSR with subject `/emailAddress=<account-email>`; form POST `email`, `password`, `csr` to the confirmed LS Control registration endpoint.
+- Certificate chain: legacy Nabto issuer `C=DK, O=Nabto` (not the separate `Nabto NG` CA); the old chain uses deprecated cryptography. `openssl verify -auth_level 0` was used as a compatibility check, **not** a modern security endorsement.
+- PKCS#8 key: `openssl pkcs8 -topk8 -v2 des3 -v2prf hmacWithSHA256 -iter 2048`; store the passphrase separately and enter it interactively.
+- SDK call sequence: `nabtoStartup(home)` -> `nabtoInstallDefaultStaticResources(NULL)` -> `nabtoOpenSession(&session, email, key_passphrase)` -> `nabtoRpcSetDefaultInterface(session, xml, &error)` -> `nabtoRpcInvoke(session, url, &response)` -> free returned SDK allocations -> `nabtoCloseSession(session)` -> `nabtoShutdown()`.
+- SDK status: `0` = success; status `18` was a **generic** error for the 2048-bit mismatch. The specific reason came from `nabtoRegisterLogCallback`, not the status code alone.
+- Endpoint: `nabto://<device-id>.remote.lscontrol.dk/ping.json?ping=1885957735` (replace device ID only in private test environment).
+- RPC interface from Nabto's own LS Control source: query `17`, input `ping: uint32`; response `Pong`, `Devicenumber`, `Model`, `Version`, `SlaveDevicenumber`, `SlaveModel` as uint32, plus `UserNames:` as raw. Do not print or publish the username field.
+
+### First non-ping authenticated remote datapoint result (2026-11-19)
+
+**VERIFIED USER OUTPUT, Steam Deck x86_64, Nabto SDK 4.9.11:**
+
+```text
+===== READ-ONLY RPC 45 CANDIDATE =====
+SDK startup: 0
+Resources: 0
+Profile session: 0
+Candidate XML registered: 0
+Invoking: read-only ID 45; object 0; address 20; count 1
+RPC status: 0
+Raw supply temperature register: 367
+Decoded temperature (candidate): 6.7 C
+Result: RESPONSE_DECODED_UNVERIFIED
+Session close: 0
+SDK shutdown: 0
+Temporary profile: removed on normal exit
+Test exit status: 0
+```
+
+The candidate query ID 45 was reconstructed from the source-defined LAN opcode DATAPOINT_READLIST=0x2d. The XML request was a list containing a single entry (obj=0, address=20) and a trailing uint8=1; response schema: list(values:int16). The client-side *name* candidate_read_datapoints.json was chosen by us and is not claimed as the vendor's original RPC name. The authenticated remote gateway supplied a successful decoded response.
+
+**Boundary:** SDK RPC status 0 and decoded response confirm a working read-only RPC 45 operation, not just a ping. Raw 367 is a device response. The temperature interpretation 6.7 °C derives from the public Optima 270 LAN adapter (raw-300)/10 and has NOT been independently validated against the contemporaneous local sensor or app. RPC 45 has NOT yet been tested on HAOS/QEMU. Do not infer remote support for query 42, arbitrary addresses, batching, control or writes. No existing HA integration changes.
+
+Related: [RPC 45 derivation](archive/reconstructed-readonly-query45-2026-11-19.md) · [read-only probe](../scripts/probe_remote_datapoint45_readonly.py).
+
+### Independent manufacturer-app comparison — 2026-11-19
+
+**VERIFIED by contemporaneous user-provided screenshot:** the official Genvex Connect iOS application displayed **`Supply air: 6.70 °C`** at phone clock **22:33**, matching our previously obtained standalone SDK 4.9.11 read-only RPC ID **45**, object **0**, address **20**, raw **367**, interpreted using the published adapter as **6.7 °C**.
+
+The screenshot also showed potential follow-up benchmarks: outdoor air **0.20 °C**, exhaust air **1.80 °C**, extract air **7.60 °C**, humidity **66 %**, supply fan **60.00 %**, extract fan **58.00 %**, bypass off, and controller version **11**. These are **snapshot reference readings, not guaranteed to persist** and have not yet been retrieved with the independent RPC client. The screenshot was supplied privately in the conversation and is **not** committed to this repository.
+
+**Result:** A single **source-derived, authenticated remote sensor datapoint** can be read using our own Nabto 4 SDK client and its reported real-world interpretation **matches the official Genvex application** at the displayed value. It is still one sample: accuracy over time, multi-datapoint list handling, query 42, and HAOS/QEMU RPC 45 remain to validate. No existing HA integration changes, writes, or sensitive identifiers exposed.
+
+### Phase 1: five individual remote sensor reads — 2026-11-19
+
+**VERIFIED by user-supplied terminal output** from Linux x86_64 Steam Deck using the existing authorized RSA-1024 profile and Nabto SDK 4.9.11. SDK startup, resources, session, XML setup, session closure and shutdown all returned status `0`. All five read-only RPC 45 calls decoded successfully and test exited 0:
+
+| Optima 270 datapoint | Address | Raw | Decoded | SDK invocation duration |
+| --- | ---: | ---: | ---: | ---: |
+| Supply air | 20 | 365 | 6.50 °C | 335 ms |
+| Outdoor air | 21 | 299 | -0.10 °C | 17 ms |
+| Exhaust air | 22 | 313 | 1.30 °C | 16 ms |
+| Extract air | 23 | 376 | 7.60 °C | 16 ms |
+| Humidity | 26 | 66 | 66 % | 16 ms |
+
+Each address was read separately, using the reconstructed RPC 45 model's list of **one** `obj=0, address=<listed>` item, and `trailer=1`. These are source-documented Optima 270 datapoint addresses, **not enumerated or guessed IDs**. The supplied app screenshot predates this capture and is only an approximate reference, not a simultaneous ground truth. The first invocation likely incurred setup overhead, but this causal explanation is not yet independently measured. One run cannot establish typical latency or stability. Reference: [phase 1 validation](archive/remote-phase1-sensor-validation-2026-11-19.md).
+
+**The HAOS/QEMU five-element RPC 45 batch has now succeeded in the isolated addon v0.4.0.** Read-only data via the emulated architecture is verified; long-running operation, restart and reconnect behavior, SDK licensing, and Home Assistant entities remain unverified. See [addon documentation](../haos-apps/genvex-nabto-runtime-test/DOCS.md). Never assume writes are supported. No changes to the current local HA integration.
+
+### Phase 1B — verified read-only RPC 45 five-element batch (2026-11-19)
+
+**VERIFIED from user's Steam Deck terminal output:** same existing authenticated x86_64 Nabto SDK 4.9.11 test profile, with explicit passphrase via stdin. `nabtoStartup`, `nabtoInstallDefaultStaticResources`, `nabtoOpenSession` and `nabtoRpcSetDefaultInterface` all returned **0**. Exactly one `nabtoRpcInvoke` for query **45** with the ordered five-item request `obj=0`, addresses **20, 21, 22, 23, 26**, trailer=1, returned **RPC status 0** in **318 ms**. Its response decoded to **five signed int16 values**:
+
+| Address | Sensor | Raw | Converted |
+| ---: | --- | ---: | ---: |
+| 20 | Supply air | 365 | 6.50 °C |
+| 21 | Outdoor air | 299 | -0.10 °C |
+| 22 | Exhaust air | 313 | 1.30 °C |
+| 23 | Extract air | 377 | 7.70 °C |
+| 26 | Humidity | 65 | 65 % |
+
+Log ended `Read-only batch decoded: 5/5`, `Result: BATCH_DECODED`, session close 0, SDK shutdown 0, cleaned temporary profile and wrapper success. This demonstrates **one working five-address remote batch**, including response count and values consistent with individual reads and expected position ordering. Since no response-side address IDs were present, response **ordering is strongly corroborated rather than independently proven for every possible list**. An additional repeated/reordered batch could check this if needed. The 318 ms is one observed elapsed time and not a latency benchmark.
+
+**Now next gate:** run the same read-only batch inside the **existing isolated** HAOS Raspberry Pi 4 ARM64/QEMU test runtime. Do not change the working Home Assistant integration, commit private credentials or SDK binaries, or enable writes. Confirm SDK/CLI invocation and response decoding in the emulated environment; only then plan HA entity mapping and runtime deployment.
+
+## Verified HAOS ARM64/QEMU five-sensor RPC 45 batch — 2026-11-19
+
+**VERIFIED from the user's successful Raspberry Pi 4 HAOS terminal test**, orchestrated from Steam Deck through SSH on its explicitly configured port, into the running isolated test addon v0.4.0. The addon boot log independently showed `aarch64`, functioning QEMU x86_64, successful x86_64 Python ctypes import, and Nabto 4 Client SDK **4.9.11**. The temporary encrypted client profile was transferred for the test; the remote query was run with the bundled x86_64 Python probe under QEMU, **not native ARM64 code**.
+
+- SDK startup **0**, static resources **0**, authenticated profile session **0**, reconstructed RPC interface XML registration **0**.
+- Exactly **one read-only RPC ID 45** with ordered obj=0 addresses **20, 21, 22, 23, 26**, and trailer=1. RPC status **0**, elapsed **1,150 ms** for this invocation.
+- Response decoded **5/5** signed 16-bit values in requested order:
+
+| Sensor | Address | Raw int16 | Interpreted value |
+| --- | ---: | ---: | ---: |
+| Supply air | 20 | 367 | 6.70 °C |
+| Outdoor air | 21 | 295 | -0.50 °C |
+| Exhaust air | 22 | 313 | 1.30 °C |
+| Extract air | 23 | 377 | 7.70 °C |
+| Humidity | 26 | 65 | 65 % |
+
+- Client session closed **0**, SDK shutdown **0**, SDK temporary profile cleaned, and orchestration reported success.
+
+**Milestone:** real device telemetry from an authenticated proprietary Nabto 4/Micro gateway is now proven **from HAOS Raspberry Pi ARM64 via isolated x86_64 QEMU SDK runtime**. This is a single successful test run, **not** a supported native ARM64 SDK, a shipping Home Assistant integration, a latency benchmark, a long-running polling service, or verified writes. Batch response value order is strongly corroborated by the independently verified single-address measurements but is not accompanied by per-item response identifiers. The existing LAN UDP integration remained unchanged. Maintain credential protection and check the licensing/redistribution rights of the proprietary SDK before production distribution.
+
+**Next safe engineering work:** establish restart/reconnect behavior, bounded polling and secret lifecycle in the isolated test runtime; then design a remote data-coordinator/transport adapter isolated from the working LAN integration. No write RPCs.
+
+## Safety, privacy and engineering guardrails
+
+1. **Do not commit** actual client certificates, private keys, account passwords, local passphrases, device identifiers, or unredacted PCAP/HAR captures.
+2. RSA-1024, SHA-1-era certificates and 3DES are **legacy compatibility mechanisms**, not appropriate cryptographic defaults for new systems. Evaluate ongoing security and vendor-supported alternatives before deployment.
+3. Keep remote tests read-only until the individual RPC calls, authorization, error paths and timeout behavior are verified.
+4. Do not confuse Nabto **Micro/4** with **Nabto Edge/5**; Edge binaries and APIs are not compatible drop-in replacements.
+5. No changes to `custom_components/genvex_connect` without a separate implementation decision. Preserve the existing working local UDP integration.
+6. Publicly redistributing the proprietary Nabto SDK requires reviewing permission/licensing. Test access to the shared library does not establish redistribution rights.
+7. Isolated diagnostics should set timeouts, minimize sensitive output, and securely manage keys. Successful `ping` does not validate controller write capabilities, transport resilience or ARM64 portability.
+
+## Next experiments (ordered)
+
+1. **Validate the verified *read-only* RPC 45 batch on HAOS/QEMU:** x86_64 single-point reads and a five-sensor batch are now successful; reproduce the batch in the isolated ARM64/QEMU test environment, then benchmark stability and safely map to HA entities. Never attempt writes or assume other query models. The original production XML remains useful but is no longer a prerequisite for cautious read-only progress.
+2. **Reference client:** preserve the proven Python/ctypes experiment as a **local/private** test fixture; extract a sanitized, non-secret template only after the interface is known. Do not commit SDK binaries or working credentials.
+3. **ARM64 path:** investigate a licensed native Nabto 4 Client SDK for Linux aarch64; separately evaluate whether an isolated emulated x86_64 service can be supported on HAOS as a **fallback**. **Remote RPC on HAOS ARM64 through QEMU has now succeeded.** Next evaluate its maintainability and security, including CPU/memory, reconnection, restart behavior and supported SDK licensing before considering it a deployable fallback.
+4. **Integration architecture:** abstract remote transport behind the existing Home Assistant entities only after the read RPC schema and runtime packaging are verified. Keep local and remote modes isolated, with explicit credential handling and a tested fallback.
+5. **Remote behavior:** establish timeout/reconnection, credential lifecycle, gateway authorization and direct-vs-relay behavior in controlled, read-only tests.
+
+## Historical evidence and upstream sources
+
+- [Investigation log](archive/remote-nabto-investigation.md) — earlier hypotheses/captures; some old statements are superseded by this manifest.
+- [RPC research](archive/remote-nabto-rpc-findings.md) — historical RPC research, not a verified production Optima 270 query list.
+- [SDK / identity research](archive/nabto4-client-sdk-availability-and-identity-2026-11-19.md) — public distribution and CA model; older statements about portal/profile being unknown have now been resolved experimentally.
+- [LS Control test app source analysis](archive/lsc-nabto-test-app-analysis.md) — source definition of `ping.json` and its **local** demo. Our own later remote test independently proves the remote case.
+- [HAOS test app notes](../haos-apps/genvex-nabto-runtime-test/DOCS.md) — isolated QEMU runtime design; not a production remote transport.
+- Upstream LS Control query: https://github.com/nabto/cordova-lsc-test/blob/master/www/js/index.js
+- Upstream Nabto CLI: https://github.com/nabto/nabto-cli/blob/master/src/nabto_cli.cpp
+- Upstream Nabto legacy C API header: https://github.com/nabto/nabto4-python-wrapper/blob/master/extension/linux64/include/nabto_client_api.h
+
+**Revision policy:** append or update VERIFIED rows only after actual reproducible results. Keep failed tests and unresolved hypotheses accurately labeled.
+
+### Seven-address snapshot v2 live success — VERIFIED 2026-11-20
+
+**VERIFIED from user-supplied Steam Deck output:** after the offline preflight, one explicitly authorized read-only remote RPC45 returned status **0** in **396 ms** for exactly ordered addresses `20,21,22,23,26,18,19` (raw `368,308,322,378,67,6000,5800`). The decoder produced **6.8 °C supply air, 0.8 °C outdoor air, 2.2 °C exhaust air, 7.8 °C extract air, 67 % humidity**, plus source-scaled optional fan duty values **60 % supply** and **58 % extract**, in one versioned `GENVEX_READONLY_SNAPSHOT_V2` marker. Session close and SDK shutdown both returned **0**; temporary credential cleanup was attempted, not independently verified.
+
+This confirms one-shot remote seven-item RPC and v2 snapshot generation on Steam Deck, **not** deployed HAOS ARM64/QEMU v2 polling, Home Assistant entity registration or long-running stability. Fan-duty physical meaning is not yet independently checked against the official UI. The existing v1 five-sensor production contract remains unchanged. Details: [seven-address v2 live verification](archive/remote-optima270-seven-snapshot-v2-live-verification.md).
+
+### Source-only v2 state-to-HTTP bridge and pinned HAOS preflight — 2026-11-20
+
+**VERIFIED in GitHub Actions** for commit `189d48a`: [Remote Nabto offline-only tests](https://github.com/rabbyraptor/genvexconnect/actions/runs/44815515139) finished **SUCCESS** on both Python 3.12 / cryptography 46.0.4 and 47.0.0. Each matrix job ran **197 backend tests** and **27 import-free HA snapshot/transport tests**, all OK, and passed source compilation. Source-only v2 components include an authorized, exactly-seven-address, serial RPC45 callback state; fail-closed atomic snapshot invalidation; and opt-in loopback-only HTTP projections for **both `/v1/snapshot` and `/v2/snapshot` from one synthetic seven-reading poll**. Unauthenticated/misrouted/writing HTTP requests are rejected and do not trigger another RPC. This is **synthetic SDK-free CI**, not deployed App-to-Core HTTP or real HAOS ARM64/QEMU seven-address RPC.
+
+The new [pinned HAOS ARM64 offline runner](../scripts/archive/run_haos_v2_offline_preflight_v1.sh) has `--preflight` and explicit `--execute-offline` modes; it checks out immutable source commit `640125954c0683e13372f3317e5cb9bd0a4e39ac` and runs source-only tests in the existing isolated HAOS test App, never opening Nabto or reading credentials. Its shell/preflight regression test passed in CI. **The HAOS ARM64 execution has not been run by the operator and remains pending.** The active v1 runtime, installed test App, and LAN integration have not been changed by these GitHub commits.
+
+HACS `Validate` continues to fail on the repository's pre-existing metadata requirements (**Issues not enabled; no valid topics**); corresponding **hassfest** and **formatting** workflows passed for the same commit. These HACS repository-setting errors are unrelated to the v2 code.
+
+### HAOS v2 offline staging failure and corrected runner — 2026-11-20
+
+**USER-OBSERVED:** Initial HAOS ARM64 test of pinned `run_haos_v2_offline_preflight_v1.sh` ran **171 backend tests**, reporting **3 failures and 4 errors**, all shown failures caused by missing source scripts under `/tmp/scripts` after flattening `experimental/genvex_remote` to a temporary `backend` directory. The test harness omitted the original `scripts/` tree; test files expecting `Path(__file__).parents[2] / "scripts"` could not resolve dependencies. This is an **offline test staging defect**, not evidence of a Nabto RPC, live Genvex or v2 sensor decoding failure. No live connection was attempted by this test.
+
+**FIXED IN SOURCE:** New distinct [HAOS v2 offline runner v2](../scripts/run_haos_v2_offline_preflight_v2.sh) preserves `project/experimental/genvex_remote`, `project/experimental/home_assistant`, and `project/scripts` under an isolated private container tmp path. It pins source to immutable `189d48a641ef613023c1060f7d6cf2b2f7369b34`, supports `--preflight` (no network/container work) and explicit `--execute-offline` (public GitHub source download, temporary staging, source-only unit tests; no SDK, live RPC or credential access). The old URL and script revision remain immutable and **must not be reused** for the HAOS offline suite.
+
+**CI-VERIFIED:** [Remote Nabto offline-only workflow](https://github.com/rabbyraptor/genvexconnect/actions/runs/44816941893) on commit `236e73d` passed **200 backend** and **27 HA scaffold** tests in each of two Python 3.12/cryptography dependency configurations. A new regression `test_repo_relative_script_tests_in_recreated_layout` staged the same three source subtrees and reran the four script-dependent test modules successfully. This verifies the corrected source layout locally in CI; the **corrected runner's full ARM64 test execution is still pending user evidence**, and production v1/LAN were untouched.
+
+### HAOS ARM64 v2 source preflight passed and isolated v2 SDK runtime staged — 2026-11-20
+
+**HAOS-VERIFIED from user-provided terminal:** corrected [v2 repo-layout offline runner](../scripts/run_haos_v2_offline_preflight_v2.sh) ended with `Ran 27 tests in 0.111s / OK` followed by `PASS: GENVEX V2 HAOS OFFLINE REPO-LAYOUT TEST v2`. This is a clean **source-only** run in the user's isolated HAOS ARM64 App; it is **not** a live seven-address SDK/QEMU test, production App deployment or HA Core registration. No real RPC or credentials accessed.
+
+**NEW SOURCE-ONLY DEVELOPMENT:** `experimental/genvex_remote/probe_remote_snapshot_v2.py` is a separate, currently **unbundled** x86-64 Nabto SDK read-only probe for exact `RPC45` addresses `20,21,22,23,26,18,19`, a single invocation and a `GENVEX_READONLY_SNAPSHOT_V2` marker only after successful close/shutdown. `sdk_snapshot_adapter_v2.py` validates a single fresh, device-matched v2 marker from a bounded QEMU subprocess and passes credentials via stdin, not argv. `runtime_v2_draft.py` composes opt-in serial polling, an atomic v2 snapshot state and a **loopback-only** bearer-protected test HTTP bridge serving v1 + v2 from one synthetic batch. Importing these modules does not start Nabto, polling or an HTTP server. **Do not claim this exposes App-to-Core IPC**: its listener is restricted to localhost and the code is not in the installable App.
+
+**CI-VERIFIED:** [Remote Nabto offline tests](https://github.com/rabbyraptor/genvexconnect/actions/runs/44818191284) on `a0e32de` passed **218 backend tests + 27 HA tests in each Python 3.12 matrix job** (cryptography 46.0.4 and 47.0.0). A prior CI run for `c47cec9` had one new test error: invalid token validation raised `IPCAuthError` instead of expected `ValueError`; commit `a0e32de` fixed the exception boundary and CI subsequently passed. All sensor transport tests here use **mock subprocesses and synthetic readings**. The deployed five-sensor v1 runtime and working LAN component are untouched.
+
+**NEXT HAOS GATE:** [v4 immutable source-only runtime preflight](../scripts/archive/run_haos_v2_runtime_offline_v4.sh) pins `a0e32de6673eb08d792262ff81a0a00e3a03a097` with `--preflight` / `--execute-offline`, preserves repository-relative test fixtures and checks the new v2 adapter and runtime lifecycle in isolated ARM64 Python without opening Nabto. Its **actual HAOS run is pending**. A later real QEMU seven-address RPC and private intercontainer service connectivity must be separately reviewed and authorized; no unattended remote polling has been enabled.
+
+### HAOS v4 runtime offline harness failure and v5 correction — 2026-11-20
+
+**USER-OBSERVED:** `scripts/archive/run_haos_v2_runtime_offline_v4.sh` passed its inert `--preflight` but its `--execute-offline` exited immediately after displaying the pinned source commit, with BusyBox `test: exec: unknown operand`. Inspection of the committed runner showed **two `docker exec "$APP" test -f ...` file-check commands accidentally concatenated by literal backslash-n (`\\n`) text on one shell line**. This is a **test harness syntax/argument defect**, not any executed Python unit test, QEMU SDK session or RPC45 failure.
+
+**FIX:** new distinct [v5 offline runner](../scripts/run_haos_v2_runtime_offline_v5.sh) puts the four staged file checks on four separate, valid shell lines, pins the same previously passing SDK-free source commit `a0e32de6673eb08d792262ff81a0a00e3a03a097`, preserves the original repo-relative `scripts/` layout, and leaves all installed App and LAN files untouched. New [v5 staging regression](../experimental/genvex_remote/test_haos_v2_runtime_runner_v5.py) checks the exact command boundary, shell syntax, pinned source and offline option gates.
+
+**CI-VERIFIED:** [offline tests](https://github.com/rabbyraptor/genvexconnect/actions/runs/44818810535) on commit `99d13c5` passed **223 backend tests and 27 HA snapshot/transport tests** in each Python 3.12 cryptography configuration (46.0.4 and 47.0.0); the new command-boundary regression specifically passed. This is a host/CI source test, not an observed HAOS v5 run. The latter remains an operator test gate. No credentials, vendor device or Nabto SDK involved.
+
+### HAOS ARM64 v2 runtime source-only PASS — reported 2026-11-20
+
+**HAOS-VERIFIED, operator terminal:** The corrected immutable [v5 offline runner](../scripts/run_haos_v2_runtime_offline_v5.sh), with inner source pinned to `a0e32de6673eb08d792262ff81a0a00e3a03a097`, reported `Ran 218 tests in 21.043s / OK` (backend) and `Ran 27 tests in 0.108s / OK` (HA parsers/readers), followed by `Checking source syntax...` and `PASS: GENVEX HAOS V2 RUNTIME OFFLINE TEST v5`. This verifies source-only Python execution under the operator's isolated HAOS ARM64 App using mock subprocesses; it does **not** show a live Nabto/QEMU seven-address RPC45, persistently running v2 service, App-to-HA IPC, or installed Home Assistant entities.
+
+**Review before any live test:** Existing five-address [HAOS/QEMU runner](../scripts/run_haos_qemu_remote_batch_from_deck.sh) is not a seven-address run and must not be misrepresented as one. The unbundled [v2 QEMU probe](../experimental/genvex_remote/probe_remote_snapshot_v2.py) has a single fixed RPC45 for seven known addresses and a v2 marker, but moving an encrypted Steam Deck test identity into a temporary HAOS container and executing a live probe still requires a separate explicit operator-controlled workflow and cleanup verification. No production v1 runtime, installed App, or LAN integration was changed by the offline pass.
+
+
+### HAOS ARM64 QEMU seven-address live RPC45 success — 2026-11-20
+
+**LIVE HAOS-VERIFIED from operator terminal:** Steam Deck initiated the isolated [one-shot seven-address QEMU runner](../scripts/run_haos_qemu_seven_v2_from_deck_v1.sh) on the existing HAOS ARM64 test App. Pinned v2 probe source commit `3c7506bfeeaef869e71b113d5009c23cc9918a6a`. Legacy Nabto SDK startup, resources, profile session, XML interface registration, one read-only RPC45, session close and SDK shutdown all returned **0**. The single RPC took **1275 ms**, returned **7/7** fixed addresses `20,21,22,23,26,18,19`, raw values `368,308,322,380,66,6000,5800`, decoded to **supply air 6.8°C, outdoor air 0.8°C, exhaust air 2.2°C, extract air 8.0°C, humidity 66%, supply fan duty 60%, extract fan duty 58%**. The emitted `GENVEX_READONLY_SNAPSHOT_V2` had `schema_version:2`, `health:ok`, complete baseline and optional fan pair; process exit status **0**. Operator timestamp `2026-11-20T21:30:26.332290+00:00`. Identity and gateway ID are intentionally not reproduced in this project log.
+
+**Scope:** proves a single authenticated remote seven-address Nabto 4/Micro read under x86_64 QEMU inside isolated ARM64 HAOS test App. Does **not** prove ongoing polling, private App-to-Core networking, installed HA entity lifecycle, or that remote cleanup was independently inspected (the probe reported normal cleanup; shell runner attempted cleanup). The existing LAN integration and five-sensor v1 remain untouched. Next engineering gate: opt-in isolated runtime/service deployment with bounded polling and authenticated inter-container read access; review security and transport boundary before any live persistent service.
+
+
+### Source-only opt-in v2 private-bind policy — 2026-11-20
+
+**IMPLEMENTED, not deployed:** New `experimental/genvex_remote/private_bind_v2.py` requires an explicit `private_opt_in=True` and **exact fixed internal port 18275** for a v2 listener on a literal RFC1918 IPv4 interface address. Loopback (`127.0.0.1`) remains the unchanged default and accepts ephemeral test ports. Wildcard `0.0.0.0`, public addresses, hostnames, IPv6 and non-fixed private ports are rejected. The policy is applied to the source-only `ExperimentalV2HTTPServer`, `OptInV2SnapshotBridge` and `ExperimentalV2Runtime`; they still create no network listener or SDK process on import. New `test_private_bind_v2.py` checks opt-in, rejection and inert construction.
+
+**Security boundary:** RFC1918 binding alone is **not sufficient security**. Before enabling this mode in a HAOS App, review and enforce container-interface selection, Supervisor App network access, absence of host port publishing, trustworthy transport endpoint and token provisioning, and stop/cleanup behavior. No App manifest, running container, Home Assistant Core, v1 LAN integration or HA entities changed by this development. CI outcome must be recorded separately.
+
+**CI VERIFIED:** [Remote Nabto offline-only tests](https://github.com/rabbyraptor/genvexconnect/actions/runs/44821822400) for commit `5142c14` passed **230 backend + 27 HA isolated tests** in both Python 3.12 / cryptography 46.0.4 and 47.0.0 jobs, including new private-bind policy tests. [HAOS App candidate offline checks](https://github.com/rabbyraptor/genvexconnect/actions/runs/44821822541), formatting and hassfest also succeeded. The HACS `Validate` job retains its known repository-metadata failure. This is source-only CI, **not a real HAOS inter-container connectivity test**.
+
+
+### HAOS v2 IPC network topology safety gate — 2026-11-20
+
+**SOURCE-VERIFIED, not executed on HAOS:** The already-installed isolated QEMU test App is declared `host_network: true` in [its configuration](../haos-apps/genvex-nabto-runtime-test/config.yaml). Consequently, it is unsuitable for hosting a remotely accessible v2 HTTP snapshot listener: simply restricting a bind to an RFC1918 address is **not** adequate when the container shares host networking. Keep QEMU one-shot testing on that App only; do **not** enable private v2 HTTP there.
+
+A distinct [read-only IPC topology gate](../scripts/audit_haos_v2_ipc_network_gate_v1.sh) now has an inert `--preflight` mode and explicit `--execute-readonly` mode. It inspects Core, the QEMU App and optional dedicated remote App via Docker, refuses a dedicated App with network mode `host`, `none` or generic `bridge`, refuses configured host port publishing, and asks Core to do DNS-only lookup of the dedicated App. Missing dedicated remote App is a documented `NOT READY`, not a failure requiring installation. Even if the gate passes, **manual approval of trusted network topology, interface address and bearer provisioning is still required** before exposing an HTTP listener. Fake-Docker offline regressions live in `test_haos_v2_ipc_network_gate_v1.py`. No live runtime, credentials, installed App or Core were modified.
+
+
+### HAOS operator network audit: stopped-App ambiguity — 2026-11-20
+
+**OPERATOR-VERIFIED:** Running the pinned read-only `audit_haos_v2_ipc_network_gate_v1.sh` over SSH to the HAOS host reported Core container `present`, existing QEMU test App network mode `host`, and **no Docker container for the dedicated remote App**. Preflight passed; the gate printed `NOT READY` for the absent *container*. This DOES NOT establish that Supervisor has no installed App: the [separate App installation history](remote-install-readiness.md) previously reported an installed, **stopped** Supervisor App without a Docker container.
+
+**FIXED TERMINOLOGY / NEXT GATE:** New separate [read-only Supervisor and Docker state audit](../scripts/archive/audit_haos_v2_ipc_supervisor_state_v1.sh) checks `ha apps info local_genvex_nabto_remote --raw` when available, emitting only allowlisted state, installed flag and version (never raw options/secrets), then examines Docker container existence. It cannot start/install an App, read profile data or run Nabto. This source-only script is **not yet operator-executed**. The earlier [network gate](../scripts/audit_haos_v2_ipc_network_gate_v1.sh) is a container topology check, not a Supervisor installation inventory. No live private v2 listener is authorized.
+
+
+### HAOS streamed Supervisor status audit v1 failure and v2 correction — 2026-11-20
+
+**OPERATOR-OBSERVED:** `audit_haos_v2_ipc_supervisor_state_v1.sh` over Steam Deck -> HAOS `ssh -T ... 'sh -s -- --execute-readonly'` printed `Supervisor App metadata: unavailable`, then `sh: syntax error: unterminated quoted string`, without reaching Docker checks. Thus it did **not** determine Supervisor App status. In a streamed shell script, subprocesses such as `ha apps info` can accidentally consume inherited stdin (remaining script source), making parsing fail. Lack of Python on the HAOS host is another possible reason for metadata unavailability.
+
+**SOURCE FIX:** New distinct [v2 Supervisor audit](../scripts/audit_haos_v2_ipc_supervisor_state_v2.sh) explicitly runs `ha apps info ... --raw </dev/null`; the JSON metadata is passed to the known Core container's Python over `docker exec -i`, reducing dependency on HAOS host Python. A new offline regression feeds the entire script through `sh -s` using a fake `ha` that attempts to consume stdin and checks the allowlist does not disclose App credentials. Early initial CI caught a v2 script regression: literal `\\n` text in a constructed comment collapsed a shell command; corrected in source commit `e20cd1c` and guarded by an added regression in `ea08085`. The corrected v2 **has not yet been verified on HAOS**. Neither error implicates the Nabto SDK or working LAN integration. No App has been started or installed by this work.
+
+
+### HAOS isolated App synthetic-only Core-to-App acceptance — 2026-11-20
+
+**OPERATOR-VERIFIED PASS:** After explicit approval for diagnostic-only configuration and manual start, `scripts/verify_haos_remote_diagnostic_readonly.sh` reported all checks passed on the user's actual HAOS host:
+
+- Dedicated `app_local_genvex_nabto_remote` container running, **not** in host network mode and with **no published host ports**.
+- Dedicated App attached to Supervisor `hassio` network.
+- Home Assistant Core resolved `local-genvex-nabto-remote` and retrieved the strictly marked synthetic-only `GET /v1/diagnostic` payload.
+- Production `GET /v1/snapshot` returned HTTP 404 in diagnostic mode.
+- No Nabto RPC, device credentials, IPC bearer token, or real sensor data were used.
+
+The operator reported `===== ACCEPTANCE COMPLETE =====`. **App stop after the acceptance run has not yet been confirmed**; operator should manually stop the dedicated remote App, leaving `diagnostic_only: true`. Do not infer that live polling, private credential enrollment, restart persistence, or HA entities are validated. Existing LAN integration and host-networked QEMU test App were not modified by this acceptance script.
+
+### Phase F read-only stop/isolation gate (source-only) — 2026-11-20
+
+Following the successful synthetic HAOS acceptance, added `scripts/audit_haos_remote_phase_f_gate_v1.sh`. The script checks that Supervisor reports the dedicated App **stopped**, boot **manual**, version `0.1.0-dev1`, and that any residual Docker container is stopped, not host-networked and has no published ports. It filters Supervisor output to allowlisted top-level status fields; it does not display or store options, read private files, start/stop Apps or invoke Nabto. `experimental/genvex_remote/test_haos_remote_phase_f_gate_v1.py` includes a streamed `sh -s` regression with a greedy fake `ha`, a fake secret and negative tests for running/mismatched App. **Not yet run on HAOS**. A passing gate would verify stop/isolation only, not live credentials, polling or Home Assistant entities.
+
+### Offline App-private profile no-clobber hardening — 2026-11-20
+
+**SOURCE-ONLY:** Hardened `genvex-nabto-remote/runtime/profile_provision.py` to require a private `0700` App data directory and to reject a dangling pre-existing profile symlink. More importantly, directory publication now uses Linux `renameat2(..., RENAME_NOREPLACE)` through libc, synchronized after file staging; it fails closed if atomic no-replace is unavailable rather than falling back to `os.rename` / `Path.rename` (which could replace an empty concurrently created target directory). Tests simulate an empty-directory and symlink competitor between the existence check and final promotion, as well as unsupported atomic rename; the preexisting fake PEM fixtures are used throughout. GitHub App-candidate offline CI `44825491997` succeeded with 63 App tests and 27 HA tests. This source change has **not** been installed on HAOS; installed App remains `0.1.0-dev1` and stopped after Phase F confirmation. No real profile has been provisioned and no live RPC performed. Real App-private mount permissions and rollback/recovery must be separately verified before authorizing actual provisioning.
+
+
+### Phase G read-only Supervisor private-storage mount gate — 2026-11-20
+
+**SOURCE-ONLY, NOT YET HAOS-VERIFIED:** Added `scripts/archive/audit_haos_remote_private_storage_v1.sh`. Explicit `--preflight` is inert; explicit `--execute-readonly` confirms the dedicated App is Supervisor-stopped/manual/version `0.1.0-dev1`, checks no dedicated App container is running, verifies that the Supervisor container's `/data` bind source equals the previously observed HAOS root `/mnt/data/supervisor`, then performs only `test -L`, `test -d`, and `stat` on the expected App-private **directory** `/mnt/data/supervisor/apps/data/local_genvex_nabto_remote`. It does **not** list the folder, access profile/certificate/key/token/options files, start services or make RPC requests. A symlink, missing mount, missing folder, or any group/other permission is conservatively blocked; a failure is not proof of incorrect installation, but a reason to investigate Supervisor's actual mount. Synthetic streamed-stdin tests cover allowed/blocked statuses, a Supervisor mount mismatch, permission refusal and suppression of fake options secrets. No storage mutation or actual import is authorized. Do not install new source, change permissions, or provision real secrets based on this check alone.
+
+### App-private storage metadata discrepancy — 2026-11-20
+
+**OPERATOR-VERIFIED:** `scripts/archive/audit_haos_remote_private_storage_v1.sh` reported Supervisor stopped/manual; no running dedicated App container; Supervisor `/data` bind maps to `/mnt/data/supervisor`; then `BLOCKED: App storage permissions are not 0700`. The actual numeric mode and owner are **unknown**. Do not infer that this is a compromised storage directory or set `chmod 700` on Supervisor-managed paths. The earlier profile importer deliberately requires a private data root and will reject the current host state unless later evidence and design are reconciled.
+
+**SOURCE-ONLY FOLLOW-UP:** `scripts/audit_haos_remote_private_storage_v2.sh` runs only if the App is stopped, checks the same bind, and reports numeric UID/GID and octal mode of the known parent and App root directories with `stat`, without opening or enumerating descendants. A mode other than 0700 produces `REVIEW` / `NOT READY`, not an automatic permission change. Synthetic tests in `experimental/genvex_remote/test_haos_remote_private_storage_v2.py` cover 0755 and 0700, running App, bind mismatch, symlink and secret suppression. This v2 diagnosis has **not yet run on HAOS**; real profile enrollment remains unauthorized.
+
+
+### Verified Supervisor 0755 ownership and owner-controlled importer adjustment — 2026-11-20
+
+**OPERATOR-VERIFIED ON HAOS:** `scripts/audit_haos_remote_private_storage_v2.sh` reported `parent directory mode=755 uid=0 gid=0` and `app directory mode=755 uid=0 gid=0`. The remote App was stopped/manual, no dedicated App container was running, and the Supervisor container's `/data` host bind mapping was confirmed. These are Supervisor-managed directories; no permissions were changed and no contents inspected. `0755` permits traversal by non-owners but **not** group/other writes, so it is not itself a writable-directory attack. It is not an adequate private boundary for PEM material, however.
+
+**SOURCE-ONLY FIX:** `genvex-nabto-remote/runtime/profile_provision.py` now permits owner-controlled non-group/other-writable App data roots such as `0755`, requiring `st_uid == os.geteuid()` and rejecting `mode & 0o022`; never relaxes the new `/data/profile` mode `0700` nor `client.crt` and `client-encrypted.key` mode `0600`. Tests cover exact 0755 parent with 0700/0600 child, another owner's data directory, and group/other writable modes. Existing Linux atomic `RENAME_NOREPLACE` remains mandatory. **Caveat:** the directory inspected on the HAOS host via Supervisor mount has not yet been correlated with the exact `/data` bind in a started production-mode remote App, and executing UID must be checked before live provisioning. No real key transfer, App update, or Nabto RPC was performed.
+
+
+### Private profile import anchored to verified directory FD — 2026-11-20
+
+**SOURCE-ONLY:** The App-private certificate importer now opens the known App `/data` directory with Linux `O_DIRECTORY | O_NOFOLLOW`, validates ownership and non-writable group/other bits with `fstat`, then holds that exact directory descriptor for no-clobber profile promotion and cleanup. Staging is created and populated using `mkdir/open/unlink/rmdir` with `dir_fd`, preventing a path swap after the permission check from redirecting writes into another directory or leaving private staging files behind in the original inode. The published `profile` directory remains mode `0700`; PEM files remain `0600`; Linux `RENAME_NOREPLACE` remains mandatory. Synthetic fake-PEM tests simulate renaming and replacing the checked parent pathname during both successful publication and failed promotion. This is not a production import workflow: it has not been built or run in the installed `0.1.0-dev1` App, no mount or effective UID was verified inside a production-mode container, and no real Nabto credentials were transferred. Review exact App runtime mount mapping and safe enrollment channel before live use.
+
+**CI verification:** Offline App-candidate workflow [44826938745](https://github.com/rabbyraptor/genvexconnect/actions/runs/44826938745) passed **68 App tests and 27 Home Assistant tests** after normalizing the Linux `O_NOFOLLOW` symlink refusal to a generic validation error. Regression tests confirm both successful fd-anchored publication and staging cleanup after replacing the parent pathname with a different directory. Formatting and hassfest also passed. The ARM64 image build and HACS Validate checks are independent and were not complete at the time of this note; source-only App tests do not prove install/update or live Nabto.
+
+
+### Native ARM64 fake-only private-storage smoke and diagnostic mount attestation — 2026-11-20
+
+**Native ARM64 CI PASS:** The dedicated development image from commit `da98df2` was built on the ARM64 runner ([image-build run 44827487390](https://github.com/rabbyraptor/genvexconnect/actions/runs/44827487390)). Using a throwaway Docker container with `--network none`, a read-only image and ephemeral `/data` tmpfs mode `0755`, a fake-only PEM fixture was securely imported by the actual bundled `profile_provision.py`, verified by bundled `app_bootstrap.validate_private_profile`, and an attempted duplicate import was rejected. Observed private profile `0700`, PEM files `0600`; no host HAOS data or credential was mounted. The first CI run failed due to incorrectly escaped fake PEM newline markers in the test fixture; fixture was fixed, and the ARM64 image then passed the complete fake profile, IPC and diagnostic smoke workflows. This does not establish a live App update or real Nabto connection.
+
+**SOURCE-ONLY, NEXT HAOS GATE:** `scripts/verify_haos_remote_mount_uid_diagnostic_v1.sh` is an explicit `--preflight` / `--execute-readonly` audit requiring the existing dedicated `0.1.0-dev1` App to be **manually started in synthetic-only mode** by the operator. It does not start or stop Apps. Before examining the mount, it checks Supervisor started/manual, no host networking or published ports, and obtains the marked synthetic diagnostic via Core while ensuring the production `/v1/snapshot` endpoint remains HTTP 404. Then it checks that the running App's Docker `/data` mount source equals `/mnt/data/supervisor/apps/data/local_genvex_nabto_remote`, compares host and container `/data` mode/UID/GID and verifies the container's effective UID is 0 to match the previously observed owner. No keys, tokens, profiles or App options are opened, listed, or printed. It must **not** be run until the user agrees to a new diagnostic-only manual App start. After auditing, stop the App manually again, keeping `diagnostic_only: true` and all credentials empty. A passing audit validates mount identity only; it does not authorize installing a new image or provisioning real credentials.
+
+**Verification update:** Regression tests for the synthetic-only mount/UID diagnostic completed successfully in [GitHub Actions 44827859121](https://github.com/rabbyraptor/genvexconnect/actions/runs/44827859121): **269 backend tests and 27 Home Assistant tests on each of two environments**. Tests include fake Supervisor and Docker CLI, stream-fed shell execution, missing diagnostic marker, an enabled host network, a published port, mismatched mount and a different effective UID. Initial CI had two failures caused by a fake `stat` script containing escaped newlines; this test harness was corrected, with no production script changes needed. The diagnostic mount attestation itself remains **unverified on the actual HAOS host** and requires a new operator-controlled synthetic-only App start. Preserve stopped App until that step.
+
+### HAOS Phase G mount and UID attestation passed — 2026-11-20
+
+**OPERATOR-VERIFIED ON REAL HAOS:** The manually started **diagnostic-only** installed `local_genvex_nabto_remote` v`0.1.0-dev1` passed `scripts/verify_haos_remote_mount_uid_diagnostic_v1.sh`. Supervisor state/manual mode was correct. Docker reported isolated networking with no host-published ports. Home Assistant Core retrieved the marked synthetic-only diagnostic while `/v1/snapshot` remained disabled (HTTP 404). The running container's `/data` mount source matched the dedicated host path `/mnt/data/supervisor/apps/data/local_genvex_nabto_remote`; host and container both reported `755:0:0` and the in-container UID probe reported `0`. **No profile files, credentials, token or Nabto SDK RPC were accessed.** The audit does not automatically stop the App: the operator was separately instructed to stop it manually. **Stopped state after this particular test remains unconfirmed** until a subsequent Phase F read-only check. These observations establish the mount and UID assumptions for the owner-controlled importer, but do not approve real provisioning, production polling or replacing the existing installed image.
+
+### 2026-11-21 — persistent SDK worker (DEV3) live acceptance
+
+**OPERATOR-VERIFIED:** Local offline tests and adapter preflight passed, followed by three authorized read-only RPC45 batches returning **five values each**. Observed elapsed times: **10,504 ms**, **40 ms**, **34 ms**. The adapter identified the first worker launch on call 1 and confirmed process reuse on calls 2 and 3. Worker close succeeded, live validation exit code 0 and DEV3 restart check passed. This is evidence of a bounded persistent-process read sequence, **not** proof of unattended Home Assistant polling or production deployment. See [current status](STATUS.md).
