@@ -2,7 +2,30 @@
 
 Run scripts from the **repository root** unless a script explicitly says otherwise. This directory holds current and still useful diagnostic entry points; superseded versioned scripts live in [archive/](archive/README.md).
 
-## Recommended offline/development gates
+## Current DEV9 release workflow
+
+The one supported **source-only** entry point for this branch is:
+
+```sh
+python scripts/remote_release_gate.py --check
+python scripts/remote_release_gate.py --package
+```
+
+`--check` validates repository references, canonical runtime/App/HA mirror parity, App/HA options and version compatibility, and English/Danish sensor name/icon metadata. `--package` performs those same checks, builds the deterministic DEV9 combined source archive and verifies the archive and SHA256 manifest. Both run **without** Home Assistant OS, Nabto SDK, network or gateway access. App and remote offline CI share this gate.
+
+When adding a register or model, edit `experimental/genvex_remote/register_catalog.py` then synchronize shipping copies and default sensor labels with:
+
+```sh
+python scripts/check_remote_runtime_parity.py --sync
+python scripts/sync_remote_entity_localizations.py --sync
+python scripts/remote_release_gate.py --check
+```
+
+Read-only model, RPC and register lookup is available via `python scripts/lookup_micro_nabto.py --commands` or `--model optima270 --setpoints`. **All RPC43 write definitions remain metadata only**.
+
+Version-stamped `run_haos_*.sh` and `package_dev8_*.py` helpers are retained for historical reproducibility and existing regression tests, not advertised as the latest install procedure. Source artifacts are not auto-deployed to the running HAOS installation. See [current branch architecture](../docs/overnight-architecture-baseline.md) and [work log](../docs/overnight-refactoring-log.md).
+
+## Historical and specialized offline/development gates
 
 | Purpose | Entry point |
 | --- | --- |
