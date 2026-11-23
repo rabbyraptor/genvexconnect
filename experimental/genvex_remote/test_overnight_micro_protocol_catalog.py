@@ -7,6 +7,8 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import subprocess
+import sys
 import unittest
 
 from register_catalog import (
@@ -148,6 +150,43 @@ class MicroProtocolCatalogTests(unittest.TestCase):
             for item in model.setpoints:
                 self.assertFalse(item.write_enabled)
                 self.assertFalse(item.remote_write_verified)
+
+
+class MicroLookupCLITests(unittest.TestCase):
+    def invoke(self, *args):
+        result = subprocess.run(
+            [sys.executable, str(ROOT / "scripts/lookup_micro_nabto.py"), *args],
+            capture_output=True, text=True, timeout=10, check=False,
+        )
+        return result, json.loads(result.stdout) if result.returncode == 0 else None
+
+    def test_all_commands_and_models_visible(self):
+        result, cmds = self.invoke("--commands")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual({c["opcode"] for c in cmds}, {2, 17, 42, 43, 45})
+        self.assertFalse(next(c for c in cmds if c["opcode"] == 43)["transmit_enabled"])
+        result, models = self.invoke("--models")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual([x["key"] for x in models], ["optima270"])
+
+    def test_read_write_namespace_lookup_is_not_a_network_action(self):
+        result, read = self.invoke("--model", "optima270", "--rpc", "42", "--address", "7")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(read["register"]["key"], "fan_speed")
+        result, write = self.invoke("--model", "optima270", "--rpc", "43", "--address", "24")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(write["register"]["key"], "fan_speed")
+        self.assertFalse(write["register"]["write_enabled"])
+        result, point = self.invoke("--model", "optima270", "--rpc", "45", "--address", "24")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(point["register"]["key"], "frost_protection_temp")
+
+    def test_inactive_requires_explicit_opt_in(self):
+        result, _ = self.invoke("--model", "optima270", "--rpc", "43", "--address", "30")
+        self.assertEqual(result.returncode, 2)
+        result, meta = self.invoke("--model", "optima270", "--rpc", "43", "--address", "30", "--include-inactive")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(meta["register"]["status"], "commented_out_in_source")
 
 
 if __name__ == "__main__":
