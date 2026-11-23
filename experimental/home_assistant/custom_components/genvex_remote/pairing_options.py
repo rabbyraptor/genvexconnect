@@ -91,6 +91,8 @@ class GenvexRemoteOptionsFlow(config_entries.OptionsFlowWithReload):
                     options = {CONF_PAIR_FROM_APP: False}
                     if requested_raw:
                         options[CONF_RAW_REGISTERS_V3] = True
+                    if requested_fan:
+                        options[CONF_FAN_LEVEL_V4] = True
                     return self.async_create_entry(
                         title="", data=options,
                     )
