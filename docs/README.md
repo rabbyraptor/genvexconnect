@@ -40,4 +40,4 @@ These are retained as dated engineering records. Their DEV8/DEV2 versions, entit
 
 ## Interpretation boundary
 
-A source-model address is not proof of a present physical sensor, working remote operation or permitted write. All currently identified RPC43 write-address pairs are documented **as metadata only**. The verified remote integration remains read-only; no remote write transport is enabled. The existing HACS LAN integration in [`custom_components/genvex_connect/`](../custom_components/genvex_connect/) is separate from this experimental remote system.
+A source-model address is not proof of a present physical sensor, working remote operation or permitted write. All currently identified RPC43 write-address pairs are documented **as metadata only**. The verified remote integration remains read-only; no remote write transport is enabled. The existing Marketplace-compatible LAN integration in [`custom_components/genvex_connect/`](../custom_components/genvex_connect/) is separate from this experimental remote system.
