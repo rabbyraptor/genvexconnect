@@ -1,46 +1,43 @@
-# Genvex Connect documentation
+# Genvex Connect development documentation
 
-**Latest verified live milestone: DEV8, 22 November 2026.** The separate Genvex Remote App `0.1.0-dev8` and HA integration `0.2.0` were deployed together on HAOS ARM64. The Optima 270 remote connection returned **17/17 raw RPC45 sensors**, alongside five existing scaled sensors and a data-age sensor (**23/23 entities available**).
+**Current verified remote baseline: DEV9 · 23 November 2026.** The separate Genvex Remote App `0.1.0-dev9` and HA integration `0.3.0` are verified together on one Optima 270 / HAOS ARM64 setup. With the v4 stage and v3 diagnostics enabled, Home Assistant has **24 entities**: 5 scaled measurements, 17 RPC45 signed-int16 raw diagnostics, one data-age diagnostic and one RPC42 selected ventilation stage (0–4). Automatic and manual IPC pairing remain available. Experimental refactoring commits on `overnight-refactoring` are **not** automatically deployed to HAOS.
 
-- [Live DEV8 deployment and exact 17-register readings](dev8-live-verification-2026-11-22.md) — most recent installation evidence
-- [DEV8 combined release and test gate](dev8-4-combined-release-gate.md) — source packaging, preflight, offline and live acceptance plan
-- [Main README](../README.md) — current public-facing architecture, capabilities, limitations and repository map
-- [DEV8 staging pull request #16](https://github.com/rabbyraptor/genvexconnect/pull/16) — development changes; not the released LAN HACS integration
+## Current authoritative references
 
-## Current remote development references
-
-| Document | Focus |
+| Document | Owns |
 | --- | --- |
-| [DEV8 live verification](dev8-live-verification-2026-11-22.md) | Installed versions, real 17 raw register values, 23 entities, worker reuse and remaining live tests |
-| [DEV8.1 recovery](dev8-1-recovery-gate.md) | Supervisor IPC token rotation and bounded retry; offline-validated |
-| [DEV8.2 register evidence](dev8-2-register-evidence-gate.md) | Readability and interpretation evidence for all 17 candidate addresses |
-| [DEV8.3 all raw registers](dev8-3-all-raw-registers.md) | Optional v3 snapshot, 17 raw diagnostics, v1 preservation and partial-RPC behavior |
-| [DEV8.4 combined release](dev8-4-combined-release-gate.md) | Full-path tests, packaging, fixed-version source transfer, installer and deferred fault-injection |
-| [Optima 270 read command reference (DA)](optima270-nabto-read-command-reference-da.md) | Legacy read-only commands and datapoints |
-| [RPC45 expansion test matrix](remote-optima270-rpc45-expansion-testmatrix.md) | Original source-known candidates and seven-address prototype |
-| [IPC architecture](remote-runtime-ipc-security.md) | Authenticated App-to-Core snapshot bridge |
-| [Verified facts ledger](remote-nabto-verified-facts.md) | Dated protocol research and prior observations |
+| [Architecture and source-of-truth decisions](overnight-architecture-baseline.md) | Runtime/HA responsibility, trusted snapshot boundary and authority table |
+| [Overnight refactoring work log](overnight-refactoring-log.md) | Changes, tested results, commits, blockers and task status |
+| [Micro Nabto protocol library](micro-nabto-protocol-library.md) | Source-known RPC 2/17/42/43/45, Optima 270 register catalog and future model extension |
+| [Setpoint source evidence](references/optima270_micro_nabto_setpoint_catalog.json) | Source-derived read/write addresses and separate remote verification flags |
+| [Remote verified facts](remote-nabto-verified-facts.md) | Historical network/protocol observations with their dates |
+| [Main repository README](../README.md) | Public summary, current DEV9 remote capabilities and LAN/remote separation |
+| [Engineering status and history](STATUS.md) | DEV9 overview, then explicitly historical DEV1–DEV8 milestones |
 
-## Earlier milestones and background
+## Working source and tooling
 
-The [engineering timeline](STATUS.md) and the [historical archive](archive/README.md) document the progression from DEV1 through the original DEV4/DEV5 experiments. Some older status sections reflect their original observation date and are **not current installation state**. Prefer [DEV8 live verification](dev8-live-verification-2026-11-22.md) for the installed Remote App version, register coverage and entity counts.
+- [Canonical remote runtime and tests](../experimental/genvex_remote/) — source of RPC definitions and snapshot contracts
+- [Separate HA integration](../experimental/home_assistant/) — sensor identities, language translations and coordinator
+- [HAOS App](../genvex-nabto-remote/) — persistent legacy SDK transport and authenticated IPC
+- [Local register/command lookup](../scripts/lookup_micro_nabto.py) — read-only JSON catalog queries
+- [Translation sync](../scripts/sync_remote_entity_localizations.py) — generate/check language-specific sensor names
+- [Runtime parity and release contracts](../scripts/check_remote_runtime_parity.py) — shipping-copy parity; use alongside `check_remote_contracts.py`
 
-Additional references:
+## Historical milestones — evidence, not current installation state
 
-- [Remote installation readiness notes](remote-install-readiness.md) — historical/current readiness considerations; cross-check against DEV8 live evidence
-- [DEV4 source parity/onboarding](remote-dev4-source-and-onboarding.md) — earlier source and pairing gates
-- [DEV5 diagnostic upgrade](dev5-diagnostic-upgrade.md) — historical source migration and backup
-- [Architecture/maintenance roadmap](architecture-maintenance-plan.md) — broader design and maintenance topics
-- [Existing five-sensor plan](remote-ha-entity-plan.md) — initial entity design, prior to v3 expansion
-- [Nabto documentation/resources](remote-nabto-resources.md) — legacy upstream and vendor references
+These are retained as dated engineering records. Their DEV8/DEV2 versions, entity counts and open gates must not be interpreted as describing the current DEV9 deployment.
 
-## Implementation entry points
+- [DEV8 live verification (23 entities before stage integration)](dev8-live-verification-2026-11-22.md)
+- [DEV8.1 recovery](dev8-1-recovery-gate.md)
+- [DEV8.2 raw-register evidence](dev8-2-register-evidence-gate.md)
+- [DEV8.3 raw v3 snapshot contract](dev8-3-all-raw-registers.md)
+- [DEV8.4 combined release gate](dev8-4-combined-release-gate.md)
+- [Older read-only Optima 270 reference](optima270-nabto-read-command-reference-da.md) — predates verified remote RPC42; use the newer library for present capabilities
+- [Legacy RPC45 expansion matrix](remote-optima270-rpc45-expansion-testmatrix.md)
+- [IPC security background](remote-runtime-ipc-security.md)
+- [Architecture/maintenance roadmap](architecture-maintenance-plan.md)
+- [Historical archive](archive/README.md)
 
-- [Existing HACS LAN integration](../custom_components/genvex_connect/)
-- [Remote backend and test models](../experimental/genvex_remote/)
-- [Remote Home Assistant integration](../experimental/home_assistant/README.md)
-- [ARM64/QEMU HAOS App](../genvex-nabto-remote/)
-- [Source packaging and versioned release runner](../scripts/)
-- [Historical scripts](../scripts/archive/README.md)
+## Interpretation boundary
 
-The existing LAN/HACS integration and the experimental Remote App remain distinct. Confirmed remote support currently covers the **one tested Optima 270 setup**; production distribution of the proprietary SDK and controlled live fault-injection are still pending.
+A source-model address is not proof of a present physical sensor, working remote operation or permitted write. All currently identified RPC43 write-address pairs are documented **as metadata only**. The verified remote integration remains read-only; no remote write transport is enabled. The existing HACS LAN integration in [`custom_components/genvex_connect/`](../custom_components/genvex_connect/) is separate from this experimental remote system.
