@@ -106,12 +106,17 @@ def config_from_stdin() -> tuple[str, str, str, Path]:
     return identity, host, secret, profile
 
 
-def rpc_url(host: str) -> bytes:
+def _rpc45_url(host: str, addresses: tuple[int, ...]) -> bytes:
+    """Encode the common read-only RPC45 envelope without changing its wire shape."""
     body = {"request": {"datapoints": [
-        {"obj": 0, "address": spec[0]} for spec in SENSORS
+        {"obj": 0, "address": address} for address in addresses
     ], "trailer": 1}}
     return ("nabto://" + host + "/candidate_read_datapoints.json?json="
             + quote(json.dumps(body, separators=(",", ":")), safe="")).encode()
+
+
+def rpc_url(host: str) -> bytes:
+    return _rpc45_url(host, tuple(spec[0] for spec in SENSORS))
 
 
 def raw_rpc_url(host: str) -> bytes:
@@ -120,11 +125,7 @@ def raw_rpc_url(host: str) -> bytes:
         24, 18, 19, 35, 36, 41, 42, 53, 40, 114, 115, 50
     ):
         raise ValueError("Unexpected raw register list")
-    body = {"request": {"datapoints": [
-        {"obj": 0, "address": address} for address in OPTIONAL_ADDRESSES
-    ], "trailer": 1}}
-    return ("nabto://" + host + "/candidate_read_datapoints.json?json="
-            + quote(json.dumps(body, separators=(",", ":")), safe="")).encode()
+    return _rpc45_url(host, OPTIONAL_ADDRESSES)
 
 
 def decode_raw_rpc(raw: str, count: int) -> tuple[int, ...] | None:
