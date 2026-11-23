@@ -15,7 +15,7 @@ from .raw_snapshot_v3 import validate_raw_v3
 from .raw_snapshot_v4 import validate_v4
 
 
-class GenvexRemoteCoordinator(DataUpdateCoordinator[dict[str, float]]):
+class GenvexRemoteCoordinator(DataUpdateCoordinator[dict[str, float | int]]):
     """Keep a validated measurement through short remote disconnects."""
 
     def __init__(
