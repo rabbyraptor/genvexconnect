@@ -12,6 +12,7 @@ from .freshness import age_seconds, sample_time, within_grace
 from .runtime_client import RuntimeUnavailable, SnapshotReader
 from .snapshot import InvalidSnapshot, validate_snapshot
 from .raw_snapshot_v3 import validate_raw_v3
+from .raw_snapshot_v4 import validate_v4
 
 
 class GenvexRemoteCoordinator(DataUpdateCoordinator[dict[str, float]]):
@@ -20,6 +21,7 @@ class GenvexRemoteCoordinator(DataUpdateCoordinator[dict[str, float]]):
     def __init__(
         self, hass: HomeAssistant, device_id: str, reader: SnapshotReader, *,
         config_entry=None, raw_registers_v3: bool = False,
+        fan_level_v4: bool = False,
     ) -> None:
         super().__init__(
             hass,
@@ -32,7 +34,10 @@ class GenvexRemoteCoordinator(DataUpdateCoordinator[dict[str, float]]):
         self.reader = reader
         if type(raw_registers_v3) is not bool:
             raise ValueError("Invalid raw register mode")
+        if type(fan_level_v4) is not bool or (fan_level_v4 and not raw_registers_v3):
+            raise ValueError("V4 fan level requires raw-v3 registration")
         self.raw_registers_v3 = raw_registers_v3
+        self.fan_level_v4 = fan_level_v4
         self.last_sample_utc: datetime | None = None
         self._last_values: dict[str, float | int] | None = None
 
@@ -44,7 +49,16 @@ class GenvexRemoteCoordinator(DataUpdateCoordinator[dict[str, float]]):
     async def _async_update_data(self) -> dict[str, float | int]:
         try:
             payload = await self.reader.async_fetch_snapshot(self.device_id)
-            if self.raw_registers_v3:
+            if self.fan_level_v4:
+                baseline, raw, fan_level = validate_v4(
+                    payload, expected_device_id=self.device_id,
+                )
+                values = baseline | {
+                    "raw_" + key: value for key, value in raw.items()
+                }
+                if fan_level is not None:
+                    values["fan_level"] = fan_level
+            elif self.raw_registers_v3:
                 baseline, raw = validate_raw_v3(
                     payload, expected_device_id=self.device_id,
                 )

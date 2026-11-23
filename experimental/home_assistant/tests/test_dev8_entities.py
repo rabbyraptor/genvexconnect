@@ -58,7 +58,7 @@ class EntityRegistrationTests(unittest.IsolatedAsyncioTestCase):
         self.sensor = module
         self.entry = types.SimpleNamespace(entry_id="raw-test")
         self.coordinator = types.SimpleNamespace(
-            device_id="123456789012", raw_registers_v3=True,
+            device_id="123456789012", raw_registers_v3=True, fan_level_v4=False,
             data={
                 "supply_air": 6.8, "outdoor_air": 0.8,
                 "exhaust_air": 2.2, "extract_air": 7.8,
@@ -106,13 +106,49 @@ class EntityRegistrationTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(all("råværdi" in e._attr_name for e in raw))
         self.assertEqual(raw[6]._attr_unique_id, "123456789012_rpc45_raw_18")
         self.assertEqual(raw[6].native_value, 6000)
+        # DEV9 adds evidence metadata without changing entity IDs or raw values.
+        duty = raw[6].extra_state_attributes
+        self.assertEqual(duty["rpc45_address"], 18)
+        self.assertEqual(duty["source_display_value_candidate"], 60.0)
+        self.assertEqual(duty["source_display_unit_candidate"], "%")
+        self.assertIs(duty["source_display_verified"], True)
+        self.assertIs(duty["source_display_unit_verified_against_ui"], True)
+        alarm = raw[14].extra_state_attributes
+        self.assertEqual(alarm["meaning_evidence"], "source_model_only")
+        self.assertNotIn("source_display_value_candidate", alarm)
+        self.assertIn("not an alarm-free verdict", alarm["interpretation_note"])
         self.assertEqual(raw[14].native_value, 0)
         self.assertTrue(raw[6].available)
         self.assertFalse(raw[7].available)
         self.assertIsNone(raw[7].native_value)
+        self.assertNotIn("source_display_value_candidate",
+                         raw[7].extra_state_attributes)
         self.assertIsNone(raw[7]._attr_native_unit_of_measurement
                           if hasattr(raw[7], "_attr_native_unit_of_measurement")
                           else None)
+
+    async def test_dev9_recorder_contract_all_23_history_ready(self):
+        entities = await self.entities()
+        self.assertEqual(len(entities), 23)
+        self.assertEqual(len({e._attr_unique_id for e in entities}), 23)
+        for entity in entities:
+            with self.subTest(uid=entity._attr_unique_id):
+                self.assertEqual(entity._attr_state_class, "measurement")
+        # Raw registers remain unitless signed integers; never mislabel
+        # source model candidates as physical percent, RPM or alarms.
+        for entity in entities[6:]:
+            self.assertIsNone(
+                getattr(entity, "_attr_native_unit_of_measurement", None)
+            )
+            self.assertEqual(entity._attr_entity_category, "diagnostic")
+        self.assertEqual(
+            [e._attr_unique_id for e in entities[:6]],
+            [
+                "123456789012_supply_air", "123456789012_outdoor_air",
+                "123456789012_exhaust_air", "123456789012_extract_air",
+                "123456789012_humidity", "123456789012_data_age",
+            ],
+        )
 
     async def test_default_v1_retains_only_original_six_entities(self):
         self.coordinator.raw_registers_v3 = False

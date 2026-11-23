@@ -39,6 +39,9 @@
       },
       "data_age": {
         "name": "Data age"
+      },
+      "fan_level": {
+        "name": "Fan level"
       }
     }
   },
@@ -50,7 +53,8 @@
         "data": {
           "pair_from_app": "Pair automatically via Home Assistant Supervisor",
           "runtime_token": "Manual internal IPC token (manual pairing only)",
-          "raw_registers_v3": "Expose all 17 RPC45 raw values (requires v3 mode in Remote App)"
+          "raw_registers_v3": "Expose all 17 RPC45 raw values (requires v3 mode in Remote App)",
+          "fan_level_v4": "Expose selected fan level 0–4 via RPC42 (requires v4 mode in Remote App)"
         }
       }
     },

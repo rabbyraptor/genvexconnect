@@ -16,7 +16,7 @@ import voluptuous as vol
 
 from .const import (
     CONF_DEVICE_ID, CONF_PAIR_FROM_APP, CONF_RUNTIME_TOKEN,
-    CONF_RAW_REGISTERS_V3,
+    CONF_RAW_REGISTERS_V3, CONF_FAN_LEVEL_V4,
 )
 from .core_supervisor_loader import async_fetch_paired_token
 from .supervisor_pairing import SupervisorPairingUnavailable
@@ -40,11 +40,16 @@ class GenvexRemoteOptionsFlow(config_entries.OptionsFlowWithReload):
                               entry.data.get(CONF_PAIR_FROM_APP, False)) is True
         )
         existing_raw = entry.options.get(CONF_RAW_REGISTERS_V3, False) is True
+        existing_fan = entry.options.get(CONF_FAN_LEVEL_V4, False) is True
         errors: dict[str, str] = {}
         if user_input is not None:
             requested_auto = user_input.get(CONF_PAIR_FROM_APP, False)
             requested_raw = user_input.get(CONF_RAW_REGISTERS_V3, existing_raw)
-            if type(requested_auto) is not bool or type(requested_raw) is not bool:
+            requested_fan = user_input.get(CONF_FAN_LEVEL_V4, existing_fan)
+            if requested_fan is True:
+                requested_raw = True
+            if (type(requested_auto) is not bool or type(requested_raw) is not bool
+                    or type(requested_fan) is not bool):
                 errors["base"] = "invalid_runtime_config"
             elif requested_auto:
                 try:
@@ -65,6 +70,8 @@ class GenvexRemoteOptionsFlow(config_entries.OptionsFlowWithReload):
                     options = {CONF_PAIR_FROM_APP: True}
                     if requested_raw:
                         options[CONF_RAW_REGISTERS_V3] = True
+                    if requested_fan:
+                        options[CONF_FAN_LEVEL_V4] = True
                     return self.async_create_entry(
                         title="", data=options,
                     )
@@ -96,6 +103,9 @@ class GenvexRemoteOptionsFlow(config_entries.OptionsFlowWithReload):
                 ): bool,
                 vol.Optional(
                     CONF_RAW_REGISTERS_V3, default=existing_raw,
+                ): bool,
+                vol.Optional(
+                    CONF_FAN_LEVEL_V4, default=existing_fan,
                 ): bool,
                 vol.Optional(CONF_RUNTIME_TOKEN): TextSelector(
                     TextSelectorConfig(type=TextSelectorType.PASSWORD)

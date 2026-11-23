@@ -39,6 +39,9 @@
       },
       "data_age": {
         "name": "Dataalder"
+      },
+      "fan_level": {
+        "name": "Ventilatorniveau"
       }
     }
   },
@@ -50,7 +53,8 @@
         "data": {
           "pair_from_app": "Par automatisk via Home Assistant Supervisor",
           "runtime_token": "Manuelt internt IPC-token (kun ved manuel parring)",
-          "raw_registers_v3": "Vis alle 17 RPC45-råværdier (kræver v3-tilstand i Remote-appen)"
+          "raw_registers_v3": "Vis alle 17 RPC45-råværdier (kræver v3-tilstand i Remote-appen)",
+          "fan_level_v4": "Vis valgt ventilatorniveau 0–4 via RPC42 (kræver v4 i Remote-appen)"
         }
       }
     },
