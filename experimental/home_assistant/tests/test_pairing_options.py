@@ -172,6 +172,29 @@ class PairingOptionsTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["data"], {"pair_from_app": True})
         self.assertEqual(len(self.lookups), 1)
 
+    async def test_manual_pairing_retains_fan_v4_and_implicit_raw_v3(self):
+        result = await self.flow.async_step_init({
+            "pair_from_app": False, "fan_level_v4": True,
+        })
+        self.assertEqual(result["data"], {
+            "pair_from_app": False,
+            "raw_registers_v3": True,
+            "fan_level_v4": True,
+        })
+        self.assertEqual(self.entry.data["runtime_token"], MANUAL_TOKEN)
+        self.assertEqual(self.lookups, [])
+
+    async def test_auto_pairing_retains_fan_v4_and_implicit_raw_v3(self):
+        result = await self.flow.async_step_init({
+            "pair_from_app": True, "fan_level_v4": True,
+        })
+        self.assertEqual(result["data"], {
+            "pair_from_app": True,
+            "raw_registers_v3": True,
+            "fan_level_v4": True,
+        })
+        self.assertNotIn("runtime_token", self.entry.data)
+
     async def test_raw_v3_non_boolean_flag_is_rejected(self):
         for flag in ("true", 1, None):
             with self.subTest(flag=flag):
