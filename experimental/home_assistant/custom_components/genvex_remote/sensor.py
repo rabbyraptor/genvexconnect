@@ -8,6 +8,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, SENSORS, RAW_REGISTERS
 from .raw_interpretation import raw_register_attributes
+from .register_catalog import RPC42_FAN_LEVEL
 
 # No controls, setters, service registrations or RPC write operations.
 
@@ -147,8 +148,10 @@ class GenvexRemoteFanLevel(CoordinatorEntity, SensorEntity):
     @property
     def extra_state_attributes(self) -> dict:
         return {
-            "rpc42_read_object": 0,
-            "rpc42_read_address": 7,
-            "valid_range": "0-4",
+            "rpc42_read_object": RPC42_FAN_LEVEL.object_id,
+            "rpc42_read_address": RPC42_FAN_LEVEL.address,
+            "valid_range": (
+                f"{RPC42_FAN_LEVEL.minimum}-{RPC42_FAN_LEVEL.maximum}"
+            ),
             "measurement_kind": "selected_level_not_fan_percent_or_feedback",
         }
