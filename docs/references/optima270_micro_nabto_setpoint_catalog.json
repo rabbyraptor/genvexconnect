@@ -25,7 +25,7 @@
       "id": 42,
       "hex": "0x2a",
       "type": "SETPOINT_READLIST",
-      "current_remote_status": "not_tested"
+      "current_remote_status": "verified_remote_single_fan_level_address_7"
     },
     {
       "id": 43,
@@ -63,8 +63,8 @@
       "raw_max": 4,
       "step": 1,
       "default_read": true,
-      "evidence": "public_optima270_model_only",
-      "remote_read_verified": false,
+      "evidence": "community_source_and_live_remote_rpc42",
+      "remote_read_verified": true,
       "remote_write_verified": false,
       "write_enabled": false
     },
@@ -363,5 +363,80 @@
       "2": "modbus_setpoint_writes_full",
       "applies_to": "Modbus only; no proven effect on Micro Nabto RPC43"
     }
+  },
+  "live_verification": {
+    "query_id": 42,
+    "query_name": "candidate_read_setpoints.json",
+    "read_obj": 0,
+    "read_address": 7,
+    "response_prefix_unknown": 0,
+    "fan_level": 2,
+    "sdk_startup_status": 0,
+    "sdk_resources_status": 0,
+    "sdk_session_status": 0,
+    "xml_register_status": 0,
+    "invoke_status": 0,
+    "sdk_close_status": 0,
+    "sdk_shutdown_status": 0,
+    "cli_exit_code": 0,
+    "source": "User-provided Steam Deck SDK live probe output; isolated RPC42 read only",
+    "scope": "Level 2/0 read-only RPC42 confirmed; three sequential bracketed RPC42/RPC45/RPC42 level-zero windows showed command and feedback registers all 0. Firmware reports zero, physical airflow not independently measured.",
+    "other_setpoint_addresses_verified": false,
+    "write_attempted": false,
+    "observations": [
+      {
+        "fan_level": 2,
+        "response_prefix_unknown": 0,
+        "xml_register_status": 0,
+        "invoke_status": 0,
+        "cli_exit_code": 0,
+        "app_selection_reported": false
+      },
+      {
+        "fan_level": 0,
+        "response_prefix_unknown": 0,
+        "xml_register_status": 0,
+        "invoke_status": 0,
+        "cli_exit_code": 0,
+        "app_selection_reported": true
+      }
+    ],
+    "level_zero_confirmed": true,
+    "simultaneous_rpc45_confirmed": true,
+    "level_zero_fan_motor_state_verified": false,
+    "level_zero_controller_feedback_zero_verified": true,
+    "synchronized_level_zero_samples": [
+      {
+        "start_utc": "2026-11-22T23:49:22.194944+00:00",
+        "window_ms": 328,
+        "level_before": 0,
+        "level_after": 0,
+        "rpc45_18": 0,
+        "rpc45_19": 0,
+        "rpc45_35": 0,
+        "rpc45_36": 0
+      },
+      {
+        "start_utc": "2026-11-22T23:49:24.522979+00:00",
+        "window_ms": 49,
+        "level_before": 0,
+        "level_after": 0,
+        "rpc45_18": 0,
+        "rpc45_19": 0,
+        "rpc45_35": 0,
+        "rpc45_36": 0
+      },
+      {
+        "start_utc": "2026-11-22T23:49:26.572568+00:00",
+        "window_ms": 49,
+        "level_before": 0,
+        "level_after": 0,
+        "rpc45_18": 0,
+        "rpc45_19": 0,
+        "rpc45_35": 0,
+        "rpc45_36": 0
+      }
+    ],
+    "synchronized_result": "PASS"
   }
 }
