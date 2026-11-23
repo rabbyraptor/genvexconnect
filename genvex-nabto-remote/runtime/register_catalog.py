@@ -96,6 +96,57 @@ RPC45_OPTIONAL = (
 RPC45_ALL = RPC45_BASELINE + RPC45_OPTIONAL
 RPC45_BY_ADDRESS = {spec.address: spec for spec in RPC45_ALL}
 
+# Presentation metadata remains attached to the source-owned register catalog.
+# All shipping integrations derive default icons from here; names are translated
+# by Home Assistant's own per-user language system (not hass.config.language).
+# Entries without a dedicated mapping fall back to generic sensor semantics.
+RPC45_DEFAULT_ICONS = {
+    "supply_air": "mdi:thermometer",
+    "outdoor_air": "mdi:thermometer",
+    "exhaust_air": "mdi:thermometer",
+    "extract_air": "mdi:thermometer",
+    "humidity": "mdi:water-percent",
+    "frost_protection_temp": "mdi:snowflake-thermometer",
+    "fan_duty_supply": "mdi:fan",
+    "fan_duty_extract": "mdi:fan",
+    "fan_rpm_supply": "mdi:fan",
+    "fan_rpm_extract": "mdi:fan",
+    "preheat_pwm": "mdi:radiator",
+    "reheat_pwm": "mdi:radiator",
+    "bypass_active_raw": "mdi:valve",
+    "bypass_analog_raw": "mdi:valve",
+    "alarm_word_1_raw": "mdi:alert-outline",
+    "alarm_word_2_raw": "mdi:alert-outline",
+    "rotor_rpm": "mdi:rotate-3d",
+}
+RAW_ENGLISH_NAMES = {
+    "frost_protection_temp": "Frost protection",
+    "fan_duty_supply": "Supply fan control",
+    "fan_duty_extract": "Extract fan control",
+    "fan_rpm_supply": "Supply fan candidate",
+    "fan_rpm_extract": "Extract fan candidate",
+    "preheat_pwm": "Preheat",
+    "reheat_pwm": "Reheat",
+    "bypass_active_raw": "Bypass status",
+    "bypass_analog_raw": "Bypass analog",
+    "alarm_word_1_raw": "Alarm word 1",
+    "alarm_word_2_raw": "Alarm word 2",
+    "rotor_rpm": "Rotor candidate",
+}
+
+
+def rpc45_default_icon(key: str) -> str:
+    """Return the default icon for an identified source-model register."""
+    if type(key) is not str or key not in {spec.key for spec in RPC45_ALL}:
+        raise KeyError("Unknown RPC45 register")
+    return RPC45_DEFAULT_ICONS.get(key, "mdi:code-brackets")
+
+
+def rpc45_english_name(spec: RPC45Register) -> str:
+    """Source-only fallback for newly imported catalog entries."""
+    return RAW_ENGLISH_NAMES.get(spec.key, spec.name or spec.key.replace("_", " ").title())
+
+
 if (
     len(RPC45_BASELINE) != 5 or len(RPC45_OPTIONAL) != 12
     or len(RPC45_BY_ADDRESS) != 17
