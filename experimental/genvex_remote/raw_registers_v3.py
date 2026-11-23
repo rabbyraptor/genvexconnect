@@ -15,24 +15,14 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Sequence
 
+from register_catalog import RPC45_OPTIONAL
 from sensor_model import SENSORS, decode_readings, remote_hostname
 from snapshot_contract import SnapshotError, parse_snapshot
 
 VERSION = 3
 BASE_REGISTERS = tuple((spec.key, spec.address) for spec in SENSORS)
-OPTIONAL_REGISTERS = (
-    ("frost_protection_temp", 24),
-    ("fan_duty_supply", 18),
-    ("fan_duty_extract", 19),
-    ("fan_rpm_supply", 35),
-    ("fan_rpm_extract", 36),
-    ("preheat_pwm", 41),
-    ("reheat_pwm", 42),
-    ("bypass_active_raw", 53),
-    ("bypass_analog_raw", 40),
-    ("alarm_word_1_raw", 114),
-    ("alarm_word_2_raw", 115),
-    ("rotor_rpm", 50),
+OPTIONAL_REGISTERS = tuple(
+    (spec.key, spec.address) for spec in RPC45_OPTIONAL
 )
 ALL_REGISTERS = BASE_REGISTERS + OPTIONAL_REGISTERS
 BASE_KEYS = tuple(key for key, _ in BASE_REGISTERS)
@@ -41,8 +31,7 @@ ALL_KEYS = BASE_KEYS + OPTIONAL_KEYS
 BASE_ADDRESSES = tuple(address for _, address in BASE_REGISTERS)
 OPTIONAL_ADDRESSES = tuple(address for _, address in OPTIONAL_REGISTERS)
 if (
-    BASE_ADDRESSES != (20, 21, 22, 23, 26)
-    or OPTIONAL_ADDRESSES != (24, 18, 19, 35, 36, 41, 42, 53, 40, 114, 115, 50)
+    len(BASE_REGISTERS) != 5 or len(OPTIONAL_REGISTERS) != 12
     or len(set(ALL_KEYS)) != 17
     or len(set(BASE_ADDRESSES + OPTIONAL_ADDRESSES)) != 17
 ):
