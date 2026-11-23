@@ -50,6 +50,7 @@ class GenvexRemoteSensor(CoordinatorEntity, SensorEntity):
         self._key = spec.key
         self._attr_unique_id = f"{coordinator.device_id}_{spec.key}"
         self._attr_translation_key = spec.translation_key
+        self._attr_icon = spec.icon
         self._attr_native_unit_of_measurement = (
             PERCENTAGE if spec.key == "humidity" else UnitOfTemperature.CELSIUS
         )
@@ -96,7 +97,6 @@ class GenvexRemoteRawRegister(CoordinatorEntity, SensorEntity):
     _attr_has_entity_name = True
     _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_entity_category = EntityCategory.DIAGNOSTIC
-    _attr_icon = "mdi:code-brackets"
 
     def __init__(self, coordinator, spec):
         super().__init__(coordinator)
@@ -105,7 +105,10 @@ class GenvexRemoteRawRegister(CoordinatorEntity, SensorEntity):
         self._attr_unique_id = (
             f"{coordinator.device_id}_rpc45_raw_{spec.address}"
         )
-        self._attr_name = f"RPC45 råværdi {spec.address} – {spec.label}"
+        # Native translations use the active HA user's language. _attr_name
+        # would override them and pin all raw entities to Danish.
+        self._attr_translation_key = "raw_" + spec.key
+        self._attr_icon = spec.icon
         self._attr_device_info = _genvex_device_info(coordinator.device_id)
 
     @property
