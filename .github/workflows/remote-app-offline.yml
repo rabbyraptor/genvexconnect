@@ -6,6 +6,7 @@ on:
       - main
       - development
       - standalone-repo-migration
+      - overnight-refactoring
     paths:
       - "genvex-nabto-remote/**"
       - "experimental/genvex_remote/**"
