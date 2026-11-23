@@ -103,7 +103,24 @@ class EntityRegistrationTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(all(
             e._attr_entity_category == "diagnostic" for e in raw
         ))
-        self.assertTrue(all("råværdi" in e._attr_name for e in raw))
+        self.assertEqual(
+            [e._attr_translation_key for e in raw],
+            ["raw_" + key for key in (
+                "supply_air", "outdoor_air", "exhaust_air", "extract_air",
+                "humidity", "frost_protection_temp", "fan_duty_supply",
+                "fan_duty_extract", "fan_rpm_supply", "fan_rpm_extract",
+                "preheat_pwm", "reheat_pwm", "bypass_active_raw",
+                "bypass_analog_raw", "alarm_word_1_raw",
+                "alarm_word_2_raw", "rotor_rpm",
+            )],
+        )
+        self.assertTrue(all(
+            getattr(e, "_attr_name", None) is None for e in raw
+        ), "A hard-coded _attr_name would prevent per-user translation")
+        self.assertEqual(raw[6]._attr_icon, "mdi:fan")
+        self.assertEqual(raw[14]._attr_icon, "mdi:alert-outline")
+        self.assertEqual(entities[0]._attr_icon, "mdi:thermometer")
+        self.assertEqual(entities[4]._attr_icon, "mdi:water-percent")
         self.assertEqual(raw[6]._attr_unique_id, "123456789012_rpc45_raw_18")
         self.assertEqual(raw[6].native_value, 6000)
         # DEV9 adds evidence metadata without changing entity IDs or raw values.
