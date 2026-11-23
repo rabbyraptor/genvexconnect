@@ -14,6 +14,7 @@ on:
       - ".github/workflows/remote-app-offline.yml"
       - "scripts/package_remote_diagnostic_app.py"
       - "scripts/check_remote_contracts.py"
+      - "scripts/remote_release_gate.py"
       - "scripts/sync_remote_entity_localizations.py"
       - "scripts/package_dev9_combined.py"
       - "scripts/check_remote_runtime_parity.py"
@@ -37,12 +38,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Check bundled runtime matches canonical source
-        run: python scripts/check_remote_runtime_parity.py --check
-      - name: Check App/HA configuration and release contract
-        run: python scripts/check_remote_contracts.py
-      - name: Verify translated default names for all remote sensors
-        run: python scripts/sync_remote_entity_localizations.py --check
+      - name: Run common remote source and localization contract gate
+        run: python scripts/remote_release_gate.py --check
       - name: Compile native runtime and App bootstrap
         run: python -m compileall -q genvex-nabto-remote/runtime
       - name: Run fake-credential bootstrap tests (no real profile)
@@ -84,10 +81,8 @@ jobs:
             dist/APP_SOURCE_SHA256SUMS
           if-no-files-found: error
           retention-days: 14
-      - name: Package combined DEV9 source release
-        run: |
-          python scripts/package_dev9_combined.py
-          (cd dist && sha256sum -c DEV9_COMBINED_SHA256SUMS)
+      - name: Package and verify combined DEV9 release
+        run: python scripts/remote_release_gate.py --package
       - uses: actions/upload-artifact@v4
         with:
           name: genvex-remote-dev9-combined-${{ github.sha }}
