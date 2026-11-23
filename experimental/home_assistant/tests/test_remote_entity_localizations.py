@@ -18,6 +18,9 @@ module_spec = importlib.util.spec_from_file_location(
 )
 generator = importlib.util.module_from_spec(module_spec)
 module_spec.loader.exec_module(generator)
+# Do not leak the shared runtime path into unittest's module discovery.
+# A runtime draft test has the same filename as an HA-side draft test.
+sys.path.remove(str(SOURCE))
 
 
 class RemoteEntityLocalizationTests(unittest.TestCase):
