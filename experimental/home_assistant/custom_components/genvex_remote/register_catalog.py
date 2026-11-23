@@ -125,23 +125,23 @@ class MicroCommand:
 MICRO_COMMANDS = (
     MicroCommand(2, "KEEP_ALIVE", "session",
                  "community LAN keep-alive payload", "source-only response",
-                 "superrob/genvexnabto protocol/payload.py", "community_source_only", False),
+                 "https://github.com/superrob/genvexnabto/blob/main/src/genvexnabto/protocol/payload.py", "community_source_only", False),
     MicroCommand(17, "PING", "identify",
                  "ping.json gateway identity request",
                  "Pong, Devicenumber, Model, Version, SlaveDevicenumber, SlaveModel",
-                 "Nabto LS Controls ping interface and remote evidence", "remote_verified", True),
+                 "https://github.com/nabto/cordova-lsc-test/blob/main/www/js/index.js", "remote_verified", True),
     MicroCommand(42, "SETPOINT_READLIST", "read_setpoint",
                  "SDK: uint8 obj + uint16 address; source LAN packet format differs",
                  "SDK: prefix_unknown uint8 + list of uint16 values",
-                 "RPC42 DEV9 and community readlist", "remote_verified_single_address_7", True),
+                 "https://github.com/superrob/genvexnabto/blob/main/src/genvexnabto/protocol/cmd_setpoint_readlist.py", "remote_verified_single_address_7", True),
     MicroCommand(43, "SETPOINT_WRITELIST", "write_setpoint",
                  "community LAN: uint8 obj + uint32 write_address + uint16 raw",
                  "remote response not verified; SDK write schema unknown",
-                 "community writelist only", "community_source_only_unverified", False),
+                 "https://github.com/superrob/genvexnabto/blob/main/src/genvexnabto/protocol/cmd_setpoint_writelist.py", "community_source_only_unverified", False),
     MicroCommand(45, "DATAPOINT_READLIST", "read_datapoint",
                  "SDK: uint8 obj + uint32 address",
                  "SDK: ordered signed int16 values",
-                 "RPC45 DEV9 and community readlist", "remote_verified_17_raw", True),
+                 "https://github.com/superrob/genvexnabto/blob/main/src/genvexnabto/protocol/cmd_datapoint_readlist.py", "remote_verified_17_raw", True),
 )
 MICRO_COMMAND_BY_ID = {command.opcode: command for command in MICRO_COMMANDS}
 MICRO_COMMAND_BY_NAME = {command.name: command for command in MICRO_COMMANDS}
