@@ -62,7 +62,7 @@ assert not write_metadata.write_enabled
 assert sensor.key == "supply_air"
 ```
 
-`SetpointDefinition.display_value(raw)` implementerer kun kildeformlen `(raw + offset) / divisor` og validerer de kildeangivne råværdigrænser. Den udløser ingen netværksaktivitet. Beskrivelsen af RPC43's LAN-pakkeformat er **ikke** det samme som et verificeret SDK XML-interface for fjernskrivning.
+`SetpointDefinition.display_value(raw)` bruger kildeformlen `(raw + offset) / divisor`, og `source_raw_from_display(value)` bruger den omvendte kildeformel `int(value * divisor - offset)`. Begge validerer råværdiens kildeangivne grænser og er **udelukkende lokale omregninger**; de udløser ingen netværksaktivitet. Hver protokolkommando indeholder desuden link til kildekoden bag definitionen. Beskrivelsen af RPC43's LAN-pakkeformat er **ikke** det samme som et verificeret SDK XML-interface for fjernskrivning.
 
 ## Evidens og sikring mod falske konklusioner
 
